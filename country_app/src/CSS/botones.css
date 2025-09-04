@@ -1,0 +1,15 @@
+.social-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background-color: var(--brown-overlay); /* 👈 aquí usas tu color */
+  color: #fff;
+  text-decoration: none;
+  transition: background-color 0.3s ease;
+}
+
+.social-link:hover {
+  background-color: rgba(107, 68, 35, 0.9); /* un poco más oscuro en hover */
+}
