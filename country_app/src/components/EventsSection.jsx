@@ -3,6 +3,7 @@ import image5 from '../img/image_5.jpg';
 import image6 from '../img/image-6.jpg';
 import image8 from '../img/image_8.jpg';
 import image9 from '../img/image-9.jpg';
+import image10 from '../img/image_10.jpg';
 
 const EventsSection = () => {
   const eventos = [
@@ -33,6 +34,13 @@ const EventsSection = () => {
       descripcion: "Espacio perfecto para retiros espirituales, talleres creativos y actividades de crecimiento personal.",
       imagen: image9,
       caracteristicas: ["Conexión con la naturaleza", "Ambientes tranquilos", "Espacios meditativos"]
+    }, 
+    {
+      id: 5,
+      titulo: "¿Te gustaria aprender a montar en caballo?",
+      descripcion: "Contamos con caballos para que puedas disfrutar de paseos guiados y clases de equitación en un entorno seguro y natural.",
+      imagen: image10,
+      caracteristicas: ["Paseos guiados", "Clases de equitación", "Actividades para todas las edades"]
     }
   ];
 
