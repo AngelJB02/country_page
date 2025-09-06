@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom'; // Importa useNavigate
 import image5 from '../img/image_5.jpg';
 import image6 from '../img/image-6.jpg';
 import image8 from '../img/image_8.jpg';
@@ -6,6 +7,8 @@ import image9 from '../img/image-9.jpg';
 import image10 from '../img/image_10.jpg';
 
 const EventsSection = () => {
+  const navigate = useNavigate(); // Hook para redireccionar
+
   const eventos = [
     {
       id: 1,
@@ -44,6 +47,13 @@ const EventsSection = () => {
     }
   ];
 
+  const handleEventClick = (evento) => {
+    if (evento.id === 5) {
+      navigate("/equitacion"); // Redirige a la página de equitación
+    }
+    // Puedes agregar más redirecciones según el id si quieres
+  };
+
   return (
     <section id="eventos" className="events-section">
       <div className="container">
@@ -54,7 +64,12 @@ const EventsSection = () => {
         
         <div className="events-grid">
           {eventos.map((evento) => (
-            <div key={evento.id} className="event-card">
+            <div
+              key={evento.id}
+              className="event-card"
+              onClick={() => handleEventClick(evento)}
+              style={{ cursor: evento.id === 5 ? "pointer" : "default" }} // Solo cambia el cursor para el evento 5
+            >
               <div className="event-image">
                 <img src={evento.imagen} alt={evento.titulo} />
               </div>
