@@ -1,8 +1,10 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 
 // CSS
 import "../CSS/variables.css";
 import "../CSS/index.css";// Nuevo CSS para clases y login
+import "../CSS/Login.css";
 
 // Imágenes
 import class1Img from "../img/class1.jpg";
@@ -12,6 +14,7 @@ import class3Img from "../img/class3.jpg";
 // Componentes
 import Navigation from "../components/Navigation";
 import Footer from "../components/Footer";
+import Login from "../components/Login";
 
 const clases = [
   {
@@ -38,6 +41,7 @@ const clases = [
 ];
 
 const Equitacion = () => {
+  const navigate = useNavigate();
 
   return (
     <>
@@ -48,6 +52,8 @@ const Equitacion = () => {
         <div className="swiper-slide-content" style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", color: "#fff", textAlign: "center" }}>
           <h1 className="swiper-slide-title">Clases de Equitación</h1>
           <p className="swiper-slide-subtitle">Descubre nuestros cursos y mejora tu técnica sobre caballo</p>
+          <button onClick={() => window.location.href = "../Login"} className="cta-button rustic-button">Reservar mi clase</button>
+
         </div>
       </section>
 
@@ -73,6 +79,7 @@ const Equitacion = () => {
                     <li key={idx}>{car}</li>
                   ))}
                 </ul>
+                <button className="cta-button rustic-button" onClick={() => navigate('/login')}>Reservar</button>
               </div>
             </div>
           ))}
@@ -80,14 +87,6 @@ const Equitacion = () => {
       </section>
 
       {/* Login Section */}
-      <section className="container" style={{ marginTop: '2rem', marginBottom: '2rem' }}>
-        <h2>Ingresar a tu cuenta</h2>
-        <form className="login-form">
-          <input type="email" placeholder="Correo electrónico" required className="input" />
-          <input type="password" placeholder="Contraseña" required className="input" />
-          <button type="submit" className="cta-button rustic-button">Ingresar</button>
-        </form>
-      </section>
 
       <Footer />
     </>
