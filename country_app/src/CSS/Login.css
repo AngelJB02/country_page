@@ -1,5 +1,5 @@
 /* components/Login/Login.css */
-
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Flex:wght@400;500;600;700&display=swap');
 /* Variables CSS rústicas */
 :root {
   --primary-brown: #6b4423;
@@ -34,32 +34,29 @@
   --radius-xl: 32px;
 }
 
-@import url('https://fonts.googleapis.com/css2?family=Roboto+Flex:wght@400;500;600;700&display=swap');
+
 
 .login-page {
-  font-family: 'Roboto Flex', Arial, Helvetica, sans-serif;
-  background: linear-gradient(135deg, var(--primary-brown) 0%, var(--secondary-brown) 50%, var(--terracotta) 100%);
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
+  background: url('../img/image_10.jpg') no-repeat center center;
+  background-size: cover;
+  position: relative; /* 👈 necesario para el overlay */
+  font-family: 'Roboto Flex', Arial, Helvetica, sans-serif;
   overflow: hidden;
   padding: var(--spacing-md);
 }
-
-.login-page::before {
-  content: '';
+.login-page::after {
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background-image: 
-    radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
-    radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.05) 0%, transparent 50%),
-    radial-gradient(circle at 40% 80%, rgba(240, 230, 210, 0.1) 0%, transparent 50%);
-  animation: float 20s ease-in-out infinite;
+  background: var(--brown-overlay); /* 👈 aquí usas el café translúcido */
+  z-index: 0;
 }
 
 @keyframes float {
@@ -469,4 +466,13 @@
     padding: var(--spacing-sm) var(--spacing-lg);
     font-size: 1rem;
   }
+}
+/* login.css */
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: url('/img/image-10.jpg') no-repeat center center;
+  background-size: cover;
 }

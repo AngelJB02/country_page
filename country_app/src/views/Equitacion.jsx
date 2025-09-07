@@ -52,7 +52,7 @@ const Equitacion = () => {
         <div className="swiper-slide-content" style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", color: "#fff", textAlign: "center" }}>
           <h1 className="swiper-slide-title">Clases de Equitación</h1>
           <p className="swiper-slide-subtitle">Descubre nuestros cursos y mejora tu técnica sobre caballo</p>
-          <button onClick={() => window.location.href = "../Login"} className="cta-button rustic-button">Reservar mi clase</button>
+          <button onClick={() => window.location.href = "./Login"} className="cta-button rustic-button">Reservar mi clase</button>
 
         </div>
       </section>
