@@ -1,7 +1,8 @@
-// src/App.jsx
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Home from "./views/Home";
 import Equitacion from "./views/Equitacion";
+import CalendarioReserva from "./components/CalendarioReserva";
+import MenuCalendario from "./components/MenuCalendario";
 import Login from "./components/Login";
 
 function App() {
@@ -10,6 +11,8 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/equitacion" element={<Equitacion />} />
+        <Route path="/CalendarioReserva" element={<CalendarioReserva />} />
+        <Route path="/MenuCalendario" element={<MenuCalendario />} />
         <Route path="/login" element={<Login />} />
       </Routes>
     </Router>
