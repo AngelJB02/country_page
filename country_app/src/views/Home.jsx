@@ -46,7 +46,7 @@ const slides = [
       <Navigation />
 
       {/* Hero Section */}
-      <section id="hero" className="hero-section">
+    <section id="hero" className="hero-section">
         <div style={{ position: 'relative', width: '100%', height: '100vh' }}>
           <Swiper
             spaceBetween={0}
@@ -110,7 +110,7 @@ const slides = [
             <div style={{ fontSize: '1.5rem' }}>↓</div>
           </div>
         </div>
-      </section>
+      </section>  
 
 
 

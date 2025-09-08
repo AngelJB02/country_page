@@ -11,6 +11,7 @@ import class1Img from "../img/class1.jpg";
 import class2Img from "../img/class2.jpg";
 import class3Img from "../img/class3.jpg";
 
+
 // Componentes
 import Navigation from "../components/Navigation";
 import Footer from "../components/Footer";
@@ -59,8 +60,12 @@ const Equitacion = () => {
 
       {/* Sección Información General */}
       <section className="container" style={{ marginTop: '2rem', marginBottom: '2rem' }}>
-        <h2>Aprende y Disfruta</h2>
-        <p>Ofrecemos tres niveles de clases adaptadas a todos los niveles. Cada clase incluye caballos entrenados y seguridad garantizada.</p>
+        <div className="section-header">
+          <h2>Sobre las Clases</h2>
+          <p>
+            Un espacio único donde puedes aprender a montar y disfrutar de la equitación en un entorno natural y seguro.
+          </p>
+        </div>
       </section>
 
       {/* Sección de Clases */}
@@ -79,7 +84,7 @@ const Equitacion = () => {
                     <li key={idx}>{car}</li>
                   ))}
                 </ul>
-                <button className="cta-button rustic-button" onClick={() => navigate('/login')}>Reservar</button>
+                <button className="cta-button rustic-button" onClick={() => navigate('/login')}>Más Información</button>
               </div>
             </div>
           ))}
