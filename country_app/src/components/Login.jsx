@@ -1,6 +1,8 @@
 // components/Login/Login.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import image10 from "../img/image_10.jpg"; // Ajusta la ruta según tu proyecto
+
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -145,13 +147,16 @@ const Login = () => {
   };
 
   return (
-    <div   className="login-page"
+    <div
+      className="login-page"
       style={{
-        background: "url(${image10}) no-repeat center center",
+        background: `url(${image10}) no-repeat center center`,
         backgroundSize: "cover",
-        position: "relative"
+        position: "relative",
+        minHeight: "100vh" // Para que ocupe toda la pantalla
       }}
-      >
+    >
+
       <div className="login-container">
         <div className="login-header">
           <h1 className="login-title">Bienvenido</h1>
@@ -201,6 +206,15 @@ const Login = () => {
             onClick={handleSubmit}
           >
             {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+          </button>
+          
+          {/* Botón para regresar a la página principal */}
+          <button
+            type="button"
+            className="login-button-small"
+            onClick={() => navigate('/')}
+          >
+            Volver a la página principal
           </button>
         </div>
       </div>

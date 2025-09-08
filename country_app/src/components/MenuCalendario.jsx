@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import '../CSS/MenuCalendario.css';
+import ReservaInfo from "./ReservaInfo";
+
 
 const MenuCalendario = () => {
   const [currentDate, setCurrentDate] = useState(new Date(2025, 8, 1)); // Septiembre 2025
@@ -428,8 +430,11 @@ const MenuCalendario = () => {
           </div>
         </div>
       )}
+      <ReservaInfo />
     </div>
+    
   );
 };
+
 
 export default MenuCalendario;

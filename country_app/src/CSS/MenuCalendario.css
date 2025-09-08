@@ -852,3 +852,61 @@
   
   .date-modal .modal-header h2 { font-size: 1rem; }
 }
+
+/* ===== RESUMEN DE RESERVA ===== */
+.booking-summary {
+  margin-top: 32px;
+  padding: 24px;
+  background: var(--warm-white);
+  border: 1px solid rgba(107, 68, 35, 0.12);
+  border-radius: 20px;
+  box-shadow: 0 8px 24px rgba(107, 68, 35, 0.08);
+}
+
+.booking-summary h3 {
+  font-family: var(--font-primary);
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--primary-brown);
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.booking-summary p {
+  margin: 6px 0;
+  font-size: 1rem;
+  color: var(--charcoal);
+  text-align: center;
+}
+
+.booking-summary strong {
+  color: var(--primary-brown);
+}
+
+/* Botón más pequeño para volver a la página principal */
+.login-button-small {
+  background: linear-gradient(135deg, var(--secondary-brown) 0%, var(--terracotta) 100%);
+  color: var(--warm-white);
+  border: none;
+  padding: 0.5rem 1rem; /* Más pequeño que el original */
+  font-size: 0.9rem;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  display: block;
+  margin: 1rem auto 0 auto; /* Centrado y separado del botón principal */
+}
+
+.login-button-small:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--medium-shadow);
+  background: linear-gradient(135deg, var(--primary-brown) 0%, var(--secondary-brown) 100%);
+}
+
+.login-button-small:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
