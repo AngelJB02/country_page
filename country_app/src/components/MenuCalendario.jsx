@@ -18,12 +18,6 @@ const MenuCalendario = () => {
 
   // Horarios ocupados (formato: 'YYYY-MM-DD': ['HH:MM', 'HH:MM'])
   const [occupiedSlots, setOccupiedSlots] = useState({
-    '2025-09-10': ['09:00'],
-    '2025-09-13': ['16:00'],
-    '2025-09-15': ['10:00', '17:00'],
-    '2025-09-20': ['08:00', '18:00'],
-    '2025-09-22': ['17:00'],
-    '2025-09-25': ['08:00', '16:00']
   });
 
   const monthNames = [
@@ -31,8 +25,8 @@ const MenuCalendario = () => {
     'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
   ];
 
-  const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-  const dayNamesFull = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+  const dayNames = ['Dom', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+  const dayNamesFull = ['Domingo', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']; // Eliminar 'Lunes'
 
   const timeSlots = {
     morning: [
@@ -61,20 +55,27 @@ const MenuCalendario = () => {
     const month = currentDate.getMonth();
     const firstDay = new Date(year, month, 1);
     const startDate = new Date(firstDay);
-    startDate.setDate(startDate.getDate() - firstDay.getDay());
-    
+    startDate.setDate(startDate.getDate() - 1);
+    startDate.setDate(startDate.getDate() - (startDate.getDay() === 0 ? 0 : startDate.getDay()));
+  
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     const days = [];
-    
-    for (let i = 0; i < 42; i++) {
+    let cellCount = 0;
+
+    for (let i = 0; i < 42 && cellCount < 36; i++) {
       const cellDate = new Date(startDate);
       cellDate.setDate(startDate.getDate() + i);
-      
+
+      if (cellDate.getDay() === 1) {
+      continue;
+    }
+
       const isOtherMonth = cellDate.getMonth() !== month;
       const isToday = cellDate.toDateString() === today.toDateString();
-      const isUnavailable = !isWorkingDay(cellDate) || cellDate < today;
+      // Solo marcar como no disponible si es de otro mes o es fecha pasada O es lunes
+      const isUnavailable = isOtherMonth || cellDate < today || !isWorkingDay(cellDate);
       const isSelected = selectedDate && cellDate.toDateString() === selectedDate.toDateString();
       
       const dateString = cellDate.toISOString().split('T')[0];
@@ -90,6 +91,7 @@ const MenuCalendario = () => {
         appointmentCount,
         dateString
       });
+      cellCount++;
     }
 
     return days;
@@ -365,8 +367,8 @@ const MenuCalendario = () => {
         <div className="modal-overlay" onClick={closeSuccessModal}>
           <div className="success-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
+            <button className="close-btn2" onClick={closeSuccessModal}>×</button>
               <h2>¡Cita Confirmada!</h2>
-              <button className="close-btn2" onClick={closeSuccessModal}>×</button>
             </div>
             
             <div className="modal-content">
