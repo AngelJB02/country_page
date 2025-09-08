@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import '../CSS/MenuCalendario.css';
 import ReservaInfo from "./ReservaInfo";
+import TituloReserva from './TituloReserva';
 
 
 const MenuCalendario = () => {
@@ -200,6 +201,7 @@ const MenuCalendario = () => {
   };
 
   return (
+    
     <div className="calendar-container">
       {/* Modal al seleccionar fecha: muestra horarios y formulario de reserva */}
       {showDateModal && selectedDate && (
@@ -320,6 +322,9 @@ const MenuCalendario = () => {
           </div>
         </div>
       )}
+      
+      {/* Título de la sección */}
+      <TituloReserva />
 
       {/* Sección del Calendario */}
       <div className="calendar-section">

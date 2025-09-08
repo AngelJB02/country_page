@@ -3,19 +3,20 @@
 /* ===== CONTENEDOR PRINCIPAL ===== */
 .calendar-container { 
   font-family: var(--font-secondary);
-  background: var(--brown-overlay);
+  background: var(--terracotta--light-brown);
   padding: var(--spacing-lg);
   color: var(--dark-brown);
-  max-width: 1400px;
-  margin: auto;
+  width: 100%;           /* ocupar todo el ancho */
+  margin: 0;             /* quitar márgenes automáticos */
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 32px;
   min-height: 85vh;
-  align-items: center;
+  align-items: start;    /* no centrar verticalmente para evitar corte */
   justify-content: center;
+  box-sizing: border-box; /* padding no agrega ancho extra */
+  box-shadow: #3A3A3A;
 }
-
 /* ===== CALENDARIO ===== */
 .calendar-section {
   background: var(--warm-white);
@@ -874,8 +875,8 @@
 
 .booking-summary p {
   margin: 6px 0;
-  font-size: 1rem;
-  color: var(--charcoal);
+  font-size: 2rem;
+  color: var(--terracotta);
   text-align: center;
 }
 

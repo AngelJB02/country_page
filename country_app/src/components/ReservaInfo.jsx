@@ -1,5 +1,5 @@
 import React from "react";
-import "../CSS/MenuCalendario.css";
+import "../CSS/ReservaInfo.css";
 
 const ReservaInfo = () => {
   return (
