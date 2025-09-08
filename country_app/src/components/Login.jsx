@@ -1,4 +1,3 @@
-// components/Login/Login.jsx
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import image10 from "../img/image_10.jpg"; // Ajusta la ruta según tu proyecto
@@ -9,7 +8,6 @@ const Login = () => {
     password: "",
     remember: false,
   });
-
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -17,93 +15,75 @@ const Login = () => {
   const navigate = useNavigate();
 
   const validateField = (name, value) => {
-    switch (name) {
-      case "password":
-        return value.length >= 4
-          ? ""
-          : "La contraseña debe tener al menos 4 caracteres";
-      default:
-        return "";
+    if (name === "password") {
+      return value.length >= 4
+        ? ""
+        : "La contraseña debe tener al menos 4 caracteres";
     }
+    return "";
   };
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    const newValue = type === "checkbox" ? checked : value;
-
-    setFormData((prev) => ({
-      ...prev,
-      [name]: newValue,
-    }));
-
-    if (errors[name]) {
-      setErrors((prev) => ({
-        ...prev,
-        [name]: "",
-      }));
-    }
+    setFormData((prev) => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
   const handleBlur = (e) => {
     const { name, value } = e.target;
     const error = validateField(name, value);
-
-    setErrors((prev) => ({
-      ...prev,
-      [name]: error,
-    }));
+    setErrors((prev) => ({ ...prev, [name]: error }));
   };
 
-  // 🔹 Aquí ahora llamamos al backend
   const handleSubmit = async () => {
     const passwordError = validateField("password", formData.password);
+    setErrors({ password: passwordError });
+    if (passwordError) return;
 
-    const newErrors = { password: passwordError };
-    setErrors(newErrors);
+    setIsLoading(true);
+    try {
+      const response = await fetch("http://localhost:3001/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
 
-    if (!passwordError) {
-      setIsLoading(true);
+      let data = {};
+      const contentType = response.headers.get("content-type");
 
-      try {
-        const response = await fetch("http://localhost:3001/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: formData.email,
-            password: formData.password,
-          }),
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-          setShowSuccess(true);
-          setTimeout(() => {
-            navigate("/MenuCalendario");
-          }, 1000);
-        } else {
-          throw new Error(data.message || "Usuario o contraseña incorrectos");
-        }
-      } catch (error) {
-        console.error("Login error:", error);
-        setErrors({
-          general:
-            error.message ||
-            "Error al iniciar sesión. Por favor intenta de nuevo.",
-        });
-      } finally {
-        setIsLoading(false);
+      if (contentType && contentType.includes("application/json")) {
+        data = await response.json();
+      } else {
+        throw new Error("Servidor no respondió correctamente (no JSON)");
       }
+
+      if (response.ok) {
+        setShowSuccess(true);
+        setTimeout(() => navigate("/MenuCalendario"), 1000);
+      } else {
+        throw new Error(data.message || "Usuario o contraseña incorrectos");
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      setErrors({
+        general:
+          error.message.includes("Failed to fetch")
+            ? "No se pudo conectar al servidor. Verifica que esté corriendo."
+            : error.message,
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleKeyPress = (e) => {
-    if (e.key === "Enter") {
-      handleSubmit();
-    }
+    if (e.key === "Enter") handleSubmit();
   };
 
-  // Animación de partículas (igual que antes)
+  // Animación de partículas
   useEffect(() => {
     const createParticle = () => {
       const particle = document.createElement("div");
@@ -120,22 +100,14 @@ const Login = () => {
         animation: particleFloat ${Math.random() * 10 + 10}s linear infinite;
         z-index: 0;
       `;
-
       document.body.appendChild(particle);
-
-      setTimeout(() => {
-        if (particle.parentNode) {
-          particle.remove();
-        }
-      }, 20000);
+      setTimeout(() => particle.remove(), 20000);
     };
 
     const interval = setInterval(createParticle, 3000);
-
     return () => {
       clearInterval(interval);
-      const particles = document.querySelectorAll(".particle");
-      particles.forEach((p) => p.remove());
+      document.querySelectorAll(".particle").forEach((p) => p.remove());
     };
   }, []);
 
