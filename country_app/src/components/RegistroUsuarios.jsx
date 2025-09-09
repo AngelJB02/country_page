@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import './RegistroUsuarios.css'; // Asegúrate de tener un archivo CSS para estilos
+import '../CSS/RegistroUsuarios.css'; // Asegúrate de tener un archivo CSS para estilos
 
 const UserRegistration = () => {
   const [formData, setFormData] = useState({
