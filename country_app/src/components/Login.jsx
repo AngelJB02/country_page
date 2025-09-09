@@ -4,7 +4,7 @@ import image10 from "../img/image_10.jpg"; // Ajusta la ruta según tu proyecto
 import { getRedirectRoute } from "../utils/roleRedirect"; // importa tu helper
 
 
-const Login = () => {
+const Login = ({ onLoginSuccess }) => { // Agregar prop para callback
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -64,14 +64,7 @@ const Login = () => {
 
       if (response.ok) {
         setShowSuccess(true);
-
-        // Guardar info en localStorage o context
-        localStorage.setItem("user", JSON.stringify(data.user));
-
-        setTimeout(() => {
-          const redirectPath = getRedirectRoute(data.user.rol);
-          navigate(redirectPath);
-        }, 1000);
+        setTimeout(() => navigate("/MenuCalendario"), 1000);
       } else {
         throw new Error(data.message || "Usuario o contraseña incorrectos");
       }
@@ -143,7 +136,7 @@ const Login = () => {
 
         <div className="login-form">
           <div className="form-group">
-            <label htmlFor="email">Usuario</label>
+            <label htmlFor="email">Correo</label>
             <input
               type="text"
               id="email"
