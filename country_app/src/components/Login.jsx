@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import image10 from "../img/image_10.jpg"; // Ajusta la ruta según tu proyecto
+import { getRedirectRoute } from "../utils/roleRedirect"; // importa tu helper
+
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -62,7 +64,14 @@ const Login = () => {
 
       if (response.ok) {
         setShowSuccess(true);
-        setTimeout(() => navigate("/MenuCalendario"), 1000);
+
+        // Guardar info en localStorage o context
+        localStorage.setItem("user", JSON.stringify(data.user));
+
+        setTimeout(() => {
+          const redirectPath = getRedirectRoute(data.user.rol);
+          navigate(redirectPath);
+        }, 1000);
       } else {
         throw new Error(data.message || "Usuario o contraseña incorrectos");
       }
