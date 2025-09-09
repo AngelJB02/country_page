@@ -5,6 +5,7 @@ import CalendarioReserva from "./components/CalendarioReserva";
 import MenuCalendario from "./components/MenuCalendario";
 import Login from "./components/Login";
 import RegistroUsuarios from "./components/RegistroUsuarios";
+import InstructorClases from "./components/InstructorClases";  
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
         <Route path="/MenuCalendario" element={<MenuCalendario />} />
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<RegistroUsuarios />} />
+        <Route path="/InstructorClases" element={<InstructorClases />} />
       </Routes>
     </Router>
   );
