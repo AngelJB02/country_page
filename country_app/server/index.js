@@ -27,6 +27,7 @@ app.post('/login', async (req, res) => {
       [email]
     );
 
+
     if (rows.length === 0) {
       return res.status(401).json({ message: 'Usuario o contraseña incorrectos' });
     }

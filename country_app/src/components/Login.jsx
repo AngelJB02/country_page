@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import image10 from "../img/image_10.jpg"; // Ajusta la ruta según tu proyecto
+import { getRedirectRoute } from "../utils/roleRedirect"; // importa tu helper
+
 
 const Login = ({ onLoginSuccess }) => { // Agregar prop para callback
   const [formData, setFormData] = useState({
@@ -61,34 +63,11 @@ const Login = ({ onLoginSuccess }) => { // Agregar prop para callback
       }
 
       if (response.ok) {
-  setShowSuccess(true);
-
-  // Guardar usuario en localStorage
-  const usuario = {
-    id: data.user.id,
-    nombre: data.user.nombre,
-    rol: data.user.rol
-  };
-
-  // Validar rol permitido
-  if (!['admin','cliente'].includes(usuario.rol)) {
-    setErrors({ general: "Acceso restringido para tu rol" });
-    setIsLoading(false);
-    return;
-  }
-
-  localStorage.setItem("usuario", JSON.stringify(usuario));
-
-  // Pasar la información del usuario al componente padre
-  if (onLoginSuccess) {
-    onLoginSuccess(usuario);
-  }
-
-  setTimeout(() => navigate("/MenuCalendario"), 1000);
-} else {
-  throw new Error(data.message || "Usuario o contraseña incorrectos");
-}
-
+        setShowSuccess(true);
+        setTimeout(() => navigate("/MenuCalendario"), 1000);
+      } else {
+        throw new Error(data.message || "Usuario o contraseña incorrectos");
+      }
     } catch (error) {
       console.error("Login error:", error);
       setErrors({
