@@ -4,7 +4,7 @@ export const roleRedirects = {
   instructor: "/dashboard-instructor",
   contabilidad: "/dashboard-contabilidad",
   viewer: "/dashboard-viewer",
-  creadorcuentas: "/RegistroUsuarios",
+  creadorcuentas: "/registro",
   cliente: "/MenuCalendario"
 };
 

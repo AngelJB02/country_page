@@ -4,6 +4,7 @@ import Equitacion from "./views/Equitacion";
 import CalendarioReserva from "./components/CalendarioReserva";
 import MenuCalendario from "./components/MenuCalendario";
 import Login from "./components/Login";
+import RegistroUsuarios from "./components/RegistroUsuarios";
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
         <Route path="/CalendarioReserva" element={<CalendarioReserva />} />
         <Route path="/MenuCalendario" element={<MenuCalendario />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/registro" element={<RegistroUsuarios />} />
       </Routes>
     </Router>
   );

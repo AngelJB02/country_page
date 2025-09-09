@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import PasswordRequirements from "./PasswordRequirements";
+import RegistrosContras from "./RegistrosContras";
 
-const RegisterForm = () => {
+const RegistrosFormularios = () => {
   const [formData, setFormData] = useState({
     nombre: "",
     email: "",
@@ -56,7 +56,7 @@ const RegisterForm = () => {
           placeholder="••••••••"
           required
         />
-        <PasswordRequirements password={formData.password} />
+        <RegistrosContras password={formData.password} />
       </div>
 
       <div className="form-group full-width">
@@ -74,4 +74,4 @@ const RegisterForm = () => {
   );
 };
 
-export default RegisterForm;
+export default RegistrosFormularios;
