@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import '../CSS/MenuCalendario.css';
 import ReservaInfo from "./ReservaInfo";
 import TituloReserva from './TituloReserva';
 import axios from 'axios';
 
 const MenuCalendario = ({ usuario: propUsuario }) => {
-  // Declarar usuario primero
-  const usuario = propUsuario || JSON.parse(localStorage.getItem("usuario"));
+  // Memoizar usuario para evitar recalculaciones innecesarias
+  const usuario = useMemo(() => propUsuario || JSON.parse(localStorage.getItem("usuario")), [propUsuario]);
 
   // VERIFICAR ROL PERMITIDO
   const rolesPermitidos = ['admin', 'cliente'];
@@ -33,6 +33,7 @@ const MenuCalendario = ({ usuario: propUsuario }) => {
   const [confirmedBooking, setConfirmedBooking] = useState(null);
   const [showDateModal, setShowDateModal] = useState(false);
   const [occupiedSlots, setOccupiedSlots] = useState({});
+  const [loading, setLoading] = useState(false);
 
   const monthNames = [
     'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -54,19 +55,38 @@ const MenuCalendario = ({ usuario: propUsuario }) => {
     ]
   };
 
-  const actividades = ['iniciacion', 'caminata', 'salto'];
+  const actividades = ['iniciacion', 'paseo', 'salto'];
 
-  // Actualizar bookingData cuando cambie el usuario
+  // Cargar reservas existentes al montar el componente
+  useEffect(() => {
+    const cargarReservasExistentes = async () => {
+      try {
+        const response = await axios.get('http://localhost:3001/reservas');
+        console.log('Reservas cargadas:', response.data);
+        setOccupiedSlots(response.data);
+      } catch (err) {
+        console.error('Error cargando reservas:', err);
+        setOccupiedSlots({});
+      }
+    };
+    cargarReservasExistentes();
+  }, []); // Solo se ejecuta una vez al montar
+
+  // Actualizar bookingData cuando cambia el usuario, evitando bucles infinitos
   useEffect(() => {
     if (usuario) {
-      setBookingData(prev => ({ ...prev, nombre: usuario.nombre }));
+      setBookingData(prev => ({
+        nombre: usuario.nombre,
+        edad: prev.edad || "",
+        actividad: prev.actividad || ""
+      }));
     }
   }, [usuario]);
 
   /* ---------------------- FUNCIONES CALENDARIO ---------------------- */
   const isWorkingDay = (date) => {
     const dayOfWeek = date.getDay();
-    return dayOfWeek >= 2 || dayOfWeek === 0; // Martes a Domingo
+    return dayOfWeek >= 2 || dayOfWeek === 0;
   };
 
   const generateCalendarDays = () => {
@@ -82,7 +102,7 @@ const MenuCalendario = ({ usuario: propUsuario }) => {
     for (let i = 0; i < 42 && cellCount < 36; i++) {
       const cellDate = new Date(startDate);
       cellDate.setDate(startDate.getDate() + i);
-      if (cellDate.getDay() === 1) continue; // Omitir lunes
+      if (cellDate.getDay() === 1) continue;
       const isOtherMonth = cellDate.getMonth() !== month;
       const isToday = cellDate.toDateString() === today.toDateString();
       const isUnavailable = isOtherMonth || cellDate < today || !isWorkingDay(cellDate);
@@ -115,11 +135,12 @@ const MenuCalendario = ({ usuario: propUsuario }) => {
       alert('Por favor completa todos los campos');
       return;
     }
-
     if (!usuario) {
       alert('Debes iniciar sesión primero');
       return;
     }
+
+    setLoading(true);
 
     const dateString = selectedDate.toISOString().split('T')[0];
     const dayName = dayNamesFull[selectedDate.getDay()];
@@ -131,35 +152,68 @@ const MenuCalendario = ({ usuario: propUsuario }) => {
                           selectedTime.includes('09') ? '9:00 AM' : '10:00 AM';
 
     try {
-      const res = await axios.post('http://localhost:3001/reservas', {
+      console.log('Enviando reserva:', {
         usuario_id: usuario.id,
         clase_id: actividades.indexOf(bookingData.actividad) + 1,
         fecha: dateString,
         horario: selectedTime
       });
 
+      const res = await axios.post('http://localhost:3001/reservas', {
+        usuario_id: usuario.id,
+        fecha: dateString,
+        horario: selectedTime,
+        tipoActividad: bookingData.actividad // obligatorio según tu router
+      });
+
+      console.log('Respuesta del servidor:', res.data);
+
       setOccupiedSlots(prev => ({
         ...prev,
         [dateString]: [...(prev[dateString] || []), selectedTime]
       }));
 
-      setConfirmedBooking({ ...bookingData, fecha: formattedDate, hora: timeFormatted, dayName });
+      setConfirmedBooking({ 
+        ...bookingData, 
+        fecha: formattedDate, 
+        hora: timeFormatted, 
+        dayName,
+        caballo: res.data.caballo_nombre || 'Caballo asignado',
+        caballo_id: res.data.caballo_id,
+        clase_id: res.data.clase_id,
+        reserva_id: res.data.reserva_id,
+        tipo: res.data.tipo
+      });
       setShowSuccessModal(true);
-
       setShowDateModal(false);
       setSelectedDate(null);
       setSelectedTime(null);
       setBookingData({ nombre: usuario.nombre, edad: '', actividad: '' });
+
     } catch (err) {
-      console.error(err);
-      alert(err.response?.data?.message || 'Error creando reserva');
+      console.error('Error creando reserva:', err);
+      const errorMessage = err.response?.data?.message || 'Error creando reserva';
+      alert(`Error: ${errorMessage}`);
+    } finally {
+      setLoading(false);
     }
   };
 
-  /* ---------------------- NAVEGACIÓN CALENDARIO ---------------------- */
-  const previousMonth = () => { setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1)); resetSelection(); };
-  const nextMonth = () => { setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1)); resetSelection(); };
-  const resetSelection = () => { setSelectedDate(null); setSelectedTime(null); setBookingData({ nombre: usuario?.nombre || '', edad: '', actividad: '' }); };
+  const previousMonth = () => { 
+    setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1)); 
+    resetSelection(); 
+  };
+  
+  const nextMonth = () => { 
+    setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1)); 
+    resetSelection(); 
+  };
+  
+  const resetSelection = () => { 
+    setSelectedDate(null); 
+    setSelectedTime(null); 
+    setBookingData({ nombre: usuario?.nombre || '', edad: '', actividad: '' }); 
+  };
 
   const calendarDays = generateCalendarDays();
   const selectedDateString = selectedDate ? selectedDate.toISOString().split('T')[0] : '';
@@ -167,9 +221,12 @@ const MenuCalendario = ({ usuario: propUsuario }) => {
   const isWorkingToday = selectedDate ? isWorkingDay(selectedDate) : false;
 
   const closeSuccessModal = () => { setShowSuccessModal(false); setConfirmedBooking(null); };
-  const closeDateModal = () => { setShowDateModal(false); setSelectedTime(null); setBookingData({ nombre: usuario?.nombre || '', edad: '', actividad: '' }); };
+  const closeDateModal = () => { 
+    setShowDateModal(false); 
+    setSelectedTime(null); 
+    setBookingData({ nombre: usuario?.nombre || '', edad: '', actividad: '' }); 
+  };
 
-  // Si no hay usuario
   if (!usuario) {
     return (
       <div className="calendar-container">
@@ -181,10 +238,9 @@ const MenuCalendario = ({ usuario: propUsuario }) => {
     );
   }
 
-  /* ---------------------- RENDER ---------------------- */
   return (
     <div className="calendar-container">
-      {/* Modal al seleccionar fecha */}
+      {/* MODALES Y CALENDARIO */}
       {showDateModal && selectedDate && (
         <div className="modal-overlay" onClick={closeDateModal}>
           <div className="date-modal" onClick={e => e.stopPropagation()}>
@@ -242,8 +298,12 @@ const MenuCalendario = ({ usuario: propUsuario }) => {
                           {actividades.map(act => <option key={act} value={act}>{act.charAt(0).toUpperCase() + act.slice(1)}</option>)}
                         </select>
                       </div>
-                      <button className="modal-btn primary" onClick={confirmAppointment} disabled={!bookingData.nombre || !bookingData.edad || !bookingData.actividad}>
-                        Confirmar Reserva
+                      <button 
+                        className="modal-btn primary" 
+                        onClick={confirmAppointment} 
+                        disabled={!bookingData.nombre || !bookingData.edad || !bookingData.actividad || loading}
+                      >
+                        {loading ? 'Creando reserva...' : 'Confirmar Reserva'}
                       </button>
                     </div>
                   )}
@@ -260,7 +320,7 @@ const MenuCalendario = ({ usuario: propUsuario }) => {
       )}
 
       <TituloReserva />
-      {/* Calendario */}
+
       <div className="calendar-section">
         <div className="calendar-header">
           <div className="month-navigation">
@@ -287,7 +347,6 @@ const MenuCalendario = ({ usuario: propUsuario }) => {
         </div>
       </div>
 
-      {/* Modal de confirmación */}
       {showSuccessModal && confirmedBooking && (
         <div className="modal-overlay" onClick={closeSuccessModal}>
           <div className="success-modal" onClick={e => e.stopPropagation()}>
@@ -297,14 +356,58 @@ const MenuCalendario = ({ usuario: propUsuario }) => {
             </div>
             <div className="modal-content">
               <div className="booking-details">
-                <div className="detail-row"><div className="detail-info"><span className="detail-label">Nombre:</span> <span className="detail-value">{confirmedBooking.nombre}</span></div></div>
-                <div className="detail-row"><div className="detail-info"><span className="detail-label">Edad:</span> <span className="detail-value">{confirmedBooking.edad} años</span></div></div>
-                <div className="detail-row"><div className="detail-info"><span className="detail-label">Actividad:</span> <span className="detail-value">{confirmedBooking.actividad.charAt(0).toUpperCase() + confirmedBooking.actividad.slice(1)}</span></div></div>
-                <div className="detail-row"><div className="detail-info"><span className="detail-label">Fecha:</span> <span className="detail-value">{confirmedBooking.fecha}</span></div></div>
-                <div className="detail-row"><div className="detail-info"><span className="detail-label">Hora:</span> <span className="detail-value">{confirmedBooking.hora}</span></div></div>
+                <div className="detail-row">
+                  <div className="detail-info">
+                    <span className="detail-label">Nombre:</span> 
+                    <span className="detail-value">{confirmedBooking.nombre}</span>
+                  </div>
+                </div>
+                <div className="detail-row">
+                  <div className="detail-info">
+                    <span className="detail-label">Edad:</span> 
+                    <span className="detail-value">{confirmedBooking.edad} años</span>
+                  </div>
+                </div>
+                <div className="detail-row">
+                  <div className="detail-info">
+                    <span className="detail-label">Actividad:</span> 
+                    <span className="detail-value">{confirmedBooking.actividad.charAt(0).toUpperCase() + confirmedBooking.actividad.slice(1)}</span>
+                  </div>
+                </div>
+                <div className="detail-row">
+                  <div className="detail-info">
+                    <span className="detail-label">Fecha:</span> 
+                    <span className="detail-value">{confirmedBooking.fecha}</span>
+                  </div>
+                </div>
+                <div className="detail-row">
+                  <div className="detail-info">
+                    <span className="detail-label">Hora:</span> 
+                    <span className="detail-value">{confirmedBooking.hora}</span>
+                  </div>
+                </div>
+                {confirmedBooking.caballo && (
+                  <div className="detail-row">
+                    <div className="detail-info">
+                      <span className="detail-label">Caballo:</span> 
+                      <span className="detail-value">{confirmedBooking.caballo}</span>
+                    </div>
+                  </div>
+                )}
+                {confirmedBooking.reserva_id && (
+                  <div className="detail-row">
+                    <div className="detail-info">
+                      <span className="detail-label">ID Reserva:</span> 
+                      <span className="detail-value">#{confirmedBooking.reserva_id}</span>
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="success-message">
                 <p>Tu cita ha sido reservada exitosamente. Te esperamos el <strong>{confirmedBooking.dayName}</strong> a las <strong>{confirmedBooking.hora}</strong>.</p>
+                <p className="reservation-note">
+                  <strong>Nota:</strong> Se ha creado automáticamente una clase de <em>{confirmedBooking.tipo}</em> y se te ha asignado un caballo apropiado para esta actividad.
+                </p>
                 <p>¡Nos vemos pronto!</p>
               </div>
             </div>

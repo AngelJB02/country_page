@@ -1,133 +1,119 @@
-// server/reservas.js
 import express from 'express';
 import cors from 'cors';
 import db from './db.js'; // tu conexión a MySQL
 
-const app = express();
-const PORT = 3001;
+const router = express.Router();
 
-app.use(cors());
-app.use(express.json());
+router.use(cors());
+router.use(express.json());
 
-// Ruta de prueba
-app.get('/', (req, res) => {
-  res.json({ message: 'Servidor corriendo ✅' });
-});
-
-/* ------------------- LOGIN USUARIO (sin hash) ------------------- */
-/* ------------------- LOGIN USUARIO (sin hash) ------------------- */
-app.post('/login', async (req, res) => {
+// ------------------ OBTENER RESERVAS AGRUPADAS ------------------
+router.get('/', async (req, res) => {
   try {
-    const { email, password } = req.body;
-
-    // Buscar por email o nombre
-    const [rows] = await db.execute(
-      'SELECT * FROM usuarios WHERE (email = ? OR nombre = ?)',
-      [email, email] // reutilizamos el valor del input
+    const [reservas] = await db.query(
+      'SELECT horario, fecha FROM reservas WHERE estado != "cancelada"'
     );
 
-    if (rows.length === 0) {
-      return res.status(401).json({ message: 'Usuario no encontrado' });
-    }
-
-    const usuario = rows[0];
-
-    // Validar contraseña directamente (sin hash)
-    if (password !== usuario.password) {
-      return res.status(401).json({ message: 'Contraseña incorrecta' });
-    }
-
-    // Verificar que esté activo
-    if (usuario.estado !== 'activo') {
-      return res.status(403).json({ message: 'Usuario no está activo' });
-    }
-
-    // Respuesta con datos del usuario
-    res.json({
-      id: usuario.id,
-      nombre: usuario.nombre,
-      apellido: usuario.apellido,
-      email: usuario.email,
-      rol: usuario.rol,
-      estado: usuario.estado
+    const agrupadas = {};
+    reservas.forEach(r => {
+      const fechaStr = r.fecha instanceof Date ? r.fecha.toISOString().split('T')[0] : r.fecha;
+      if (!agrupadas[fechaStr]) agrupadas[fechaStr] = [];
+      agrupadas[fechaStr].push(r.horario);
     });
+
+    res.json(agrupadas);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Error en login' });
+    console.error('Error cargando reservas:', err);
+    res.status(500).json({ message: 'Error cargando reservas', error: err.message });
   }
 });
 
-/* ------------------- CABALLOS DISPONIBLES ------------------- */
-app.get('/caballos', async (req, res) => {
-  const { tipo, fecha } = req.query;
+// ------------------ ASIGNAR CABALLO ------------------
+async function asignarCaballo(tipo) {
   try {
-    const [caballos] = await db.execute(
-      `SELECT * FROM caballos c 
-       WHERE c.tipo = ? AND c.disponible = 1 AND c.id NOT IN (
-         SELECT caballo_id FROM reservas WHERE fecha = ?
-       ) LIMIT 1`,
-      [tipo, fecha]
+    const [caballos] = await db.query(
+      'SELECT id, tipo FROM caballos WHERE tipo = ? AND disponible = 1 LIMIT 1',
+      [tipo]
     );
-    res.json(caballos);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Error obteniendo caballos' });
-  }
-});
+    if (caballos.length > 0) return caballos[0];
 
-/* ------------------- CREAR RESERVA AUTOMÁTICA ------------------- */
-app.post('/reservas', async (req, res) => {
-  const { usuario_id, clase_id, fecha, horario } = req.body;
+    const [otros] = await db.query(
+      'SELECT id, tipo FROM caballos WHERE disponible = 1 LIMIT 1'
+    );
+    return otros.length > 0 ? otros[0] : null;
+  } catch (err) {
+    console.error('Error asignando caballo:', err);
+    return null;
+  }
+}
+
+// ------------------ CREAR RESERVA ------------------
+router.post('/', async (req, res) => {
+  const { usuario_id, fecha, horario, tipoActividad } = req.body;
+
+  if (!usuario_id || !fecha || !horario || !tipoActividad) {
+    return res.status(400).json({ message: 'Faltan datos obligatorios' });
+  }
 
   try {
-    // Buscar tipo de clase
-    const [claseRows] = await db.execute(`SELECT tipo FROM clases WHERE id = ?`, [clase_id]);
-    if (claseRows.length === 0) return res.status(400).json({ message: 'Clase no encontrada' });
-    const tipoClase = claseRows[0].tipo;
+    // Validar usuario
+    const [usuarios] = await db.query('SELECT id, nombre FROM usuarios WHERE id = ?', [usuario_id]);
+    if (usuarios.length === 0) return res.status(400).json({ message: 'Usuario no encontrado' });
 
-    // Buscar caballo disponible
-    const [caballos] = await db.execute(
-      `SELECT * FROM caballos c 
-       WHERE c.tipo = ? AND c.disponible = 1 AND c.id NOT IN (
-         SELECT caballo_id FROM reservas WHERE fecha = ?
-       ) LIMIT 1`,
-      [tipoClase, fecha]
+    // Validar si ya existe reserva
+    const [exist] = await db.query(
+      'SELECT id FROM reservas WHERE fecha = ? AND horario = ? AND estado != "cancelada"',
+      [fecha, horario]
     );
-    if (caballos.length === 0) return res.status(400).json({ message: 'No hay caballos disponibles' });
-    const caballo_id = caballos[0].id;
+    if (exist.length > 0) return res.status(400).json({ message: 'Reserva ya existe' });
 
-    // Insertar reserva
-    await db.execute(
-      `INSERT INTO reservas (usuario_id, caballo_id, clase_id, fecha, horario) VALUES (?, ?, ?, ?, ?)`,
-      [usuario_id, caballo_id, clase_id, fecha, horario]
+    // Asignar caballo
+    const caballo = await asignarCaballo(tipoActividad);
+    if (!caballo) return res.status(400).json({ message: `No hay caballos disponibles para ${tipoActividad}` });
+
+    // Crear clase
+    const [claseResult] = await db.query(
+      'INSERT INTO clases (tipo, fecha, confirmacion_cita, usuario_id, caballo_id) VALUES (?, ?, 1, ?, ?)',
+      [tipoActividad, fecha, usuario_id, caballo.id]
+    );
+    const claseId = claseResult.insertId;
+
+    // Crear reserva
+    const [reservaResult] = await db.query(
+      'INSERT INTO reservas (usuario_id, caballo_id, clase_id, fecha, horario, estado) VALUES (?, ?, ?, ?, ?, "confirmada")',
+      [usuario_id, caballo.id, claseId, fecha, horario]
     );
 
-    // Actualizar control_caballos
-    const [controlRows] = await db.execute(
-      `SELECT * FROM control_caballos WHERE caballo_id = ? AND fecha = ? AND tipo_clase = ?`,
-      [caballo_id, fecha, tipoClase]
-    );
+    res.json({
+      message: 'Reserva creada con éxito',
+      clase_id: claseId,
+      reserva_id: reservaResult.insertId,
+      caballo_id: caballo.id,
+      caballo_nombre: `Caballo #${caballo.id} (${caballo.tipo})`,
+      usuario_nombre: usuarios[0].nombre,
+      fecha,
+      horario,
+      tipo: tipoActividad,
+      estado: 'confirmada'
+    });
 
-    if (controlRows.length === 0) {
-      await db.execute(
-        `INSERT INTO control_caballos (caballo_id, fecha, tipo_clase, veces_usado) VALUES (?, ?, ?, 1)`,
-        [caballo_id, fecha, tipoClase]
-      );
-    } else {
-      await db.execute(
-        `UPDATE control_caballos SET veces_usado = veces_usado + 1 WHERE id = ?`,
-        [controlRows[0].id]
-      );
-    }
-
-    res.json({ message: 'Reserva creada exitosamente', caballo_id });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Error creando reserva' });
+    console.error('Error creando reserva:', err);
+    res.status(500).json({ message: 'Error interno', error: err.message });
   }
 });
 
-// Levantar servidor
-app.listen(PORT, () => {
-  console.log(`Servidor corriendo en http://localhost:${PORT}`);
+// ------------------ CONFIRMAR RESERVA ------------------
+router.patch('/:reserva_id/confirmar', async (req, res) => {
+  const { reserva_id } = req.params;
+  try {
+    const [result] = await db.query('UPDATE reservas SET estado = ? WHERE id = ?', ['confirmada', reserva_id]);
+    if (result.affectedRows === 0) return res.status(404).json({ message: 'Reserva no encontrada' });
+    res.json({ message: 'Reserva confirmada con éxito' });
+  } catch (err) {
+    console.error('Error confirmando reserva:', err);
+    res.status(500).json({ message: 'Error confirmando reserva', error: err.message });
+  }
 });
+
+export default router;
