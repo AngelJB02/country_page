@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import db from './db.js'; // tu conexión a MySQL
+import instructorRoutes from '../routes/instructor.js'; 
 
 const app = express();
 
@@ -52,6 +53,9 @@ app.post('/login', async (req, res) => {
     return res.status(500).json({ message: 'Error del servidor' });
   }
 });
+
+// Usar el router de instructor
+app.use('/instructor', instructorRoutes);
 
 // Iniciar servidor
 app.listen(3001, () => console.log('Servidor escuchando en http://localhost:3001'));
