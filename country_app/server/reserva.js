@@ -28,6 +28,42 @@ router.get('/', async (req, res) => {
   }
 });
 
+// ------------------ OBTENER RESERVAS DE UN USUARIO ------------------
+router.get('/usuario/:usuario_id', async (req, res) => {
+  const { usuario_id } = req.params;
+  
+  console.log('Obteniendo reservas para usuario:', usuario_id);
+
+  try {
+    const [reservas] = await db.query(`
+      SELECT 
+        r.id as reserva_id,
+        r.fecha,
+        r.horario,
+        r.estado,
+        r.fecha_creacion,
+        c.tipo as tipo_clase,
+        CONCAT('Caballo #', ca.id, ' (', ca.tipo, ')') as caballo_nombre,
+        u.nombre as usuario_nombre
+      FROM reservas r
+      LEFT JOIN clases c ON r.clase_id = c.id
+      LEFT JOIN caballos ca ON r.caballo_id = ca.id
+      LEFT JOIN usuarios u ON r.usuario_id = u.id
+      WHERE r.usuario_id = ?
+      ORDER BY r.fecha DESC, r.horario DESC
+    `, [usuario_id]);
+
+    console.log(`Encontradas ${reservas.length} reservas para usuario ${usuario_id}`);
+    res.json(reservas);
+  } catch (err) {
+    console.error('Error obteniendo reservas del usuario:', err);
+    res.status(500).json({ 
+      message: 'Error obteniendo reservas del usuario', 
+      error: err.message 
+    });
+  }
+});
+
 // ------------------ ASIGNAR CABALLO ------------------
 async function asignarCaballo(tipo) {
   try {

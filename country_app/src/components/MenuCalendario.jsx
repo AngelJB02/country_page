@@ -6,7 +6,19 @@ import axios from 'axios';
 
 const MenuCalendario = ({ usuario: propUsuario }) => {
   // Memoizar usuario para evitar recalculaciones innecesarias
-  const usuario = useMemo(() => propUsuario || JSON.parse(localStorage.getItem("usuario")), [propUsuario]);
+  const usuario = useMemo(() => {
+  if (propUsuario) return propUsuario;
+
+  const storedUsuario = localStorage.getItem("usuario");
+  if (!storedUsuario) return null;
+
+  try {
+    return JSON.parse(storedUsuario);
+  } catch (err) {
+    console.error("Error parseando usuario de localStorage:", err);
+    return null;
+  }
+}, [propUsuario]);
 
   // VERIFICAR ROL PERMITIDO
   const rolesPermitidos = ['admin', 'cliente'];
@@ -34,6 +46,7 @@ const MenuCalendario = ({ usuario: propUsuario }) => {
   const [showDateModal, setShowDateModal] = useState(false);
   const [occupiedSlots, setOccupiedSlots] = useState({});
   const [loading, setLoading] = useState(false);
+  
 
   const monthNames = [
     'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -418,7 +431,8 @@ const MenuCalendario = ({ usuario: propUsuario }) => {
         </div>
       )}
 
-      <ReservaInfo />
+      <ReservaInfo booking={confirmedBooking} />
+
     </div>
   );
 };
