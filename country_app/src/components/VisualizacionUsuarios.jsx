@@ -1,50 +1,40 @@
-import React, { useState } from 'react';
-import RegistroUsuarios from './RegistroUsuarios'; // Importa el componente de registro
-import VisualizacionUsuarios from './VisualizacionUsuarios'; // Importa el componente de gestión
+import React from "react";
 
-const UserSystemMain = ({ onBack }) => {
-  const [activeTab, setActiveTab] = useState('register');
-
-  const handleTabChange = (tab) => {
-    setActiveTab(tab);
-  };
+const UsersTable = () => {
+  const users = [
+    { id: 1, nombre: "Juan Pérez", email: "juan@test.com", estado: "Activo" },
+    { id: 2, nombre: "Ana Gómez", email: "ana@test.com", estado: "Pendiente" },
+  ];
 
   return (
-    <div className="user-management-container">
-      <div className="user-management-content">
-        {/* Header */}
-        <div className="user-management-header">
-          <button className="back-button" onClick={onBack} title="Volver">
-            ←
-          </button>
-          <h1>Sistema de Usuarios</h1>
-          <p>Gestión completa de cuentas de usuario</p>
-        </div>
-
-        {/* Navegación de pestañas */}
-        <div className="tab-navigation">
-          <button
-            className={`tab-button ${activeTab === 'register' ? 'active' : ''}`}
-            onClick={() => handleTabChange('register')}
-          >
-            Registrar Usuario
-          </button>
-          <button
-            className={`tab-button ${activeTab === 'manage' ? 'active' : ''}`}
-            onClick={() => handleTabChange('manage')}
-          >
-            Administrar Usuarios
-          </button>
-        </div>
-
-        {/* Contenido de las pestañas */}
-        <div className="tab-content">
-          {activeTab === 'register' && <RegistroUsuaios />}
-          {activeTab === 'manage' && <VisualizacionUsuarios />}
-        </div>
-      </div>
-    </div>
+    <table className="users-table">
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Email</th>
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {users.map((u) => (
+          <tr key={u.id}>
+            <td>{u.nombre}</td>
+            <td>{u.email}</td>
+            <td>
+              <span className={`status-badge status-${u.estado.toLowerCase()}`}>
+                {u.estado}
+              </span>
+            </td>
+            <td className="action-buttons">
+              <button className="action-btn btn-edit">Editar</button>
+              <button className="action-btn btn-delete">Eliminar</button>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 };
 
-export default UserSystemMain;
+export default UsersTable;
