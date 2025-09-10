@@ -911,3 +911,38 @@
   opacity: 0.7;
   cursor: not-allowed;
 }
+
+/* Estilos adicionales para los time slots mejorados */
+.time-slot {
+  position: relative;
+  padding: 15px;
+  border-radius: 8px;
+  border: 2px solid #e9ecef;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+  min-height: 70px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.time-slot:hover:not(.occupied) {
+  border-color: #007bff;
+  background: rgba(0, 123, 255, 0.05);
+  transform: translateY(-2px);
+}
+
+.time-slot.selected {
+  border-color: #007bff;
+  background: rgba(0, 123, 255, 0.1);
+  color: #007bff;
+}
+
+.time-slot.occupied {
+  background: #f8f9fa;
+  border-color: #dee2e6;
+  cursor: not-allowed;
+  opacity: 0.6;
+}

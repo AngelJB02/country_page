@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import '../CSS/MenuCalendario.css';
+import '../CSS/DisponibilidadCaballos.css';
 import ReservaInfo from "./ReservaInfo";
 import TituloReserva from './TituloReserva';
-
+import DisponibilidadCaballos from './DisponibilidadCaballos';
 
 const MenuCalendario = () => {
   const [currentDate, setCurrentDate] = useState(new Date(2025, 8, 1)); // Septiembre 2025
@@ -20,8 +21,18 @@ const MenuCalendario = () => {
   const [showDateModal, setShowDateModal] = useState(false);
 
   // Horarios ocupados (formato: 'YYYY-MM-DD': ['HH:MM', 'HH:MM'])
-  const [occupiedSlots, setOccupiedSlots] = useState({
-  });
+  const [occupiedSlots, setOccupiedSlots] = useState({});
+
+  // Configuración de lugares por horario - AQUÍ PUEDES CONECTAR CON TU BACKEND
+  const spotsConfig = {
+    // Formato: 'HH:MM': { total: number, reserved: string[] }
+    '08:00': { total: 6, reserved: [] }, // 6 lugares totales, ninguno reservado
+    '09:00': { total: 6, reserved: [] },
+    '10:00': { total: 6, reserved: [] },
+    '16:00': { total: 8, reserved: [] }, // Más lugares en la tarde
+    '17:00': { total: 8, reserved: [] },
+    '18:00': { total: 8, reserved: [] }
+  };
 
   const monthNames = [
     'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -29,7 +40,7 @@ const MenuCalendario = () => {
   ];
 
   const dayNames = ['Dom', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-  const dayNamesFull = ['Domingo', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']; // Eliminar 'Lunes'
+  const dayNamesFull = ['Domingo', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
   const timeSlots = {
     morning: [
@@ -46,10 +57,25 @@ const MenuCalendario = () => {
 
   const actividades = ['iniciacion', 'caminata', 'salto'];
 
+  // Función para obtener disponibilidad de lugares para un horario específico
+  const getSpotAvailability = (timeSlot, dateString) => {
+    const config = spotsConfig[timeSlot];
+    if (!config) return { total: 0, available: 0 };
+
+    // Contar reservas existentes para este horario y fecha
+    const existingReservations = occupiedSlots[dateString]?.filter(slot => slot === timeSlot).length || 0;
+    const totalReserved = config.reserved.length + existingReservations;
+    
+    return {
+      total: config.total,
+      available: Math.max(0, config.total - totalReserved)
+    };
+  };
+
   // Función para verificar si es día laboral (Martes a Domingo)
   const isWorkingDay = (date) => {
     const dayOfWeek = date.getDay();
-    return dayOfWeek >= 2 || dayOfWeek === 0; // Martes a Domingo (2-6 y 0)
+    return dayOfWeek >= 2 || dayOfWeek === 0;
   };
 
   // Generar días del calendario
@@ -72,12 +98,11 @@ const MenuCalendario = () => {
       cellDate.setDate(startDate.getDate() + i);
 
       if (cellDate.getDay() === 1) {
-      continue;
-    }
+        continue;
+      }
 
       const isOtherMonth = cellDate.getMonth() !== month;
       const isToday = cellDate.toDateString() === today.toDateString();
-      // Solo marcar como no disponible si es de otro mes o es fecha pasada O es lunes
       const isUnavailable = isOtherMonth || cellDate < today || !isWorkingDay(cellDate);
       const isSelected = selectedDate && cellDate.toDateString() === selectedDate.toDateString();
       
@@ -131,6 +156,13 @@ const MenuCalendario = () => {
     }
 
     const dateString = selectedDate.toISOString().split('T')[0];
+    const spotAvailability = getSpotAvailability(selectedTime, dateString);
+    
+    if (spotAvailability.available <= 0) {
+      alert('No hay lugares disponibles para este horario');
+      return;
+    }
+
     const dayName = dayNamesFull[selectedDate.getDay()];
     const formattedDate = selectedDate.toLocaleDateString('es-ES', {
       day: 'numeric',
@@ -188,12 +220,16 @@ const MenuCalendario = () => {
   const occupiedToday = selectedDate ? (occupiedSlots[selectedDateString] || []) : [];
   const isWorkingToday = selectedDate ? isWorkingDay(selectedDate) : false;
 
+  // Obtener disponibilidad para el horario seleccionado
+  const currentSpotAvailability = selectedTime && selectedDate ? 
+    getSpotAvailability(selectedTime, selectedDateString) : 
+    { total: 0, available: 0 };
+
   const closeSuccessModal = () => {
     setShowSuccessModal(false);
     setConfirmedBooking(null);
   };
 
-  // Cerrar el modal de fecha seleccionada
   const closeDateModal = () => {
     setShowDateModal(false);
     setSelectedTime(null);
@@ -201,7 +237,6 @@ const MenuCalendario = () => {
   };
 
   return (
-    
     <div className="calendar-container">
       {/* Modal al seleccionar fecha: muestra horarios y formulario de reserva */}
       {showDateModal && selectedDate && (
@@ -214,7 +249,7 @@ const MenuCalendario = () => {
                 month: 'long',
                 year: 'numeric'
               })}</h2>
-              </div>
+            </div>
             <div className="modal-content">
               {isWorkingToday ? (
                 <>
@@ -225,14 +260,18 @@ const MenuCalendario = () => {
                       {timeSlots.morning.map(slot => {
                         const isOccupied = occupiedToday.includes(slot.time);
                         const isSelected = selectedTime === slot.time;
+                        const spotInfo = getSpotAvailability(slot.time, selectedDateString);
+                        const hasAvailableSpots = spotInfo.available > 0;
+                        
                         return (
                           <div
                             key={slot.time}
-                            className={`time-slot ${isOccupied ? 'occupied' : ''} ${isSelected ? 'selected' : ''}`}
-                            onClick={!isOccupied ? () => selectTime(slot.time) : undefined}
+                            className={`time-slot ${isOccupied || !hasAvailableSpots ? 'occupied' : ''} ${isSelected ? 'selected' : ''}`}
+                            onClick={hasAvailableSpots && !isOccupied ? () => selectTime(slot.time) : undefined}
                           >
-                            {slot.label}
-                            {isOccupied && <span className="occupied-label">Ocupado</span>}
+                            <div className="time-label">{slot.label}</div>
+                            <div className="spots-info">{spotInfo.available}/{spotInfo.total} lugares</div>
+                            {(!hasAvailableSpots || isOccupied) && <span className="occupied-label">Sin lugares</span>}
                           </div>
                         );
                       })}
@@ -244,19 +283,31 @@ const MenuCalendario = () => {
                       {timeSlots.afternoon.map(slot => {
                         const isOccupied = occupiedToday.includes(slot.time);
                         const isSelected = selectedTime === slot.time;
+                        const spotInfo = getSpotAvailability(slot.time, selectedDateString);
+                        const hasAvailableSpots = spotInfo.available > 0;
+                        
                         return (
                           <div
                             key={slot.time}
-                            className={`time-slot ${isOccupied ? 'occupied' : ''} ${isSelected ? 'selected' : ''}`}
-                            onClick={!isOccupied ? () => selectTime(slot.time) : undefined}
+                            className={`time-slot ${isOccupied || !hasAvailableSpots ? 'occupied' : ''} ${isSelected ? 'selected' : ''}`}
+                            onClick={hasAvailableSpots && !isOccupied ? () => selectTime(slot.time) : undefined}
                           >
-                            {slot.label}
-                            {isOccupied && <span className="occupied-label">Ocupado</span>}
+                            <div className="time-label">{slot.label}</div>
+                            <div className="spots-info">{spotInfo.available}/{spotInfo.total} lugares</div>
+                            {(!hasAvailableSpots || isOccupied) && <span className="occupied-label">Sin lugares</span>}
                           </div>
                         );
                       })}
                     </div>
                   </div>
+
+                  {/* Componente de disponibilidad de caballos */}
+                  <DisponibilidadCaballos
+                    totalSpots={currentSpotAvailability.total}
+                    availableSpots={currentSpotAvailability.available}
+                    selectedTime={selectedTime}
+                  />
+
                   {/* Formulario solo si se selecciona horario */}
                   {selectedTime && (
                     <div className="booking-form">
@@ -304,7 +355,7 @@ const MenuCalendario = () => {
                       <button
                         className="modal-btn primary"
                         onClick={confirmAppointment}
-                        disabled={!bookingData.nombre || !bookingData.edad || !bookingData.actividad}
+                        disabled={!bookingData.nombre || !bookingData.edad || !bookingData.actividad || currentSpotAvailability.available <= 0}
                       >
                         Confirmar Reserva
                       </button>
@@ -374,14 +425,13 @@ const MenuCalendario = () => {
         <div className="modal-overlay" onClick={closeSuccessModal}>
           <div className="success-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-            <button className="close-btn2" onClick={closeSuccessModal}>×</button>
+              <button className="close-btn2" onClick={closeSuccessModal}>×</button>
               <h2>¡Cita Confirmada!</h2>
             </div>
             
             <div className="modal-content">
               <div className="booking-details">
                 <div className="detail-row">
-
                   <div className="detail-info">
                     <span className="detail-label">Nombre:</span>
                     <span className="detail-value">{confirmedBooking.nombre}</span>
@@ -389,7 +439,6 @@ const MenuCalendario = () => {
                 </div>
                 
                 <div className="detail-row">
-                  
                   <div className="detail-info">
                     <span className="detail-label">Edad:</span>
                     <span className="detail-value">{confirmedBooking.edad} años</span>
@@ -397,7 +446,6 @@ const MenuCalendario = () => {
                 </div>
                 
                 <div className="detail-row">
-                  
                   <div className="detail-info">
                     <span className="detail-label">Actividad:</span>
                     <span className="detail-value">{confirmedBooking.actividad.charAt(0).toUpperCase() + confirmedBooking.actividad.slice(1)}</span>
@@ -405,7 +453,6 @@ const MenuCalendario = () => {
                 </div>
                 
                 <div className="detail-row">
-                  
                   <div className="detail-info">
                     <span className="detail-label">Fecha:</span>
                     <span className="detail-value">{confirmedBooking.fecha}</span>
@@ -413,7 +460,6 @@ const MenuCalendario = () => {
                 </div>
                 
                 <div className="detail-row">
-                  
                   <div className="detail-info">
                     <span className="detail-label">Hora:</span>
                     <span className="detail-value">{confirmedBooking.hora}</span>
@@ -437,9 +483,7 @@ const MenuCalendario = () => {
       )}
       <ReservaInfo />
     </div>
-    
   );
 };
-
 
 export default MenuCalendario;
