@@ -3,62 +3,70 @@ import db from '../db.js';
 
 const router = express.Router();
 
-// --- Disponibilidad ---
+/* =========================
+   GET /reservas/availability
+   Devuelve la disponibilidad de todos los horarios para una fecha.
+   ========================= */
 router.get('/availability', async (req, res) => {
   const { fecha } = req.query;
   if (!fecha) return res.status(400).json({ error: 'La fecha es requerida' });
 
   try {
-    const [clases] = await db.execute("SELECT * FROM clases WHERE fecha = ?", [fecha]);
-    const [horarios] = await db.execute("SELECT * FROM horarios");
+    // 1️⃣ Definimos los horarios fijos
+    const horarios = ["09:00", "10:00", "11:00", "14:00", "15:00", "16:00"];
 
-    const disponibilidad = {
-      iniciacion: {},
-      paseo: {},
-      salto: {},
-    };
-
+    // 2️⃣ Inicializamos la disponibilidad de cada horario
+    const disponibilidad = {};
     horarios.forEach(h => {
-      disponibilidad.iniciacion[h.hora] = 7;
-      disponibilidad.paseo[h.hora] = 5;
-      disponibilidad.salto[h.hora] = null; // cupo total
+      if (["09:00", "10:00", "11:00"].includes(h)) disponibilidad[h] = { total: 7, available: 7 }; // Iniciación
+      else disponibilidad[h] = { total: 5, available: 5 }; // Paseo
     });
 
+    // 3️⃣ Consultamos reservas del día
     const [reservas] = await db.execute(
       "SELECT clase_id, horario, COUNT(*) as total FROM reservas WHERE fecha = ? GROUP BY clase_id, horario",
       [fecha]
     );
 
-    for (let r of reservas) {
+    // 4️⃣ Obtenemos tipos de clase
+    const [clases] = await db.execute("SELECT id, tipo FROM clases");
+
+    // 5️⃣ Ajustamos la disponibilidad según las reservas hechas
+    reservas.forEach(r => {
       const clase = clases.find(c => c.id === r.clase_id);
-      if (!clase) continue;
+      if (!clase) return;
 
-      if (clase.tipo === "salto") {
-        const totalSalto = reservas
-          .filter(x => clases.find(c => c.id === x.clase_id)?.tipo === "salto")
-          .reduce((sum, x) => sum + x.total, 0);
-
-        horarios.forEach(h => {
-          disponibilidad.salto[h.hora] = Math.max(5 - totalSalto, 0);
-        });
-      } else if (clase.tipo === "iniciacion") {
-        disponibilidad.iniciacion[r.horario] = Math.max(7 - r.total, 0);
-      } else if (clase.tipo === "paseo") {
-        disponibilidad.paseo[r.horario] = Math.max(5 - r.total, 0);
+      if (clase.tipo === "iniciacion" || clase.tipo === "paseo") {
+        disponibilidad[r.horario].available -= r.total;
+        if (disponibilidad[r.horario].available < 0) disponibilidad[r.horario].available = 0;
       }
-    }
+    });
 
-    res.json({ fecha, disponibilidad });
+    // 6️⃣ Para Salto: solo 5 espacios por día
+    const [saltoReservas] = await db.execute(
+      "SELECT COUNT(*) as total FROM reservas r JOIN clases c ON r.clase_id = c.id WHERE c.tipo = 'salto' AND r.fecha = ?",
+      [fecha]
+    );
+    const totalSalto = saltoReservas[0].total;
+    disponibilidad["salto"] = { total: 5, available: Math.max(5 - totalSalto, 0) };
+
+    res.json(disponibilidad);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Error en el servidor" });
   }
 });
 
-// --- Crear reserva ---
+
+/* =========================
+   POST /reservas
+   Crear una nueva reserva respetando las reglas de tu sistema.
+   ========================= */
 router.post('/', async (req, res) => {
-  const { usuario_id, caballo_id, clase_id, fecha, horario } = req.body;
-  if (!usuario_id || !clase_id || !fecha || !horario) {
+  const { usuario_id, clase_id, fecha, horario, nombre, edad, actividad } = req.body;
+
+  // 1️⃣ Validación básica
+  if (!usuario_id || !clase_id || !fecha || !horario || !nombre || !edad || !actividad) {
     return res.status(400).json({ error: 'Faltan campos requeridos' });
   }
 
@@ -66,7 +74,7 @@ router.post('/', async (req, res) => {
   try {
     await conn.beginTransaction();
 
-    // Validar que el usuario no tenga otra reserva ese día
+    // 2️⃣ Verificar que el usuario no tenga otra reserva ese día
     const [existe] = await conn.execute(
       "SELECT id FROM reservas WHERE usuario_id = ? AND fecha = ?",
       [usuario_id, fecha]
@@ -76,8 +84,8 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: "El usuario ya tiene reserva ese día" });
     }
 
-    // Verificar clase
-    const [claseRows] = await conn.execute("SELECT * FROM clases WHERE id = ?", [clase_id]);
+    // 3️⃣ Obtener tipo de clase y establecer cupo máximo
+    const [claseRows] = await conn.execute("SELECT id, tipo FROM clases WHERE id = ?", [clase_id]);
     if (claseRows.length === 0) {
       await conn.rollback();
       return res.status(404).json({ error: "Clase no encontrada" });
@@ -86,28 +94,47 @@ router.post('/', async (req, res) => {
     const tipo = claseRows[0].tipo;
     let cupoMax = tipo === "iniciacion" ? 7 : tipo === "paseo" ? 5 : 5;
 
-    let query, params;
+    // 4️⃣ Contar reservas existentes según tipo de clase
+    let [count];
     if (tipo === "salto") {
-      query = "SELECT COUNT(*) as total FROM reservas r JOIN clases c ON r.clase_id = c.id WHERE c.tipo = 'salto' AND r.fecha = ?";
-      params = [fecha];
+      // Salto: solo 5 por día
+      [count] = await conn.execute(
+        "SELECT COUNT(*) as total FROM reservas r JOIN clases c ON r.clase_id = c.id WHERE c.tipo = 'salto' AND r.fecha = ?",
+        [fecha]
+      );
     } else {
-      query = "SELECT COUNT(*) as total FROM reservas r JOIN clases c ON r.clase_id = c.id WHERE c.tipo = ? AND r.fecha = ? AND r.horario = ?";
-      params = [tipo, fecha, horario];
+      // Iniciación o Paseo: cupo por horario
+      [count] = await conn.execute(
+        "SELECT COUNT(*) as total FROM reservas WHERE clase_id = ? AND fecha = ? AND horario = ?",
+        [clase_id, fecha, horario]
+      );
     }
 
-    const [count] = await conn.execute(query, params);
     if (count[0].total >= cupoMax) {
       await conn.rollback();
       return res.status(400).json({ error: "No hay cupo disponible" });
     }
 
+    // 5️⃣ Insertar la reserva
     const [result] = await conn.execute(
-      "INSERT INTO reservas (usuario_id, caballo_id, clase_id, fecha, horario, estado) VALUES (?, ?, ?, ?, ?, 'pendiente')",
-      [usuario_id, caballo_id || null, clase_id, fecha, horario]
+      "INSERT INTO reservas (usuario_id, clase_id, fecha, horario, nombre, edad, actividad, estado) VALUES (?, ?, ?, ?, ?, ?, ?, 'pendiente')",
+      [usuario_id, clase_id, fecha, horario, nombre, edad, actividad]
     );
 
     await conn.commit();
-    res.status(201).json({ id: result.insertId, estado: "pendiente" });
+
+    res.status(201).json({
+      id: result.insertId,
+      usuario_id,
+      clase_id,
+      fecha,
+      horario,
+      nombre,
+      edad,
+      actividad,
+      estado: "pendiente"
+    });
+
   } catch (err) {
     console.error(err);
     await conn.rollback();

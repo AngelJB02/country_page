@@ -1,113 +1,82 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import '../CSS/MenuCalendario.css';
 import '../CSS/DisponibilidadCaballos.css';
 import ReservaInfo from "./ReservaInfo";
 import TituloReserva from './TituloReserva';
 import DisponibilidadCaballos from './DisponibilidadCaballos';
+import { useReservas } from "../hooks/useReservas";
 
 const MenuCalendario = () => {
-  const [currentDate, setCurrentDate] = useState(new Date(2025, 8, 1)); // Septiembre 2025
+  const [currentDate, setCurrentDate] = useState(new Date(2025, 8, 1));
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTime, setSelectedTime] = useState(null);
-  const [bookingData, setBookingData] = useState({
-    nombre: '',
-    edad: '',
-    actividad: ''
-  });
+  const [bookingData, setBookingData] = useState({ nombre: '', edad: '', actividad: '' });
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [confirmedBooking, setConfirmedBooking] = useState(null);
-
-  // Estado para el modal de selección de fecha
   const [showDateModal, setShowDateModal] = useState(false);
 
-  // Horarios ocupados (formato: 'YYYY-MM-DD': ['HH:MM', 'HH:MM'])
-  const [occupiedSlots, setOccupiedSlots] = useState({});
-
-  // Configuración de lugares por horario - AQUÍ PUEDES CONECTAR CON TU BACKEND
-  const spotsConfig = {
-    // Formato: 'HH:MM': { total: number, reserved: string[] }
-    '08:00': { total: 6, reserved: [] }, // 6 lugares totales, ninguno reservado
-    '09:00': { total: 6, reserved: [] },
-    '10:00': { total: 6, reserved: [] },
-    '16:00': { total: 8, reserved: [] }, // Más lugares en la tarde
-    '17:00': { total: 8, reserved: [] },
-    '18:00': { total: 8, reserved: [] }
-  };
-
-  const monthNames = [
-    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-  ];
-
-  const dayNames = ['Dom', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-  const dayNamesFull = ['Domingo', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+  const { availability, getAvailability, createReserva, loading, error } = useReservas();
 
   const timeSlots = {
     morning: [
-      { time: '08:00', label: '8:00 AM' },
       { time: '09:00', label: '9:00 AM' },
-      { time: '10:00', label: '10:00 AM' }
+      { time: '10:00', label: '10:00 AM' },
+      { time: '11:00', label: '11:00 AM' }
     ],
     afternoon: [
-      { time: '16:00', label: '4:00 PM' },
-      { time: '17:00', label: '5:00 PM' },
-      { time: '18:00', label: '6:00 PM' }
+      { time: '14:00', label: '2:00 PM' },
+      { time: '15:00', label: '3:00 PM' },
+      { time: '16:00', label: '4:00 PM' }
     ]
   };
 
-  const actividades = ['iniciacion', 'caminata', 'salto'];
+  const actividades = ['iniciacion', 'paseo', 'salto'];
 
-  // Función para obtener disponibilidad de lugares para un horario específico
-  const getSpotAvailability = (timeSlot, dateString) => {
-    const config = spotsConfig[timeSlot];
-    if (!config) return { total: 0, available: 0 };
+  // Traer disponibilidad al seleccionar fecha
+  useEffect(() => {
+    if (selectedDate) {
+      const dateString = selectedDate.toISOString().split("T")[0];
+      getAvailability(dateString);
+    }
+  }, [selectedDate]);
 
-    // Contar reservas existentes para este horario y fecha
-    const existingReservations = occupiedSlots[dateString]?.filter(slot => slot === timeSlot).length || 0;
-    const totalReserved = config.reserved.length + existingReservations;
-    
-    return {
-      total: config.total,
-      available: Math.max(0, config.total - totalReserved)
-    };
+  // Obtener disponibilidad de un horario
+  const getSpotAvailability = (timeSlot, dateString, actividad = null) => {
+    const dayAvailability = availability[dateString] || {};
+    if (actividad === "salto") return dayAvailability.salto || { total: 5, available: 5 };
+    return dayAvailability[timeSlot] || { total: 0, available: 0 };
   };
 
-  // Función para verificar si es día laboral (Martes a Domingo)
   const isWorkingDay = (date) => {
-    const dayOfWeek = date.getDay();
-    return dayOfWeek >= 2 || dayOfWeek === 0;
+    const day = date.getDay();
+    return day >= 2 || day === 0; // Martes a Domingo
   };
 
-  // Generar días del calendario
   const generateCalendarDays = () => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
     const firstDay = new Date(year, month, 1);
     const startDate = new Date(firstDay);
-    startDate.setDate(startDate.getDate() - 1);
     startDate.setDate(startDate.getDate() - (startDate.getDay() === 0 ? 0 : startDate.getDay()));
-  
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     const days = [];
-    let cellCount = 0;
-
-    for (let i = 0; i < 42 && cellCount < 36; i++) {
+    for (let i = 0; i < 42; i++) {
       const cellDate = new Date(startDate);
       cellDate.setDate(startDate.getDate() + i);
-
-      if (cellDate.getDay() === 1) {
-        continue;
-      }
+      if (cellDate.getDay() === 1) continue; // lunes cerrado
 
       const isOtherMonth = cellDate.getMonth() !== month;
       const isToday = cellDate.toDateString() === today.toDateString();
       const isUnavailable = isOtherMonth || cellDate < today || !isWorkingDay(cellDate);
       const isSelected = selectedDate && cellDate.toDateString() === selectedDate.toDateString();
-      
+
       const dateString = cellDate.toISOString().split('T')[0];
-      const appointmentCount = occupiedSlots[dateString]?.length || 0;
+      const appointmentCount = availability[dateString]
+        ? Object.values(availability[dateString]).reduce((acc, slot) => acc + (slot.total - slot.available), 0)
+        : 0;
 
       days.push({
         date: cellDate,
@@ -119,13 +88,10 @@ const MenuCalendario = () => {
         appointmentCount,
         dateString
       });
-      cellCount++;
     }
-
     return days;
   };
 
-  // Seleccionar fecha (muestra modal)
   const selectDate = (day) => {
     if (day.isUnavailable || day.isOtherMonth) return;
     setSelectedDate(day.date);
@@ -134,102 +100,55 @@ const MenuCalendario = () => {
     setShowDateModal(true);
   };
 
-  // Seleccionar hora
-  const selectTime = (time) => {
-    setSelectedTime(time);
-  };
-
-  // Manejar cambios en el formulario
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setBookingData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  // Confirmar cita desde el modal
-  const confirmAppointment = () => {
+  const confirmAppointment = async () => {
     if (!selectedDate || !selectedTime || !bookingData.nombre || !bookingData.edad || !bookingData.actividad) {
       alert('Por favor completa todos los campos');
       return;
     }
 
-    const dateString = selectedDate.toISOString().split('T')[0];
-    const spotAvailability = getSpotAvailability(selectedTime, dateString);
-    
+    const dateString = selectedDate.toISOString().split("T")[0];
+    const spotAvailability = getSpotAvailability(selectedTime, dateString, bookingData.actividad);
+
     if (spotAvailability.available <= 0) {
       alert('No hay lugares disponibles para este horario');
       return;
     }
 
-    const dayName = dayNamesFull[selectedDate.getDay()];
-    const formattedDate = selectedDate.toLocaleDateString('es-ES', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric'
-    });
-
-    const timeFormatted = selectedTime.includes('16') ? '4:00 PM' :
-                        selectedTime.includes('17') ? '5:00 PM' :
-                        selectedTime.includes('18') ? '6:00 PM' :
-                        selectedTime.includes('08') ? '8:00 AM' :
-                        selectedTime.includes('09') ? '9:00 AM' : '10:00 AM';
-
-    setOccupiedSlots(prev => ({
-      ...prev,
-      [dateString]: [...(prev[dateString] || []), selectedTime]
-    }));
-
-    setConfirmedBooking({
+    const newReserva = await createReserva({
       nombre: bookingData.nombre,
       edad: bookingData.edad,
       actividad: bookingData.actividad,
-      fecha: formattedDate,
-      hora: timeFormatted,
-      dayName
+      fecha: dateString,
+      horario: selectedTime,
     });
-    setShowSuccessModal(true);
 
-    // Resetear selección y cerrar modal de fecha
-    setShowDateModal(false);
-    setSelectedDate(null);
-    setSelectedTime(null);
-    setBookingData({ nombre: '', edad: '', actividad: '' });
+    if (newReserva) {
+      const dayName = selectedDate.toLocaleDateString("es-ES", { weekday: "long" });
+      const formattedDate = new Date(newReserva.fecha).toLocaleDateString("es-ES");
+      setConfirmedBooking({
+        ...newReserva,
+        fecha: formattedDate,
+        hora: newReserva.horario,
+        dayName
+      });
+      setShowSuccessModal(true);
+      setShowDateModal(false);
+    }
   };
 
-  // Navegación del calendario
-  const previousMonth = () => {
-    setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
-    resetSelection();
-  };
-
-  const nextMonth = () => {
-    setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
-    resetSelection();
-  };
-
-  const resetSelection = () => {
-    setSelectedDate(null);
-    setSelectedTime(null);
-    setBookingData({ nombre: '', edad: '', actividad: '' });
-  };
+  const previousMonth = () => setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+  const nextMonth = () => setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
 
   const calendarDays = generateCalendarDays();
   const selectedDateString = selectedDate ? selectedDate.toISOString().split('T')[0] : '';
-  const occupiedToday = selectedDate ? (occupiedSlots[selectedDateString] || []) : [];
-  const isWorkingToday = selectedDate ? isWorkingDay(selectedDate) : false;
-
-  // Obtener disponibilidad para el horario seleccionado
-  const currentSpotAvailability = selectedTime && selectedDate ? 
-    getSpotAvailability(selectedTime, selectedDateString) : 
-    { total: 0, available: 0 };
+  const currentSpotAvailability = selectedTime && selectedDate
+    ? getSpotAvailability(selectedTime, selectedDateString, bookingData.actividad)
+    : { total: 0, available: 0 };
 
   const closeSuccessModal = () => {
     setShowSuccessModal(false);
     setConfirmedBooking(null);
   };
-
   const closeDateModal = () => {
     setShowDateModal(false);
     setSelectedTime(null);
@@ -238,127 +157,113 @@ const MenuCalendario = () => {
 
   return (
     <div className="calendar-container">
-      {/* Modal al seleccionar fecha: muestra horarios y formulario de reserva */}
+      <TituloReserva />
+
+      <div className="calendar-section">
+        <div className="calendar-header">
+          <div className="month-navigation">
+            <button className="nav-btn prev" onClick={previousMonth}>‹</button>
+            <h2 className="month-year">{currentDate.toLocaleDateString("es-ES", { month: "long", year: "numeric" })}</h2>
+            <button className="nav-btn next" onClick={nextMonth}>›</button>
+          </div>
+        </div>
+
+        <div className="calendar-grid">
+          <div className="day-headers">
+            {["Dom", "Mar", "Mié", "Jue", "Vie", "Sáb"].map(day => (
+              <div key={day} className="day-header">{day}</div>
+            ))}
+          </div>
+          <div className="days-grid">
+            {calendarDays.map((day, index) => (
+              <div
+                key={index}
+                className={`day-cell ${day.isOtherMonth ? 'other-month' : ''} ${day.isToday ? 'today' : ''} ${day.isUnavailable ? 'unavailable' : 'available'} ${day.isSelected ? 'selected' : ''}`}
+                onClick={() => selectDate(day)}
+              >
+                <span className="day-number">{day.day}</span>
+                {day.appointmentCount > 0 && !day.isOtherMonth && (
+                  <div className="appointment-indicators">
+                    {Array.from({ length: Math.min(day.appointmentCount, 3) }, (_, i) => <div key={i} className="appointment-dot" />)}
+                    {day.appointmentCount > 3 && <span className="more-appointments">+{day.appointmentCount - 3}</span>}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {showDateModal && selectedDate && (
         <div className="modal-overlay" onClick={closeDateModal}>
           <div className="date-modal" onClick={e => e.stopPropagation()}>
             <button className="close-btn" onClick={closeDateModal}>×</button>
             <div className="modal-header">
-              <h2>Reserva para {dayNamesFull[selectedDate.getDay()]}, {selectedDate.toLocaleDateString('es-ES', {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric'
-              })}</h2>
+              <h2>
+                Reserva para {selectedDate.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+              </h2>
             </div>
             <div className="modal-content">
-              {isWorkingToday ? (
+              {isWorkingDay(selectedDate) ? (
                 <>
                   <h4>Horarios Disponibles</h4>
-                  <div className="time-period">
-                    <h5>Matutino</h5>
-                    <div className="time-slots-grid">
-                      {timeSlots.morning.map(slot => {
-                        const isOccupied = occupiedToday.includes(slot.time);
-                        const isSelected = selectedTime === slot.time;
-                        const spotInfo = getSpotAvailability(slot.time, selectedDateString);
-                        const hasAvailableSpots = spotInfo.available > 0;
-                        
-                        return (
-                          <div
-                            key={slot.time}
-                            className={`time-slot ${isOccupied || !hasAvailableSpots ? 'occupied' : ''} ${isSelected ? 'selected' : ''}`}
-                            onClick={hasAvailableSpots && !isOccupied ? () => selectTime(slot.time) : undefined}
-                          >
-                            <div className="time-label">{slot.label}</div>
-                            <div className="spots-info">{spotInfo.available}/{spotInfo.total} lugares</div>
-                            {(!hasAvailableSpots || isOccupied) && <span className="occupied-label">Sin lugares</span>}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  <div className="time-period">
-                    <h5>Vespertino</h5>
-                    <div className="time-slots-grid">
-                      {timeSlots.afternoon.map(slot => {
-                        const isOccupied = occupiedToday.includes(slot.time);
-                        const isSelected = selectedTime === slot.time;
-                        const spotInfo = getSpotAvailability(slot.time, selectedDateString);
-                        const hasAvailableSpots = spotInfo.available > 0;
-                        
-                        return (
-                          <div
-                            key={slot.time}
-                            className={`time-slot ${isOccupied || !hasAvailableSpots ? 'occupied' : ''} ${isSelected ? 'selected' : ''}`}
-                            onClick={hasAvailableSpots && !isOccupied ? () => selectTime(slot.time) : undefined}
-                          >
-                            <div className="time-label">{slot.label}</div>
-                            <div className="spots-info">{spotInfo.available}/{spotInfo.total} lugares</div>
-                            {(!hasAvailableSpots || isOccupied) && <span className="occupied-label">Sin lugares</span>}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
+                  {["morning", "afternoon"].map(period => (
+                    <div key={period} className="time-period">
+                      <h5>{period === "morning" ? "Matutino" : "Vespertino"}</h5>
+                      <div className="time-slots-grid">
+                        {timeSlots[period].map(slot => {
+                          const spotInfo = getSpotAvailability(slot.time, selectedDateString, bookingData.actividad);
+                          const hasAvailableSpots = spotInfo.available > 0;
+                          const isSelected = selectedTime === slot.time;
 
-                  {/* Componente de disponibilidad de caballos */}
+                          return (
+                            <div
+                              key={slot.time}
+                              className={`time-slot ${!hasAvailableSpots ? 'occupied' : ''} ${isSelected ? 'selected' : ''}`}
+                              onClick={hasAvailableSpots ? () => setSelectedTime(slot.time) : undefined}
+                            >
+                              <div className="time-label">{slot.label}</div>
+                              <div className="spots-info">{spotInfo.available}/{spotInfo.total} lugares</div>
+                              {!hasAvailableSpots && <span className="occupied-label">Sin lugares</span>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+
                   <DisponibilidadCaballos
                     totalSpots={currentSpotAvailability.total}
                     availableSpots={currentSpotAvailability.available}
                     selectedTime={selectedTime}
                   />
 
-                  {/* Formulario solo si se selecciona horario */}
                   {selectedTime && (
                     <div className="booking-form">
                       <h4>Información de la Reserva</h4>
                       <div className="form-group">
-                        <label htmlFor="nombre">Nombre:</label>
-                        <input
-                          type="text"
-                          id="nombre"
-                          name="nombre"
-                          value={bookingData.nombre}
-                          onChange={handleInputChange}
-                          placeholder="Ingresa tu nombre completo"
-                        />
+                        <label>Nombre:</label>
+                        <input type="text" value={bookingData.nombre} onChange={e => setBookingData({...bookingData, nombre: e.target.value})} placeholder="Nombre completo" />
                       </div>
                       <div className="form-group">
-                        <label htmlFor="edad">Edad:</label>
-                        <input
-                          type="number"
-                          id="edad"
-                          name="edad"
-                          value={bookingData.edad}
-                          onChange={handleInputChange}
-                          placeholder="Ingresa tu edad"
-                          min="1"
-                          max="120"
-                        />
+                        <label>Edad:</label>
+                        <input type="number" value={bookingData.edad} onChange={e => setBookingData({...bookingData, edad: e.target.value})} min="1" max="120" placeholder="Edad" />
                       </div>
                       <div className="form-group">
-                        <label htmlFor="actividad">Actividad:</label>
-                        <select
-                          id="actividad"
-                          name="actividad"
-                          value={bookingData.actividad}
-                          onChange={handleInputChange}
-                        >
-                          <option value="">Selecciona una actividad</option>
-                          {actividades.map(actividad => (
-                            <option key={actividad} value={actividad}>
-                              {actividad.charAt(0).toUpperCase() + actividad.slice(1)}
-                            </option>
-                          ))}
+                        <label>Actividad:</label>
+                        <select value={bookingData.actividad} onChange={e => setBookingData({...bookingData, actividad: e.target.value})}>
+                          <option value="">Selecciona</option>
+                          {actividades.map(act => <option key={act} value={act}>{act.charAt(0).toUpperCase() + act.slice(1)}</option>)}
                         </select>
                       </div>
                       <button
                         className="modal-btn primary"
                         onClick={confirmAppointment}
-                        disabled={!bookingData.nombre || !bookingData.edad || !bookingData.actividad || currentSpotAvailability.available <= 0}
+                        disabled={!bookingData.nombre || !bookingData.edad || !bookingData.actividad || currentSpotAvailability.available <= 0 || loading}
                       >
-                        Confirmar Reserva
+                        {loading ? "Guardando..." : "Confirmar Reserva"}
                       </button>
+                      {error && <p className="error-text">{error}</p>}
                     </div>
                   )}
                 </>
@@ -373,115 +278,32 @@ const MenuCalendario = () => {
           </div>
         </div>
       )}
-      
-      {/* Título de la sección */}
-      <TituloReserva />
 
-      {/* Sección del Calendario */}
-      <div className="calendar-section">
-        <div className="calendar-header">
-          <div className="month-navigation">
-            <button className="nav-btn prev" onClick={previousMonth}>‹</button>
-            <h2 className="month-year">
-              {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-            </h2>
-            <button className="nav-btn next" onClick={nextMonth}>›</button>
-          </div>
-        </div>
-        
-        <div className="calendar-grid">
-          <div className="day-headers">
-            {dayNames.map(day => (
-              <div key={day} className="day-header">{day}</div>
-            ))}
-          </div>
-          
-          <div className="days-grid">
-            {calendarDays.map((day, index) => (
-              <div
-                key={index}
-                className={`day-cell ${day.isOtherMonth ? 'other-month' : ''} ${day.isToday ? 'today' : ''} ${day.isUnavailable ? 'unavailable' : 'available'} ${day.isSelected ? 'selected' : ''}`}
-                onClick={() => selectDate(day)}
-              >
-                <span className="day-number">{day.day}</span>
-                {day.appointmentCount > 0 && !day.isOtherMonth && (
-                  <div className="appointment-indicators">
-                    {Array.from({ length: Math.min(day.appointmentCount, 3) }, (_, i) => (
-                      <div key={i} className="appointment-dot" />
-                    ))}
-                    {day.appointmentCount > 3 && (
-                      <span className="more-appointments">+{day.appointmentCount - 3}</span>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Modal de Confirmación */}
       {showSuccessModal && confirmedBooking && (
         <div className="modal-overlay" onClick={closeSuccessModal}>
-          <div className="success-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="success-modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <button className="close-btn2" onClick={closeSuccessModal}>×</button>
               <h2>¡Cita Confirmada!</h2>
             </div>
-            
             <div className="modal-content">
               <div className="booking-details">
-                <div className="detail-row">
-                  <div className="detail-info">
-                    <span className="detail-label">Nombre:</span>
-                    <span className="detail-value">{confirmedBooking.nombre}</span>
-                  </div>
-                </div>
-                
-                <div className="detail-row">
-                  <div className="detail-info">
-                    <span className="detail-label">Edad:</span>
-                    <span className="detail-value">{confirmedBooking.edad} años</span>
-                  </div>
-                </div>
-                
-                <div className="detail-row">
-                  <div className="detail-info">
-                    <span className="detail-label">Actividad:</span>
-                    <span className="detail-value">{confirmedBooking.actividad.charAt(0).toUpperCase() + confirmedBooking.actividad.slice(1)}</span>
-                  </div>
-                </div>
-                
-                <div className="detail-row">
-                  <div className="detail-info">
-                    <span className="detail-label">Fecha:</span>
-                    <span className="detail-value">{confirmedBooking.fecha}</span>
-                  </div>
-                </div>
-                
-                <div className="detail-row">
-                  <div className="detail-info">
-                    <span className="detail-label">Hora:</span>
-                    <span className="detail-value">{confirmedBooking.hora}</span>
-                  </div>
-                </div>
+                <p><strong>Nombre:</strong> {confirmedBooking.nombre}</p>
+                <p><strong>Edad:</strong> {confirmedBooking.edad}</p>
+                <p><strong>Actividad:</strong> {confirmedBooking.actividad}</p>
+                <p><strong>Fecha:</strong> {confirmedBooking.fecha}</p>
+                <p><strong>Hora:</strong> {confirmedBooking.hora}</p>
               </div>
-              
-              <div className="success-message">
-                <p>Tu cita ha sido reservada exitosamente. Te esperamos el <strong>{confirmedBooking.dayName}</strong> a las <strong>{confirmedBooking.hora}</strong>.</p>
-                <p>¡Nos vemos pronto!</p>
-              </div>
+              <p className="success-message">Tu cita ha sido reservada exitosamente. Te esperamos el <strong>{confirmedBooking.dayName}</strong>.</p>
             </div>
-            
             <div className="modal-actions">
-              <button className="modal-btn primary" onClick={closeSuccessModal}>
-                Aceptar
-              </button>
+              <button className="modal-btn primary" onClick={closeSuccessModal}>Aceptar</button>
             </div>
           </div>
         </div>
       )}
-      <ReservaInfo />
+
+      <ReservaInfo reserva={confirmedBooking} />
     </div>
   );
 };

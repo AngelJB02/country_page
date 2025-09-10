@@ -1,7 +1,6 @@
 import { useState } from "react";
 
 const API_URL = "http://localhost:3001/reservas"; 
-// 🔴 cámbialo a tu dominio o endpoint real
 
 export function useReservas() {
   const [availability, setAvailability] = useState({});
@@ -10,16 +9,16 @@ export function useReservas() {
   const [error, setError] = useState(null);
 
   // ✅ Obtener disponibilidad para una fecha
-  const getAvailability = async (date) => {
+  const getAvailability = async (fecha) => {
     try {
       setLoading(true);
       setError(null);
 
-      const res = await fetch(`${API_URL}/availability?date=${date}`);
+      const res = await fetch(`${API_URL}/availability?fecha=${fecha}`);
       if (!res.ok) throw new Error("Error al cargar disponibilidad");
 
       const data = await res.json();
-      setAvailability((prev) => ({ ...prev, [date]: data }));
+      setAvailability((prev) => ({ ...prev, [fecha]: data }));
       return data;
     } catch (err) {
       setError(err.message);
@@ -29,7 +28,7 @@ export function useReservas() {
     }
   };
 
-  // ✅ Obtener todas las reservas (opcional, para vista de admin/instructor)
+  // ✅ Obtener todas las reservas (opcional)
   const getReservas = async () => {
     try {
       setLoading(true);
@@ -63,12 +62,20 @@ export function useReservas() {
 
       if (!res.ok) {
         const errorData = await res.json();
-        throw new Error(errorData.message || "Error al crear reserva");
+        throw new Error(errorData.error || "Error al crear reserva");
       }
 
       const newReserva = await res.json();
-      // actualizar estado local si quieres
       setReservas((prev) => [...prev, newReserva]);
+      // Actualizar disponibilidad local
+      const date = reservaData.fecha;
+      const updatedAvailability = { ...availability[date] };
+      if (reservaData.actividad === "salto") {
+        updatedAvailability.salto.available -= 1;
+      } else {
+        updatedAvailability[reservaData.hora].available -= 1;
+      }
+      setAvailability(prev => ({ ...prev, [date]: updatedAvailability }));
       return newReserva;
     } catch (err) {
       setError(err.message);
