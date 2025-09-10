@@ -1,7 +1,9 @@
 import express from 'express';
 import cors from 'cors';
-import db from './db.js'; // tu conexión a MySQL
+import db from './db.js'; // conexión MySQL
 import instructorRoutes from '../routes/instructor.js'; 
+import reservasRoutes from '../routes/reservas.js'; 
+import horariosRoutes from '../routes/horarios.js'; 
 
 const app = express();
 
@@ -22,27 +24,21 @@ app.post('/login', async (req, res) => {
   }
 
   try {
-    // Buscar usuario activo por email
     const [rows] = await db.execute(
       'SELECT * FROM usuarios WHERE email = ? AND estado = "activo"',
       [email]
     );
-
 
     if (rows.length === 0) {
       return res.status(401).json({ message: 'Usuario o contraseña incorrectos' });
     }
 
     const user = rows[0];
-
-    // Comparar contraseña con bcrypt si está hasheada
-    // Si no usas bcrypt, puedes usar: const match = password === user.password;
-    const match = password === user.password;
+    const match = password === user.password; // luego lo cambias a bcrypt
     if (!match) {
       return res.status(401).json({ message: 'Usuario o contraseña incorrectos' });
     }
 
-    // Login exitoso
     return res.json({
       message: 'Login exitoso',
       user: { id: user.id, nombre: user.nombre, rol: user.rol },
@@ -54,8 +50,10 @@ app.post('/login', async (req, res) => {
   }
 });
 
-// Usar el router de instructor
+// Routers separados
 app.use('/instructor', instructorRoutes);
+app.use('/reservas', reservasRoutes);
+app.use('/horarios', horariosRoutes);
 
 // Iniciar servidor
 app.listen(3001, () => console.log('Servidor escuchando en http://localhost:3001'));
