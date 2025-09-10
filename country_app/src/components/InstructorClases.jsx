@@ -5,6 +5,7 @@ import Loading from './instructor/Loading';
 import ErrorMessage from './instructor/ErrorMessage';
 import NoReservations from './instructor/NoReservations';
 import ReservaList from './instructor/ReservaList';
+import LogoutButton from './LogoutBoton';
 
 const InstructorReservas = () => {
   const [reservas, setReservas] = useState([]);
@@ -33,12 +34,19 @@ const InstructorReservas = () => {
         return reservaDate >= startDate && reservaDate <= endDateObj;
       });
       setReservas(filtered);
-    } catch (err) { setError('Error al cargar las reservas.'); console.error(err); }
-    finally { setLoading(false); }
+    } catch (err) { 
+      setError('Error al cargar las reservas.'); 
+      console.error(err); 
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   const filterReservas = () => {
-    if (!searchTerm.trim()) { setFilteredReservas(reservas); return; }
+    if (!searchTerm.trim()) { 
+      setFilteredReservas(reservas); 
+      return; 
+    }
     setFilteredReservas(reservas.filter(r => r.nombre.toLowerCase().includes(searchTerm.toLowerCase())));
   };
 
@@ -48,30 +56,49 @@ const InstructorReservas = () => {
     ));
   };
 
+  // 👈 Función para manejar el logout
+  const handleLogout = () => {
+    console.log('Cerrando sesión...');
+    window.location.href = '/login';
+    window.location.reload();
+  };
+
   if (loading) return <Loading />;
   
   return (
-      <div style={{ 
-        width: '100%',
-        minHeight: '100vh',
-        background: 'var(--secondary-brown)'
-      }}>
-        <div style={{ 
-          maxWidth: '100px',
-          margin: '2 auto',
-          padding: '2rem'
-        }}>
+    <div style={{ 
+      margin: '0 auto', 
+      width: '100%', 
+      padding: '2rem', 
+      minHeight: '100vh', 
+      background: 'var(--light-brown)' 
+    }}>
+      {/* 🔥 Botón de logout arriba del header */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
+        <LogoutButton 
+          onLogout={handleLogout}
+          size="normal"
+          showUserName={true}
+        />
       </div>
+
+      {/* Header */}
       <Header />
+
+      {/* Filtros */}
       <Filters 
         viewMode={viewMode} setViewMode={setViewMode}
         selectedDate={selectedDate} setSelectedDate={setSelectedDate}
         endDate={endDate} setEndDate={setEndDate}
         searchTerm={searchTerm} setSearchTerm={setSearchTerm}
       />
+
+      {/* Mensajes y reservas */}
       {error && <ErrorMessage message={error} />}
-      {filteredReservas.length === 0 ? <NoReservations /> : 
-        <ReservaList reservas={filteredReservas} updateAsistencia={updateAsistencia} />}
+      {filteredReservas.length === 0 
+        ? <NoReservations /> 
+        : <ReservaList reservas={filteredReservas} updateAsistencia={updateAsistencia} />
+      }
     </div>
   );
 };
