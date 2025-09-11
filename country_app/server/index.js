@@ -1,7 +1,11 @@
 // server/index.js
 import express from "express";
 import cors from "cors";
-import db from "./db.js"; // tu conexión ya con promise
+import db from "./db.js"; // ruta relativa correcta, db.js al mismo nivel que server
+
+import instructorRoutes from '../routes/instructor.js'; 
+import reservasRoutes from '../routes/reservas.js'; 
+import horariosRoutes from '../routes/horarios.js'; 
 
 const app = express();
 const PORT = 3001;
@@ -51,8 +55,25 @@ app.post("/login", async (req, res) => {
 });
 
 // ========================
+// Montar rutas
+// ========================
+app.use("/api/instructor", instructorRoutes);
+app.use("/api/reservas", reservasRoutes);
+app.use("/api/horarios", horariosRoutes);
+// ========================
 // Levantar servidor
 // ========================
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
+});
+
+// Capturar errores de rutas no encontradas
+app.use((req, res) => {
+  res.status(404).json({ error: "Ruta no encontrada" });
+});
+
+// Capturar errores globales
+app.use((err, req, res, next) => {
+  console.error("Error global:", err);
+  res.status(500).json({ error: "Error en el servidor" });
 });
