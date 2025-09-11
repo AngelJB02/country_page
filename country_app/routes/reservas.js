@@ -1,191 +1,127 @@
-// reservas.js
 import express from 'express';
-import db from '../server/db.js';
+import db from '../db.js';
 
 const router = express.Router();
 
-/* =========================
-   GET /reservas
-   Obtener reservas por rango de fechas (para cargar el mes del calendario)
-   ========================= */
-router.get('/', async (req, res) => {
-  const { fecha_inicio, fecha_fin } = req.query;
+  /* =========================
+    GET /reservas/availability
+    Devuelve la disponibilidad de todos los horarios para una fecha.
+    ========================= */
+  router.get('/availability', async (req, res) => {
+    const { fecha } = req.query;
+    if (!fecha) return res.status(400).json({ error: 'La fecha es requerida' });
 
   try {
-    let query = `
-      SELECT r.id, r.fecha, r.horario, r.nombre, r.edad, r.estado,
-             c.tipo as clase_tipo, c.nombre as clase_nombre, c.descripcion as clase_descripcion
-      FROM reservas r
-      JOIN clases c ON r.clase_id = c.id
-    `;
-    let params = [];
+    // 1️⃣ Definimos los horarios fijos
+    const horarios = ["09:00", "10:00", "11:00", "14:00", "15:00", "16:00"];
 
-    if (fecha_inicio && fecha_fin) {
-      query += " WHERE r.fecha BETWEEN ? AND ?";
-      params = [fecha_inicio, fecha_fin];
-    } else if (fecha_inicio) {
-      query += " WHERE r.fecha >= ?";
-      params = [fecha_inicio];
-    } else if (fecha_fin) {
-      query += " WHERE r.fecha <= ?";
-      params = [fecha_fin];
-    }
-
-    query += " ORDER BY r.fecha, r.horario";
-
-    const [reservas] = await db.execute(query, params);
-    res.json(reservas);
-  } catch (err) {
-    console.error('Error obteniendo reservas:', err);
-    res.status(500).json({ error: "Error en el servidor" });
-  }
-});
-
-/* =========================
-   GET /reservas/availability
-   Devuelve la disponibilidad de todos los horarios para una fecha.
-   ========================= */
-router.get('/availability', async (req, res) => {
-  const { fecha } = req.query;
-  if (!fecha) return res.status(400).json({ error: 'La fecha es requerida' });
-
-  try {
-    // Configuración de horarios y cupos
-    const horariosConfig = {
-      "08:00": { total: 6 },
-      "09:00": { total: 6 },
-      "10:00": { total: 6 },
-      "16:00": { total: 8 },
-      "17:00": { total: 8 },
-      "18:00": { total: 8 }
-    };
-
+    // 2️⃣ Inicializamos la disponibilidad de cada horario
     const disponibilidad = {};
-
-    // Inicializar disponibilidad
-    Object.keys(horariosConfig).forEach(horario => {
-      disponibilidad[horario] = {
-        total: horariosConfig[horario].total,
-        available: horariosConfig[horario].total
-      };
+    horarios.forEach(h => {
+      if (["09:00", "10:00", "11:00"].includes(h)) disponibilidad[h] = { total: 7, available: 7 }; // Iniciación
+      else disponibilidad[h] = { total: 5, available: 5 }; // Paseo
     });
 
-    // Contar reservas existentes por horario (excluyendo salto)
-    const [reservasHorario] = await db.execute(`
-      SELECT horario, COUNT(*) as total
-      FROM reservas r
-      JOIN clases c ON r.clase_id = c.id
-      WHERE r.fecha = ? AND c.tipo != 'salto' AND r.estado != 'cancelada'
-      GROUP BY horario
-    `, [fecha]);
+    // 3️⃣ Consultamos reservas del día
+    const [reservas] = await db.execute(
+      "SELECT clase_id, horario, COUNT(*) as total FROM reservas WHERE fecha = ? GROUP BY clase_id, horario",
+      [fecha]
+    );
 
-    reservasHorario.forEach(reserva => {
-      if (disponibilidad[reserva.horario]) {
-        disponibilidad[reserva.horario].available = Math.max(0,
-          disponibilidad[reserva.horario].total - reserva.total
-        );
+    // 4️⃣ Obtenemos tipos de clase
+    const [clases] = await db.execute("SELECT id, tipo FROM clases");
+
+    // 5️⃣ Ajustamos la disponibilidad según las reservas hechas
+    reservas.forEach(r => {
+      const clase = clases.find(c => c.id === r.clase_id);
+      if (!clase) return;
+
+      if (clase.tipo === "iniciacion" || clase.tipo === "paseo") {
+        disponibilidad[r.horario].available -= r.total;
+        if (disponibilidad[r.horario].available < 0) disponibilidad[r.horario].available = 0;
       }
     });
 
-    // Manejo especial para salto (límite diario de 5)
-    const [saltoReservas] = await db.execute(`
-      SELECT COUNT(*) as total
-      FROM reservas r
-      JOIN clases c ON r.clase_id = c.id
-      WHERE c.tipo = 'salto' AND r.fecha = ? AND r.estado != 'cancelada'
-    `, [fecha]);
-
+    // 6️⃣ Para Salto: solo 5 espacios por día
+    const [saltoReservas] = await db.execute(
+      "SELECT COUNT(*) as total FROM reservas r JOIN clases c ON r.clase_id = c.id WHERE c.tipo = 'salto' AND r.fecha = ?",
+      [fecha]
+    );
     const totalSalto = saltoReservas[0].total;
-    disponibilidad["salto"] = {
-      total: 5,
-      available: Math.max(5 - totalSalto, 0)
-    };
+    disponibilidad["salto"] = { total: 5, available: Math.max(5 - totalSalto, 0) };
 
     res.json(disponibilidad);
   } catch (err) {
-    console.error('Error obteniendo disponibilidad:', err);
+    console.error(err);
     res.status(500).json({ error: "Error en el servidor" });
   }
 });
 
+
 /* =========================
    POST /reservas
-   Crear una nueva reserva respetando las reglas del sistema.
+   Crear una nueva reserva respetando las reglas de tu sistema.
    ========================= */
 router.post('/', async (req, res) => {
-  const { usuario_id, clase_id, fecha, horario, nombre, edad } = req.body;
+  const { usuario_id, clase_id, fecha, horario, nombre, edad, actividad } = req.body;
 
-  if (!usuario_id || !clase_id || !fecha || !horario || !nombre || !edad) {
+  // 1️⃣ Validación básica
+  if (!usuario_id || !clase_id || !fecha || !horario || !nombre || !edad || !actividad) {
     return res.status(400).json({ error: 'Faltan campos requeridos' });
   }
 
-  const conn = await db.getConnection();
-  try {
-    await conn.beginTransaction();
+    const conn = await db.getConnection();
+    try {
+      await conn.beginTransaction();
 
-    // Verificar que no existe reserva para el mismo nombre en la misma fecha
-    const [existeNombre] = await conn.execute(
-      "SELECT id FROM reservas WHERE nombre = ? AND fecha = ? AND estado != 'cancelada'",
-      [nombre, fecha]
+    // 2️⃣ Verificar que el usuario no tenga otra reserva ese día
+    const [existe] = await conn.execute(
+      "SELECT id FROM reservas WHERE usuario_id = ? AND fecha = ?",
+      [usuario_id, fecha]
     );
-    if (existeNombre.length > 0) {
+    if (existe.length > 0) {
       await conn.rollback();
-      return res.status(400).json({
-        error: "Ya existe una reserva a nombre de esta persona para este día"
-      });
+      return res.status(400).json({ error: "El usuario ya tiene reserva ese día" });
     }
 
-    // Obtener información de la clase
-    const [claseRows] = await conn.execute(
-      "SELECT id, tipo FROM clases WHERE id = ?",
-      [clase_id]
-    );
+    // 3️⃣ Obtener tipo de clase y establecer cupo máximo
+    const [claseRows] = await conn.execute("SELECT id, tipo FROM clases WHERE id = ?", [clase_id]);
     if (claseRows.length === 0) {
       await conn.rollback();
       return res.status(404).json({ error: "Clase no encontrada" });
     }
 
     const tipo = claseRows[0].tipo;
+    let cupoMax = tipo === "iniciacion" ? 7 : tipo === "paseo" ? 5 : 5;
 
-    // Validaciones específicas por tipo de clase
+    // 4️⃣ Contar reservas existentes según tipo de clase
+    let [count];
     if (tipo === "salto") {
-      const [saltoCount] = await conn.execute(`
-        SELECT COUNT(*) as total
-        FROM reservas r
-        JOIN clases c ON r.clase_id = c.id
-        WHERE c.tipo = 'salto' AND r.fecha = ? AND r.estado != 'cancelada'
-      `, [fecha]);
-
-      if (saltoCount[0].total >= 5) {
-        await conn.rollback();
-        return res.status(400).json({
-          error: "No hay cupo disponible para salto (máximo 5 por día)"
-        });
-      }
+      // Salto: solo 5 por día
+      [count] = await conn.execute(
+        "SELECT COUNT(*) as total FROM reservas r JOIN clases c ON r.clase_id = c.id WHERE c.tipo = 'salto' AND r.fecha = ?",
+        [fecha]
+      );
     } else {
-      const cupoMax = tipo === "iniciacion" ? 6 : 8;
-      const [horarioCount] = await conn.execute(`
-        SELECT COUNT(*) as total
-        FROM reservas r
-        JOIN clases c ON r.clase_id = c.id
-        WHERE r.fecha = ? AND r.horario = ? AND c.tipo != 'salto' AND r.estado != 'cancelada'
-      `, [fecha, horario]);
-
-      if (horarioCount[0].total >= cupoMax) {
-        await conn.rollback();
-        return res.status(400).json({
-          error: "No hay cupo disponible para este horario"
-        });
-      }
+      // Iniciación o Paseo: cupo por horario
+      [count] = await conn.execute(
+        "SELECT COUNT(*) as total FROM reservas WHERE clase_id = ? AND fecha = ? AND horario = ?",
+        [clase_id, fecha, horario]
+      );
     }
 
-    // Crear la reserva
-    const [result] = await conn.execute(`
-      INSERT INTO reservas (usuario_id, clase_id, fecha, horario, nombre, edad, estado)
-      VALUES (?, ?, ?, ?, ?, ?, 'confirmada')
-    `, [usuario_id, clase_id, fecha, horario, nombre, edad]);
+    if (count[0].total >= cupoMax) {
+      await conn.rollback();
+      return res.status(400).json({ error: "No hay cupo disponible" });
+    }
 
-    await conn.commit();
+    // 5️⃣ Insertar la reserva
+    const [result] = await conn.execute(
+      "INSERT INTO reservas (usuario_id, clase_id, fecha, horario, nombre, edad, actividad, estado) VALUES (?, ?, ?, ?, ?, ?, ?, 'pendiente')",
+      [usuario_id, clase_id, fecha, horario, nombre, edad, actividad]
+    );
+
+      await conn.commit();
 
     res.status(201).json({
       id: result.insertId,
@@ -195,11 +131,12 @@ router.post('/', async (req, res) => {
       horario,
       nombre,
       edad,
-      estado: "confirmada"
+      actividad,
+      estado: "pendiente"
     });
 
   } catch (err) {
-    console.error('Error creando reserva:', err);
+    console.error(err);
     await conn.rollback();
     res.status(500).json({ error: "Error en el servidor" });
   } finally {
@@ -207,28 +144,4 @@ router.post('/', async (req, res) => {
   }
 });
 
-/* =========================
-   DELETE /reservas/:id
-   Cancelar una reserva
-   ========================= */
-router.delete('/:id', async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    const [result] = await db.execute(
-      "UPDATE reservas SET estado = 'cancelada' WHERE id = ?",
-      [id]
-    );
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: "Reserva no encontrada" });
-    }
-
-    res.json({ message: "Reserva cancelada exitosamente" });
-  } catch (err) {
-    console.error('Error cancelando reserva:', err);
-    res.status(500).json({ error: "Error en el servidor" });
-  }
-});
-
-export default router;
+  export default router;

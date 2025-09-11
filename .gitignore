@@ -13418,3 +13418,6 @@ country_app/node_modules/.vite/deps/chunk-OBYCLIUT.js
 country_app/node_modules/.vite/deps/chunk-OBYCLIUT.js.map
 country_app/node_modules/.vite/deps/lucide-react.js
 country_app/node_modules/.vite/deps/lucide-react.js.map
+country_app/.DS_Store
+.gitignore
+.DS_Store
