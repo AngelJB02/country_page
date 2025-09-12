@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import '../CSS/RegistroUsuarios.css';
 import { User, UserPlus, Eye, EyeOff, AlertCircle, CheckCircle, XCircle, Loader } from 'lucide-react';
+import LogoutButton from './LogoutBoton';
 
 // Hook personalizado para gestión de usuarios
 const useUsuarios = () => {
@@ -46,14 +47,7 @@ const useUsuarios = () => {
   const obtenerUsuarios = async () => {
     setLoading(true);
     setError(null);
-    
     try {
-      // TODO: Reemplazar por llamada real a la API
-      // const response = await fetch('/api/usuarios');
-      // const data = await response.json();
-      // setUsuarios(data);
-      
-      // Simulación temporal
       await new Promise(resolve => setTimeout(resolve, 1000));
       setUsuarios(mockUsuarios);
     } catch (err) {
@@ -67,26 +61,14 @@ const useUsuarios = () => {
   const crearUsuario = async (nuevoUsuario) => {
     setLoading(true);
     setError(null);
-    
     try {
-      // TODO: Reemplazar por llamada real a la API
-      // const response = await fetch('/api/usuarios', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(nuevoUsuario)
-      // });
-      // const resultado = await response.json();
-      
-      // Simulación temporal
       await new Promise(resolve => setTimeout(resolve, 500));
-      
       const usuarioConId = {
         ...nuevoUsuario,
         id: Math.max(...usuarios.map(u => u.id), 0) + 1,
         estado: 'pendiente',
         fecha_registro: new Date().toLocaleString('sv-SE').replace('T', ' ')
       };
-      
       setUsuarios(prev => [...prev, usuarioConId]);
       return { success: true, message: 'Usuario registrado exitosamente' };
     } catch (err) {
@@ -101,21 +83,11 @@ const useUsuarios = () => {
   const darDeBaja = async (id) => {
     setLoading(true);
     setError(null);
-    
     try {
-      // TODO: Reemplazar por llamada real a la API
-      // const response = await fetch(`/api/usuarios/${id}/baja`, {
-      //   method: 'PATCH',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ estado: 'inactivo' })
-      // });
-      
-      // Simulación temporal
       await new Promise(resolve => setTimeout(resolve, 300));
-      
-      setUsuarios(prev => 
-        prev.map(usuario => 
-          usuario.id === id 
+      setUsuarios(prev =>
+        prev.map(usuario =>
+          usuario.id === id
             ? { ...usuario, estado: 'inactivo' }
             : usuario
         )
@@ -130,17 +102,12 @@ const useUsuarios = () => {
     }
   };
 
-  return {
-    usuarios,
-    loading,
-    error,
-    obtenerUsuarios,
-    crearUsuario,
-    darDeBaja
-  };
+  return { usuarios, loading, error, crearUsuario, darDeBaja };
 };
 
-// Componente del formulario de registro
+// ============================
+// Formulario de registro
+// ============================
 const FormularioUsuario = ({ onCrearUsuario, loading }) => {
   const [formData, setFormData] = useState({
     nombre: '',
@@ -163,62 +130,36 @@ const FormularioUsuario = ({ onCrearUsuario, loading }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    
+    setFormData(prev => ({ ...prev, [name]: value }));
     if (errores[name]) {
-      setErrores(prev => ({
-        ...prev,
-        [name]: ''
-      }));
+      setErrores(prev => ({ ...prev, [name]: '' }));
     }
   };
 
   const validarFormulario = () => {
     const nuevosErrores = {};
-    
-    if (!formData.nombre.trim()) {
-      nuevosErrores.nombre = 'El nombre es requerido';
-    }
-    
-    if (!formData.apellido.trim()) {
-      nuevosErrores.apellido = 'El apellido es requerido';
-    }
-    
+    if (!formData.nombre.trim()) nuevosErrores.nombre = 'El nombre es requerido';
+    if (!formData.apellido.trim()) nuevosErrores.apellido = 'El apellido es requerido';
     if (!formData.email.trim()) {
       nuevosErrores.email = 'El email es requerido';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       nuevosErrores.email = 'El email no es válido';
     }
-    
     if (!formData.password.trim()) {
       nuevosErrores.password = 'La contraseña es requerida';
     } else if (formData.password.length < 6) {
       nuevosErrores.password = 'La contraseña debe tener al menos 6 caracteres';
     }
-    
     setErrores(nuevosErrores);
     return Object.keys(nuevosErrores).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!validarFormulario()) {
-      return;
-    }
-    
+    if (!validarFormulario()) return;
     const resultado = await onCrearUsuario(formData);
     if (resultado.success) {
-      setFormData({
-        nombre: '',
-        apellido: '',
-        email: '',
-        password: '',
-        rol: 'cliente'
-      });
+      setFormData({ nombre: '', apellido: '', email: '', password: '', rol: 'cliente' });
       setErrores({});
     }
   };
@@ -232,8 +173,8 @@ const FormularioUsuario = ({ onCrearUsuario, loading }) => {
         </h3>
         <p>Complete el formulario para agregar un nuevo usuario al sistema</p>
       </div>
-      
-      <div className="user-form-container" onSubmit={handleSubmit}>
+
+      <form className="user-form-container" onSubmit={handleSubmit}>
         <div className="form-row">
           <div className="form-group">
             <label htmlFor="nombre">Nombre *</label>
@@ -249,7 +190,7 @@ const FormularioUsuario = ({ onCrearUsuario, loading }) => {
             />
             {errores.nombre && <span className="error-message">{errores.nombre}</span>}
           </div>
-          
+
           <div className="form-group">
             <label htmlFor="apellido">Apellido *</label>
             <input
@@ -326,11 +267,10 @@ const FormularioUsuario = ({ onCrearUsuario, loading }) => {
           </div>
         </div>
 
-        <button 
-          type="submit" 
-          className="rustic-button submit-btn" 
+        <button
+          type="submit"
+          className="rustic-button submit-btn"
           disabled={loading}
-          onClick={handleSubmit}
         >
           {loading ? (
             <>
@@ -344,45 +284,24 @@ const FormularioUsuario = ({ onCrearUsuario, loading }) => {
             </>
           )}
         </button>
-      </div>
+      </form>
     </div>
   );
 };
 
-// Componente de la tabla de usuarios
+// ============================
+// Tabla de usuarios
+// ============================
 const TablaUsuarios = ({ usuarios, onDarDeBaja, loading }) => {
   const getEstadoBadge = (estado) => {
     const badges = {
-      activo: { 
-        icon: <CheckCircle size={14} />, 
-        className: 'status-badge badge-success',
-        text: 'Activo'
-      },
-      inactivo: { 
-        icon: <XCircle size={14} />, 
-        className: 'status-badge badge-danger',
-        text: 'Inactivo'
-      },
-      pendiente: { 
-        icon: <AlertCircle size={14} />, 
-        className: 'status-badge badge-warning',
-        text: 'Pendiente'
-      },
-      bloqueado: { 
-        icon: <XCircle size={14} />, 
-        className: 'status-badge badge-error',
-        text: 'Bloqueado'
-      }
+      activo: { icon: <CheckCircle size={14} />, className: 'status-badge badge-success', text: 'Activo' },
+      inactivo: { icon: <XCircle size={14} />, className: 'status-badge badge-danger', text: 'Inactivo' },
+      pendiente: { icon: <AlertCircle size={14} />, className: 'status-badge badge-warning', text: 'Pendiente' },
+      bloqueado: { icon: <XCircle size={14} />, className: 'status-badge badge-error', text: 'Bloqueado' }
     };
-    
     const badge = badges[estado] || badges.pendiente;
-    
-    return (
-      <span className={badge.className}>
-        {badge.icon}
-        {badge.text}
-      </span>
-    );
+    return <span className={badge.className}>{badge.icon}{badge.text}</span>;
   };
 
   const getRolLabel = (rol) => {
@@ -399,11 +318,8 @@ const TablaUsuarios = ({ usuarios, onDarDeBaja, loading }) => {
 
   const formatearFecha = (fecha) => {
     return new Date(fecha).toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      year: 'numeric', month: 'short', day: 'numeric',
+      hour: '2-digit', minute: '2-digit'
     });
   };
 
@@ -422,7 +338,7 @@ const TablaUsuarios = ({ usuarios, onDarDeBaja, loading }) => {
         </h3>
         <p>Listado completo de usuarios en el sistema</p>
       </div>
-      
+
       {usuarios.length === 0 ? (
         <div className="empty-state">
           <User size={48} />
@@ -450,24 +366,16 @@ const TablaUsuarios = ({ usuarios, onDarDeBaja, loading }) => {
                     <td className="user-id">#{usuario.id}</td>
                     <td>
                       <div className="user-info">
-                        <strong className="user-name">
-                          {usuario.nombre} {usuario.apellido}
-                        </strong>
+                        <strong className="user-name">{usuario.nombre} {usuario.apellido}</strong>
                       </div>
                     </td>
                     <td className="user-email">{usuario.email}</td>
-                    <td>
-                      <span className="rol-badge">
-                        {getRolLabel(usuario.rol)}
-                      </span>
-                    </td>
+                    <td><span className="rol-badge">{getRolLabel(usuario.rol)}</span></td>
                     <td>{getEstadoBadge(usuario.estado)}</td>
-                    <td className="fecha-registro">
-                      {formatearFecha(usuario.fecha_registro)}
-                    </td>
+                    <td className="fecha-registro">{formatearFecha(usuario.fecha_registro)}</td>
                     <td>
                       <div className="table-actions">
-                        {usuario.estado !== 'inactivo' && (
+                        {usuario.estado !== 'inactivo' ? (
                           <button
                             onClick={() => handleDarDeBaja(usuario)}
                             className="action-btn btn-danger"
@@ -477,8 +385,7 @@ const TablaUsuarios = ({ usuarios, onDarDeBaja, loading }) => {
                             <XCircle size={14} />
                             Dar de baja
                           </button>
-                        )}
-                        {usuario.estado === 'inactivo' && (
+                        ) : (
                           <span className="inactive-label">Usuario inactivo</span>
                         )}
                       </div>
@@ -494,7 +401,9 @@ const TablaUsuarios = ({ usuarios, onDarDeBaja, loading }) => {
   );
 };
 
-// Componente principal de gestión de usuarios
+// ============================
+// Componente principal
+// ============================
 const GestionUsuarios = () => {
   const { usuarios, loading, error, crearUsuario, darDeBaja } = useUsuarios();
   const [mensaje, setMensaje] = useState({ texto: '', tipo: '' });
@@ -515,25 +424,38 @@ const GestionUsuarios = () => {
     mostrarMensaje(resultado.message, resultado.success ? 'success' : 'error');
   };
 
+  const handleLogout = () => {
+    console.log('Cerrando sesión...');
+    localStorage.removeItem('token');
+    sessionStorage.clear();
+    window.location.href = '/login';
+  };
+
   return (
     <div className="user-management-container">
+
+      {/* Botón de logout afuera del header */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
+        <LogoutButton
+          userName="Admin"
+          onLogout={handleLogout}
+          size="normal"
+          showUserName={true}
+        />
+      </div>
+
       <div className="user-management-header">
         <h2>Gestión de Usuarios</h2>
         <p>Administre las cuentas de usuario de la plataforma Country Refugio</p>
       </div>
 
-      {/* Alertas y mensajes */}
+      {/* Alertas */}
       {mensaje.texto && (
         <div className={`alert alert-${mensaje.tipo}`}>
-          {mensaje.tipo === 'success' ? (
-            <CheckCircle size={20} />
-          ) : (
-            <AlertCircle size={20} />
-          )}
+          {mensaje.tipo === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
           <span>{mensaje.texto}</span>
         </div>
       )}
-
       {error && (
         <div className="alert alert-error">
           <AlertCircle size={20} />
@@ -543,16 +465,8 @@ const GestionUsuarios = () => {
 
       {/* Contenido principal */}
       <div className="user-management-content">
-        <FormularioUsuario 
-          onCrearUsuario={handleCrearUsuario}
-          loading={loading}
-        />
-        
-        <TablaUsuarios 
-          usuarios={usuarios}
-          onDarDeBaja={handleDarDeBaja}
-          loading={loading}
-        />
+        <FormularioUsuario onCrearUsuario={handleCrearUsuario} loading={loading} />
+        <TablaUsuarios usuarios={usuarios} onDarDeBaja={handleDarDeBaja} loading={loading} />
       </div>
     </div>
   );
