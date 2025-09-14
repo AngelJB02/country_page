@@ -1,11 +1,12 @@
 import React from 'react';
+import ElRefugio from '../img/ElrefugioCountryClub .webp';
 
 const EventBanner = () => {
   return (
     <section className="event-banner">
       <div className="banner-background">
         <img 
-          src="https://lh3.googleusercontent.com/p/AF1QipNBxb2UH2JkWvYWQVZcGiVqqk14UqJZY3cmn-iX=s1360-w1360-h1020-rw" 
+          src={ElRefugio} 
           alt="El Refugio - Espacio natural para eventos"
           className="banner-image"
         />

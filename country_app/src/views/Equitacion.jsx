@@ -44,21 +44,21 @@ const Equitacion = () => {
       titulo: "Clases Básicas",
       descripcion: "Aprende los fundamentos de la equitación, desde la postura hasta el control del caballo.",
       imagen: class1Img,
-      caracteristicas: ["Instrucción personalizada", "Caballos entrenados", "Duración 1 hora"],
+      caracteristicas: ["Instrucción personalizada", "Caballos entrenados"],
     },
     {
       id: 2,
       titulo: "Clases Intermedias",
       descripcion: "Mejora tu técnica, aprende a trotar y galopar con seguridad y confianza.",
       imagen: class2Img,
-      caracteristicas: ["Ejercicios avanzados", "Clases grupales o individuales", "Duración 1.5 horas"],
+      caracteristicas: ["Ejercicios avanzados", "Clases grupales o individuales"],
     },
     {
       id: 3,
       titulo: "Clases Avanzadas",
       descripcion: "Perfecciona tu habilidad con técnicas de salto y manejo avanzado del caballo.",
       imagen: class3Img,
-      caracteristicas: ["Salto de obstáculos", "Competencias simuladas", "Duración 2 horas"],
+      caracteristicas: ["Salto de obstáculos", "Competencias simuladas"],
     },
   ];
 
@@ -168,7 +168,7 @@ const Equitacion = () => {
                     <li key={idx}>{car}</li>
                   ))}
                 </ul>
-                <button className="cta-button rustic-button" onClick={() => navigate('/login')}>Más Información</button>
+                {/* <button className="cta-button rustic-button" onClick={() => navigate('/login')}>Más Información</button> */}
               </div>
             </div>
           ))}
