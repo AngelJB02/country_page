@@ -71,7 +71,7 @@ const InstructorReservas = () => {
       width: '100%', 
       padding: '2rem', 
       minHeight: '100vh', 
-      background: 'var(--light-brown)' 
+      background: 'var(--secondary-brown)' 
     }}>
       {/* 🔥 Botón de logout arriba del header */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>

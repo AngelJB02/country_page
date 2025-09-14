@@ -18,6 +18,7 @@ import image2 from "../img/image_2.webp";
 import image3 from "../img/image_3.jpg";
 import image4 from "../img/image_4.webp";
 
+
 // Componentes
 import Navigation from "../components/Navigation";
 import EventBanner from "../components/EventBanner";

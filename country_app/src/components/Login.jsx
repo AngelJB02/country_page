@@ -143,7 +143,7 @@ const Login = () => {
 
         <div className="login-form">
           <div className="form-group">
-            <label htmlFor="email">Usuario</label>
+            <label htmlFor="email">Nombre de usuario</label>
             <input
               type="text"
               id="email"

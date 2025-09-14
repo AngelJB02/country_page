@@ -44,6 +44,7 @@ const EventsSection = () => {
       descripcion: "Contamos con caballos para que puedas disfrutar de paseos guiados y clases de equitación en un entorno seguro y natural.",
       imagen: image10,
       caracteristicas: ["Paseos guiados", "Clases de equitación", "Actividades para todas las edades"]
+      
     }
   ];
 
@@ -81,6 +82,15 @@ const EventsSection = () => {
                     <li key={index}>{caracteristica}</li>
                   ))}
                 </ul>
+                 {/* Solo mostrar botón si es el evento con id 5 */}
+                  {evento.id === 5 && (
+                    <button
+                      className="cta-button rustic-button"
+                      onClick={() => navigate('/equitacion')}
+                    >
+                      Más Información
+                    </button>
+                  )}
               </div>
             </div>
           ))}

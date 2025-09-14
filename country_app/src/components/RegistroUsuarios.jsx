@@ -309,8 +309,6 @@ const TablaUsuarios = ({ usuarios, onDarDeBaja, loading }) => {
       admin: 'Administrador',
       cliente: 'Cliente',
       instructor: 'Instructor',
-      contabilidad: 'Contabilidad',
-      viewer: 'Visualizador',
       creadorcuentas: 'Creador de Cuentas'
     };
     return roles[rol] || rol;

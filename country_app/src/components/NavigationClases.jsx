@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import Logo from './Logo';
+import { useNavigate } from 'react-router-dom'; // 👈 importa aquí
 
 const Navigation = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const navigate = useNavigate(); // 👈 inicializa navigate
 
   useEffect(() => {
     const handleScroll = () => {
@@ -18,22 +20,16 @@ const Navigation = () => {
     const element = document.getElementById(sectionId);
     if (element) {
       element.scrollIntoView({ behavior: 'smooth' });
-      setIsMobileMenuOpen(false); // Cerrar menú móvil después de navegar
-      document.body.style.overflow = 'auto'; // Restaurar scroll
+      setIsMobileMenuOpen(false);
+      document.body.style.overflow = 'auto';
     }
   };
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
-    // Prevenir scroll del body cuando el menú está abierto
-    if (!isMobileMenuOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'auto';
-    }
+    document.body.style.overflow = !isMobileMenuOpen ? 'hidden' : 'auto';
   };
 
-  // Cleanup: restaurar scroll cuando el componente se desmonta
   useEffect(() => {
     return () => {
       document.body.style.overflow = 'auto';
@@ -47,7 +43,7 @@ const Navigation = () => {
           <Logo size="small" />
         </div>
         
-        {/* Hamburger Menu Button */}
+        {/* Botón Hamburguesa */}
         <button 
           className={`hamburger-menu ${isMobileMenuOpen ? 'active' : ''}`}
           onClick={toggleMobileMenu}
@@ -63,14 +59,14 @@ const Navigation = () => {
             <button onClick={() => scrollToSection('hero')}>Inicio</button>
           </li>
           <li>
-            <button onClick={() => scrollToSection('../')}>Refugio</button>
+            {/* 👇 este cambia de scroll a navigate */}
+            <button onClick={() => navigate('/')}>Refugio</button>
           </li>
           <li>
             <button onClick={() => scrollToSection('contacto')}>Contacto</button>
           </li>
         </ul>
         
-        {/* Overlay para cerrar menú móvil */}
         {isMobileMenuOpen && (
           <div 
             className="mobile-menu-overlay" 
