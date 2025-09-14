@@ -12,10 +12,11 @@ const PORT = 3001;
 
 // Middlewares
 app.use(cors({
-  origin: "http://localhost:5173", // frontend Vite
+  origin: ["http://localhost:5173", "http://localhost:5174"],
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true
 }));
+
 app.use(express.json());
 
 // Ruta de prueba

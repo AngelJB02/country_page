@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import '../CSS/MenuCalendario.css';
 import '../CSS/DisponibilidadCaballos.css';
-import ReservaInfo from "./ReservaInfo";
 import TituloReserva from './TituloReserva';
 import DisponibilidadCaballos from './DisponibilidadCaballos';
 import axios from 'axios';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import ReservasInfo from "./ReservaInfo";
 
 const MenuCalendario = () => {
-  const [currentDate, setCurrentDate] = useState(new Date(2025, 8, 1)); // Septiembre 2025
+  const [currentDate, setCurrentDate] = useState(new Date(2025, 8, 1));
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTime, setSelectedTime] = useState(null);
   const [bookingData, setBookingData] = useState({
@@ -19,18 +21,31 @@ const MenuCalendario = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [confirmedBooking, setConfirmedBooking] = useState(null);
   const [showDateModal, setShowDateModal] = useState(false);
+  const [showReservationsModal, setShowReservationsModal] = useState(false);
 
   // Estado para reservas y disponibilidad
   const [reservations, setReservations] = useState({});
   const [availability, setAvailability] = useState({});
   const [loading, setLoading] = useState(false);
 
+  // Estado para usuario logueado (simulado)
+  const [currentUser, setCurrentUser] = useState(null);
+
+  // Estado para horarios del día cargados dinámicamente
+  const [horariosDia, setHorariosDia] = useState([]);
+
   // Mapeo de actividades del frontend al backend
   const activityClassMap = {
-    'iniciacion': 1, // ID de la clase de iniciación en la BD
-    'caminata': 2,   // ID de la clase de paseo/caminata en la BD
-    'salto': 3       // ID de la clase de salto en la BD
+    'iniciacion': 1,
+    'caminata': 2,
+    'salto': 3
   };
+
+  // Simulación de verificación de usuario
+  useEffect(() => {
+    const mockUser = { id: 1, nombre: 'Usuario Test' };
+    setCurrentUser(mockUser);
+  }, []);
 
   // Cargar reservas existentes al montar el componente y cambiar mes
   useEffect(() => {
@@ -40,10 +55,25 @@ const MenuCalendario = () => {
   // Cargar disponibilidad cuando se selecciona una fecha
   useEffect(() => {
     if (selectedDate) {
-      const dateString = selectedDate.toISOString().split('T')[0];
-      fetchAvailability(dateString);
+      const diasSemana = ['domingo','lunes','martes','miercoles','jueves','viernes','sabado'];
+      const diaSemana = diasSemana[selectedDate.getDay()];
+      fetchHorariosDia(diaSemana);
+      fetchAvailability(selectedDate.toISOString().split('T')[0]);
     }
   }, [selectedDate]);
+
+  // Cerrar modal con tecla ESC
+  useEffect(() => {
+    const handleEscKey = (event) => {
+      if (event.key === 'Escape') {
+        if (showDateModal) closeDateModal();
+        if (showSuccessModal) closeSuccessModal();
+        if (showReservationsModal) closeReservationsModal();
+      }
+    };
+    document.addEventListener('keydown', handleEscKey);
+    return () => document.removeEventListener('keydown', handleEscKey);
+  }, [showDateModal, showSuccessModal, showReservationsModal]);
 
   // Función para obtener reservas del mes actual
   const fetchReservationsForMonth = async () => {
@@ -64,22 +94,30 @@ const MenuCalendario = () => {
       // Organizar reservas por fecha
       const reservasPorFecha = {};
       response.data.forEach(reserva => {
-        if (!reservasPorFecha[reserva.fecha]) {
-          reservasPorFecha[reserva.fecha] = [];
+        const fechaKey = reserva.fecha.split('T')[0];
+        
+        if (!reservasPorFecha[fechaKey]) {
+          reservasPorFecha[fechaKey] = [];
         }
-        reservasPorFecha[reserva.fecha].push({
+        
+        reservasPorFecha[fechaKey].push({
           id: reserva.id,
           time: reserva.horario,
           nombre: reserva.nombre,
           edad: reserva.edad,
-          actividad: reserva.actividad
+          actividad: reserva.clase_tipo || reserva.actividad,
+          estado: reserva.estado,
+          usuario_id: reserva.usuario_id,
+          clase_nombre: reserva.clase_nombre,
+          caballo_id: reserva.caballo_id
         });
       });
 
       setReservations(reservasPorFecha);
+
     } catch (error) {
       console.error('Error cargando reservas:', error);
-      // Mantener estado local si hay error
+      toast.error('Error al cargar las reservas del servidor');
     } finally {
       setLoading(false);
     }
@@ -96,32 +134,42 @@ const MenuCalendario = () => {
         ...prev,
         [dateString]: response.data
       }));
+
     } catch (error) {
       console.error('Error cargando disponibilidad:', error);
-      // Usar configuración por defecto si hay error
+      const dayReservations = reservations[dateString] || [];
+      const fallbackAvailability = calculateFallbackAvailability(dayReservations);
+      
       setAvailability(prev => ({
         ...prev,
-        [dateString]: {
-          '08:00': { total: 6, available: 6 },
-          '09:00': { total: 6, available: 6 },
-          '10:00': { total: 6, available: 6 },
-          '16:00': { total: 8, available: 8 },
-          '17:00': { total: 8, available: 8 },
-          '18:00': { total: 8, available: 8 },
-          'salto': { total: 5, available: 5 }
-        }
+        [dateString]: fallbackAvailability
       }));
     }
   };
 
-  // Configuración de lugares por horario (fallback si no hay conexión con backend)
-  const spotsConfig = {
-    '08:00': { total: 6 },
-    '09:00': { total: 6 },
-    '10:00': { total: 6 },
-    '16:00': { total: 8 },
-    '17:00': { total: 8 },
-    '18:00': { total: 8 }
+  // Calcular disponibilidad de fallback si falla el backend
+  const calculateFallbackAvailability = (dayReservations) => {
+    const horariosConfig = {
+      "08:00": { total: 6 },
+      "09:00": { total: 6 },
+      "10:00": { total: 6 },
+      "16:00": { total: 6 },
+      "17:00": { total: 6 },
+      "18:00": { total: 6 }
+    };
+
+    const availability = {};
+    Object.keys(horariosConfig).forEach(horario => {
+      const timeReservations = dayReservations.filter(res => 
+        res.time === horario && res.estado !== 'cancelada'
+      );
+      availability[horario] = {
+        total: horariosConfig[horario].total,
+        available: Math.max(0, horariosConfig[horario].total - timeReservations.length)
+      };
+    });
+
+    return availability;
   };
 
   const monthNames = [
@@ -132,66 +180,101 @@ const MenuCalendario = () => {
   const dayNames = ['Dom', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
   const dayNamesFull = ['Domingo', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
-  const timeSlots = {
-    morning: [
-      { time: '08:00', label: '8:00 AM' },
-      { time: '09:00', label: '9:00 AM' },
-      { time: '10:00', label: '10:00 AM' }
-    ],
-    afternoon: [
-      { time: '16:00', label: '4:00 PM' },
-      { time: '17:00', label: '5:00 PM' },
-      { time: '18:00', label: '6:00 PM' }
-    ]
-  };
-
   const actividades = ['iniciacion', 'caminata', 'salto'];
 
-  // Función para verificar si un cliente ya tiene una reserva en una fecha específica
+  // Verificar si un cliente ya tiene una reserva en una fecha específica
   const clientHasReservationOnDate = (nombre, dateString) => {
     const dayReservations = reservations[dateString] || [];
     return dayReservations.some(reservation => 
-      reservation.nombre.toLowerCase() === nombre.toLowerCase()
+      reservation.nombre.toLowerCase() === nombre.toLowerCase() &&
+      reservation.estado !== 'cancelada'
     );
   };
 
-  // Función para contar reservas de salto en una fecha específica
+  // Contar reservas de salto en una fecha específica
   const getSaltoReservationsCount = (dateString) => {
     const dateAvailability = availability[dateString];
     if (dateAvailability && dateAvailability.salto) {
       return dateAvailability.salto.total - dateAvailability.salto.available;
     }
-    // Fallback: contar desde reservas locales
+    
     const dayReservations = reservations[dateString] || [];
-    return dayReservations.filter(reservation => reservation.actividad === 'salto').length;
+    return dayReservations.filter(reservation => 
+      reservation.actividad === 'salto' && reservation.estado !== 'cancelada'
+    ).length;
   };
 
-  // Función para obtener disponibilidad de lugares para un horario específico
+  // Obtener disponibilidad de lugares para un horario específico
   const getSpotAvailability = (timeSlot, dateString) => {
-    // Usar datos del backend si están disponibles
     const dateAvailability = availability[dateString];
     if (dateAvailability && dateAvailability[timeSlot]) {
-      return dateAvailability[timeSlot];
+      const spotData = dateAvailability[timeSlot];
+      const dayReservations = reservations[dateString] || [];
+      const timeReservations = dayReservations.filter(res => 
+        res.time === timeSlot && res.estado !== 'cancelada' && res.actividad !== 'salto'
+      );
+      
+      return {
+        total: spotData.total,
+        available: spotData.available,
+        reservations: timeReservations
+      };
     }
 
-    // Fallback: calcular desde configuración local
-    const config = spotsConfig[timeSlot];
-    if (!config) return { total: 0, available: 0 };
-
+    // Fallback: usar configuración por defecto de 6 horarios máximo
     const dayReservations = reservations[dateString] || [];
-    const timeReservations = dayReservations.filter(res => res.time === timeSlot);
+    const timeReservations = dayReservations.filter(res => 
+      res.time === timeSlot && res.estado !== 'cancelada'
+    );
     
     return {
-      total: config.total,
-      available: Math.max(0, config.total - timeReservations.length),
+      total: 6,
+      available: Math.max(0, 6 - timeReservations.length),
       reservations: timeReservations
     };
   };
 
-  // Función para verificar si es día laboral (Martes a Domingo)
+  // Verificar si es día laboral (Martes a Domingo)
   const isWorkingDay = (date) => {
     const dayOfWeek = date.getDay();
     return dayOfWeek >= 2 || dayOfWeek === 0;
+  };
+
+  // Función para obtener el estado visual de un día
+  const getDayStatus = (dateString) => {
+    const dayReservations = reservations[dateString] || [];
+    const activeReservations = dayReservations.filter(res => res.estado !== 'cancelada');
+    
+    if (activeReservations.length === 0) return 'empty';
+    
+    let totalCapacity = 0;
+    let totalOccupied = 0;
+
+    const dateAvailability = availability[dateString];
+    if (dateAvailability) {
+      Object.keys(dateAvailability).forEach(key => {
+        if (key !== 'salto') {
+          totalCapacity += dateAvailability[key].total;
+          totalOccupied += (dateAvailability[key].total - dateAvailability[key].available);
+        }
+      });
+      if (dateAvailability.salto) {
+        totalCapacity += dateAvailability.salto.total;
+        totalOccupied += (dateAvailability.salto.total - dateAvailability.salto.available);
+      }
+    } else {
+      totalOccupied = activeReservations.length;
+      totalCapacity = 36; // 6 horarios x 6 cupos cada uno
+    }
+    
+    if (totalCapacity === 0) return 'empty';
+    
+    const occupancyRate = totalOccupied / totalCapacity;
+    
+    if (occupancyRate >= 0.9) return 'full';
+    if (occupancyRate >= 0.6) return 'busy';
+    if (occupancyRate > 0) return 'available';
+    return 'empty';
   };
 
   // Generar días del calendario
@@ -224,7 +307,8 @@ const MenuCalendario = () => {
       
       const dateString = cellDate.toISOString().split('T')[0];
       const dayReservations = reservations[dateString] || [];
-      const appointmentCount = dayReservations.length;
+      const appointmentCount = dayReservations.filter(res => res.estado !== 'cancelada').length;
+      const dayStatus = getDayStatus(dateString);
 
       days.push({
         date: cellDate,
@@ -234,7 +318,8 @@ const MenuCalendario = () => {
         isUnavailable,
         isSelected,
         appointmentCount,
-        dateString
+        dateString,
+        dayStatus
       });
       cellCount++;
     }
@@ -246,7 +331,7 @@ const MenuCalendario = () => {
   const selectDate = (day) => {
     if (day.isUnavailable || day.isOtherMonth) return;
     setSelectedDate(day.date);
-    setSelectedTime(null);
+    setSelectedTime(null); // Resetear horario seleccionado
     setBookingData({ nombre: '', edad: '', actividad: '' });
     setShowDateModal(true);
   };
@@ -265,10 +350,39 @@ const MenuCalendario = () => {
     }));
   };
 
-  // Confirmar cita desde el modal - INTEGRADO CON BACKEND
+  // Función para cancelar una reserva
+  const cancelReservation = async (reservaId) => {
+    if (!window.confirm('¿Estás seguro de que quieres cancelar esta reserva?')) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await axios.delete(`http://localhost:3001/api/reservas/${reservaId}`);
+      
+      toast.success('Reserva cancelada exitosamente');
+      
+      await fetchReservationsForMonth();
+      if (selectedDate) {
+        await fetchAvailability(selectedDate.toISOString().split('T')[0]);
+      }
+    } catch (error) {
+      console.error('Error cancelando reserva:', error);
+      toast.error('Error al cancelar la reserva');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Confirmar cita desde el modal
   const confirmAppointment = async () => {
+    if (!currentUser) {
+      toast.error('Debes estar logueado para hacer una reserva');
+      return;
+    }
+
     if (!selectedDate || !selectedTime || !bookingData.nombre || !bookingData.edad || !bookingData.actividad) {
-      alert('Por favor completa todos los campos');
+      toast.error('Por favor completa todos los campos');
       return;
     }
 
@@ -276,29 +390,28 @@ const MenuCalendario = () => {
     const spotAvailability = getSpotAvailability(selectedTime, dateString);
     
     if (spotAvailability.available <= 0) {
-      alert('No hay lugares disponibles para este horario');
+      toast.error('No hay lugares disponibles para este horario');
       return;
     }
 
     // Verificar si el cliente ya tiene una reserva ese día
     if (clientHasReservationOnDate(bookingData.nombre, dateString)) {
-      alert('Ya tienes una reserva para este día. Solo se permite una reserva por día por cliente.');
+      toast.error('Ya tienes una reserva para este día. Solo se permite una reserva por día por cliente.');
       return;
     }
 
     // Verificar límite de saltos (5 por día)
     if (bookingData.actividad === 'salto' && getSaltoReservationsCount(dateString) >= 5) {
-      alert('Ya se alcanzó el límite máximo de 5 reservas de salto para este día.');
+      toast.error('Ya se alcanzó el límite máximo de 5 reservas de salto para este día.');
       return;
     }
 
     setLoading(true);
 
     try {
-      // Crear reserva en el backend
       const clase_id = activityClassMap[bookingData.actividad];
       const reservaData = {
-        usuario_id: 1, // Temporal - deberías obtener esto del usuario logueado
+        usuario_id: currentUser.id,
         clase_id: clase_id,
         fecha: dateString,
         horario: selectedTime,
@@ -309,23 +422,11 @@ const MenuCalendario = () => {
 
       const response = await axios.post('http://localhost:3001/api/reservas', reservaData);
 
-      // Si la reserva se guarda exitosamente, actualizar estado local
-      const newReservation = {
-        id: response.data.id,
-        time: selectedTime,
-        nombre: bookingData.nombre,
-        edad: parseInt(bookingData.edad),
-        actividad: bookingData.actividad
-      };
-
-      // Agregar la reserva al estado local
-      setReservations(prev => ({
-        ...prev,
-        [dateString]: [...(prev[dateString] || []), newReservation]
-      }));
-
-      // Actualizar disponibilidad
-      await fetchAvailability(dateString);
+      // Actualizar inmediatamente después de crear la reserva
+      await Promise.all([
+        fetchReservationsForMonth(),
+        fetchAvailability(dateString)
+      ]);
 
       // Preparar datos para el modal de confirmación
       const dayName = dayNamesFull[selectedDate.getDay()];
@@ -352,6 +453,7 @@ const MenuCalendario = () => {
       });
 
       setShowSuccessModal(true);
+      toast.success('¡Reserva confirmada exitosamente!');
 
       // Resetear selección y cerrar modal de fecha
       setShowDateModal(false);
@@ -363,14 +465,11 @@ const MenuCalendario = () => {
       console.error('Error creando reserva:', error);
       
       if (error.response) {
-        // El servidor respondió con un código de error
-        alert(error.response.data.error || 'Error al crear la reserva');
+        toast.error(error.response.data.error || 'Error al crear la reserva');
       } else if (error.request) {
-        // No hubo respuesta del servidor
-        alert('No se pudo conectar con el servidor. Inténtalo más tarde.');
+        toast.error('No se pudo conectar con el servidor. Inténtalo más tarde.');
       } else {
-        // Error en la configuración de la petición
-        alert('Error inesperado. Inténtalo más tarde.');
+        toast.error('Error inesperado. Inténtalo más tarde.');
       }
     } finally {
       setLoading(false);
@@ -414,14 +513,60 @@ const MenuCalendario = () => {
     setConfirmedBooking(null);
   };
 
+  // Cerrar modal de fecha con reseteo completo
   const closeDateModal = () => {
     setShowDateModal(false);
     setSelectedTime(null);
     setBookingData({ nombre: '', edad: '', actividad: '' });
   };
 
+  const showReservations = () => {
+    setShowReservationsModal(true);
+  };
+
+  const closeReservationsModal = () => {
+    setShowReservationsModal(false);
+  };
+
+  // Función para obtener horarios disponibles según el día de la semana dinámicamente
+  const fetchHorariosDia = async (diaSemana) => {
+    try {
+      const response = await axios.get('http://localhost:3001/api/horarios', {
+        params: { dia_semana: diaSemana }
+      });
+      setHorariosDia(response.data);
+    } catch (error) {
+      console.error('Error obteniendo horarios:', error);
+      toast.error('Error cargando horarios disponibles');
+      setHorariosDia([]);
+    }
+  };
+
+  // Función para obtener color del estado de reserva
+  const getStatusColor = (estado) => {
+    switch(estado) {
+      case 'confirmada': return '#28a745'; // Verde
+      case 'pendiente': return '#ffc107';   // Amarillo
+      case 'cancelada': return '#dc3545';   // Rojo
+      default: return '#6c757d';           // Gris
+    }
+  };
+
   return (
     <div className="calendar-container">
+      <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
+
       {/* Indicador de carga */}
       {loading && (
         <div className="loading-overlay">
@@ -429,11 +574,61 @@ const MenuCalendario = () => {
         </div>
       )}
 
+      {/* Modal de reservas del día */}
+      {showReservationsModal && selectedDate && (
+        <div className="modal-overlay" onClick={closeReservationsModal}>
+          <div className="reservations-modal" onClick={e => e.stopPropagation()}>
+            <button className="close-btn" onClick={closeReservationsModal} aria-label="Cerrar modal">×</button>
+            <div className="modal-header">
+              <h2>Reservas del {selectedDate.toLocaleDateString('es-ES', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+              })}</h2>
+            </div>
+            <div className="modal-content">
+              {dayReservations.filter(res => res.estado !== 'cancelada').length === 0 ? (
+                <p className="no-reservations">No hay reservas activas para este día.</p>
+              ) : (
+                <div className="reservations-list">
+                  {dayReservations.filter(res => res.estado !== 'cancelada').map((reserva, idx) => (
+                    <div key={reserva.id || idx} className="reservation-item">
+                      <div className="reservation-info">
+                        <h4 style={{ color: getStatusColor(reserva.estado) }}>
+                          {reserva.nombre} – {reserva.actividad} – Caballo {reserva.caballo_id}
+                        </h4>
+                        <p><strong>Edad:</strong> {reserva.edad} años</p>
+                        <p><strong>Hora:</strong> {reserva.time}</p>
+                        <p><strong>Estado:</strong> 
+                          <span className={`status ${reserva.estado}`} style={{ color: getStatusColor(reserva.estado) }}>
+                            {reserva.estado}
+                          </span>
+                        </p>
+                      </div>
+                      {currentUser && currentUser.id === reserva.usuario_id && (
+                        <button 
+                          className="cancel-btn"
+                          onClick={() => cancelReservation(reserva.id)}
+                          disabled={loading}
+                          aria-label="Cancelar reserva"
+                        >
+                          Cancelar
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal al seleccionar fecha: muestra horarios y formulario de reserva */}
       {showDateModal && selectedDate && (
         <div className="modal-overlay" onClick={closeDateModal}>
           <div className="date-modal" onClick={e => e.stopPropagation()}>
-            <button className="close-btn" onClick={closeDateModal}>×</button>
+            <button className="close-btn" onClick={closeDateModal} aria-label="Cerrar modal">×</button>
             <div className="modal-header">
               <h2>Reserva para {dayNamesFull[selectedDate.getDay()]}, {selectedDate.toLocaleDateString('es-ES', {
                 day: 'numeric',
@@ -442,6 +637,9 @@ const MenuCalendario = () => {
               })}</h2>
               <div className="day-info">
                 <p>Reservas de salto disponibles: {5 - getSaltoReservationsCount(selectedDateString)}/5</p>
+                <button className="view-reservations-btn" onClick={showReservations}>
+                  Ver reservas del día ({dayReservations.filter(res => res.estado !== 'cancelada').length})
+                </button>
               </div>
             </div>
             <div className="modal-content">
@@ -449,47 +647,33 @@ const MenuCalendario = () => {
                 <>
                   <h4>Horarios Disponibles</h4>
                   <div className="time-period">
-                    <h5>Matutino</h5>
                     <div className="time-slots-grid">
-                      {timeSlots.morning.map(slot => {
-                        const spotInfo = getSpotAvailability(slot.time, selectedDateString);
-                        const hasAvailableSpots = spotInfo.available > 0;
-                        const isSelected = selectedTime === slot.time;
-                        
-                        return (
-                          <div
-                            key={slot.time}
-                            className={`time-slot ${!hasAvailableSpots ? 'occupied' : ''} ${isSelected ? 'selected' : ''}`}
-                            onClick={hasAvailableSpots ? () => selectTime(slot.time) : undefined}
-                          >
-                            <div className="time-label">{slot.label}</div>
-                            <div className="spots-info">{spotInfo.available}/{spotInfo.total} lugares</div>
-                            {!hasAvailableSpots && <span className="occupied-label">Sin lugares</span>}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  <div className="time-period">
-                    <h5>Vespertino</h5>
-                    <div className="time-slots-grid">
-                      {timeSlots.afternoon.map(slot => {
-                        const spotInfo = getSpotAvailability(slot.time, selectedDateString);
-                        const hasAvailableSpots = spotInfo.available > 0;
-                        const isSelected = selectedTime === slot.time;
-                        
-                        return (
-                          <div
-                            key={slot.time}
-                            className={`time-slot ${!hasAvailableSpots ? 'occupied' : ''} ${isSelected ? 'selected' : ''}`}
-                            onClick={hasAvailableSpots ? () => selectTime(slot.time) : undefined}
-                          >
-                            <div className="time-label">{slot.label}</div>
-                            <div className="spots-info">{spotInfo.available}/{spotInfo.total} lugares</div>
-                            {!hasAvailableSpots && <span className="occupied-label">Sin lugares</span>}
-                          </div>
-                        );
-                      })}
+                      {horariosDia.length === 0 ? (
+                        <p>No hay horarios disponibles para este día.</p>
+                      ) : (
+                        horariosDia.map(slot => {
+                          const horaStr = slot.hora.slice(0,5);
+                          const dayReservations = reservations[selectedDateString] || [];
+                          const timeReservations = dayReservations.filter(res => 
+                            res.time === horaStr && res.estado !== 'cancelada'
+                          );
+                          const totalCupos = 6; // Límite máximo de 6 por horario
+                          const available = Math.max(0, totalCupos - timeReservations.length);
+                          const isSelected = selectedTime === horaStr;
+
+                          return (
+                            <div
+                              key={slot.id}
+                              className={`time-slot ${available === 0 ? 'occupied' : ''} ${isSelected ? 'selected' : ''}`}
+                              onClick={available > 0 ? () => selectTime(horaStr) : undefined}
+                              aria-label={`Horario ${horaStr}, ${available} lugares disponibles`}
+                            >
+                              <div className="time-label">{horaStr}</div>
+                              {available === 0 && <span className="occupied-label">Sin lugares</span>}
+                            </div>
+                          );
+                        })
+                      )}
                     </div>
                   </div>
 
@@ -504,6 +688,11 @@ const MenuCalendario = () => {
                   {selectedTime && (
                     <div className="booking-form">
                       <h4>Información de la Reserva</h4>
+                      {!currentUser && (
+                        <div className="auth-warning">
+                          ⚠️ Debes estar logueado para hacer una reserva
+                        </div>
+                      )}
                       <div className="form-group">
                         <label htmlFor="nombre">Nombre:</label>
                         <input
@@ -513,7 +702,7 @@ const MenuCalendario = () => {
                           value={bookingData.nombre}
                           onChange={handleInputChange}
                           placeholder="Ingresa tu nombre completo"
-                          disabled={loading}
+                          disabled={loading || !currentUser}
                         />
                       </div>
                       <div className="form-group">
@@ -527,7 +716,7 @@ const MenuCalendario = () => {
                           placeholder="Ingresa tu edad"
                           min="1"
                           max="120"
-                          disabled={loading}
+                          disabled={loading || !currentUser}
                         />
                       </div>
                       <div className="form-group">
@@ -537,7 +726,7 @@ const MenuCalendario = () => {
                           name="actividad"
                           value={bookingData.actividad}
                           onChange={handleInputChange}
-                          disabled={loading}
+                          disabled={loading || !currentUser}
                         >
                           <option value="">Selecciona una actividad</option>
                           {actividades.map(actividad => {
@@ -552,25 +741,13 @@ const MenuCalendario = () => {
                         </select>
                       </div>
 
-                      {/* Validación de cliente existente */}
-                      {bookingData.nombre && clientHasReservationOnDate(bookingData.nombre, selectedDateString) && (
-                        <div className="warning-message">
-                          ⚠️ Ya tienes una reserva para este día. Solo se permite una reserva por día.
-                        </div>
-                      )}
-
-                      {/* Validación de límite de saltos */}
-                      {bookingData.actividad === 'salto' && !canMakeSaltoReservation(selectedDateString) && (
-                        <div className="warning-message">
-                          ⚠️ Se alcanzó el límite máximo de 5 reservas de salto para este día.
-                        </div>
-                      )}
-
                       <button
                         className="modal-btn primary"
                         onClick={confirmAppointment}
                         disabled={
                           loading ||
+                          !currentUser ||
+                          !selectedTime || // Botón deshabilitado hasta seleccionar horario
                           !bookingData.nombre || 
                           !bookingData.edad || 
                           !bookingData.actividad || 
@@ -578,6 +755,7 @@ const MenuCalendario = () => {
                           clientHasReservationOnDate(bookingData.nombre, selectedDateString) ||
                           (bookingData.actividad === 'salto' && !canMakeSaltoReservation(selectedDateString))
                         }
+                        aria-label="Confirmar reserva"
                       >
                         {loading ? 'Guardando...' : 'Confirmar Reserva'}
                       </button>
@@ -603,11 +781,11 @@ const MenuCalendario = () => {
       <div className="calendar-section">
         <div className="calendar-header">
           <div className="month-navigation">
-            <button className="nav-btn prev" onClick={previousMonth}>‹</button>
+            <button className="nav-btn prev" onClick={previousMonth} aria-label="Mes anterior">‹</button>
             <h2 className="month-year">
               {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
             </h2>
-            <button className="nav-btn next" onClick={nextMonth}>›</button>
+            <button className="nav-btn next" onClick={nextMonth} aria-label="Mes siguiente">›</button>
           </div>
         </div>
         
@@ -622,8 +800,10 @@ const MenuCalendario = () => {
             {calendarDays.map((day, index) => (
               <div
                 key={index}
-                className={`day-cell ${day.isOtherMonth ? 'other-month' : ''} ${day.isToday ? 'today' : ''} ${day.isUnavailable ? 'unavailable' : 'available'} ${day.isSelected ? 'selected' : ''}`}
+                className={`day-cell ${day.isOtherMonth ? 'other-month' : ''} ${day.isToday ? 'today' : ''} ${day.isUnavailable ? 'unavailable' : 'available'} ${day.isSelected ? 'selected' : ''} ${day.dayStatus}`}
                 onClick={() => selectDate(day)}
+                title={`${day.appointmentCount} reserva${day.appointmentCount !== 1 ? 's' : ''}`}
+                aria-label={`Día ${day.day}, ${day.appointmentCount} reservas`}
               >
                 <span className="day-number">{day.day}</span>
                 {day.appointmentCount > 0 && !day.isOtherMonth && (
@@ -636,6 +816,9 @@ const MenuCalendario = () => {
                     )}
                   </div>
                 )}
+                {day.dayStatus === 'full' && !day.isOtherMonth && !day.isUnavailable && (
+                  <div className="day-status-indicator full">LLENO</div>
+                )}
               </div>
             ))}
           </div>
@@ -647,7 +830,7 @@ const MenuCalendario = () => {
         <div className="modal-overlay" onClick={closeSuccessModal}>
           <div className="success-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <button className="close-btn2" onClick={closeSuccessModal}>×</button>
+              <button className="close-btn2" onClick={closeSuccessModal} aria-label="Cerrar modal">×</button>
               <h2>¡Cita Confirmada!</h2>
             </div>
             
@@ -712,9 +895,11 @@ const MenuCalendario = () => {
           </div>
         </div>
       )}
-      <ReservaInfo />
+
+      <ReservasInfo dayReservations={dayReservations} />
     </div>
   );
 };
 
 export default MenuCalendario;
+                    
