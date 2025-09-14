@@ -21,6 +21,7 @@ import class3Img from "../img/class3.jpg";
 import NavigationClases from "../components/NavigationClases";
 import Footer from "../components/Footer";
 
+
 // Swiper
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay } from "swiper/modules";

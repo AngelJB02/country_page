@@ -74,19 +74,19 @@
     opacity: 1;
     transform: translateY(0) scale(1);
   }
-}
+} 
 
 @keyframes gradientShift {
   0%, 100% { background: linear-gradient(135deg, var(--terracotta), var(--primary-brown), var(--sage-green)); }
   50% { background: linear-gradient(135deg, var(--sage-green), var(--terracotta), var(--primary-brown)); }
 }
 
-@keyframes particleFloat {
+/* @keyframes particleFloat {
   to {
     transform: translateY(-100vh) rotate(360deg);
     opacity: 0;
   }
-}
+} */
 
 .login-container {
   background: var(--cream-overlay);
