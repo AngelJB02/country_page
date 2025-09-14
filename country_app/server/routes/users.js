@@ -1,39 +1,45 @@
-// server/routes/users.js
 import express from 'express';
-import db from '../db.js';
-import bcrypt from 'bcrypt';
+import db from '../server/db.js';
 
 const router = express.Router();
 
+// Obtener todos los usuarios
+router.get('/all', async (req, res) => {
+  try {
+    const [rows] = await db.query("SELECT * FROM usuarios");
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al obtener usuarios' });
+  }
+});
+
 // Registrar usuario
 router.post('/register', async (req, res) => {
-  const { nombre, email, password } = req.body;
-
-  if (!nombre || !email || !password) {
-    return res.status(400).json({ error: 'Todos los campos son requeridos' });
-  }
+  const { nombre, apellido, email, password, rol } = req.body;
+  if (!nombre || !apellido || !email || !password) return res.status(400).json({ error:'Faltan datos' });
 
   try {
-    // Verificar si el usuario ya existe
-    const [rows] = await db.query('SELECT id FROM usuarios WHERE email = ?', [email]);
-    if (rows.length > 0) {
-      return res.status(400).json({ error: 'El usuario ya existe' });
-    }
+    const [result] = await db.query(
+      "INSERT INTO usuarios(nombre, apellido, email, password, rol, estado, fecha_registro) VALUES(?,?,?,?,?,'activo',NOW())",
+      [nombre, apellido, email, password, rol]
+    );
+    res.json({ message:'Usuario registrado correctamente', id: result.insertId });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error:'Error al registrar usuario' });
+  }
+});
 
-    // Hashear la contraseña
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Insertar usuario
-    await db.query('INSERT INTO usuarios (nombre, email, password) VALUES (?, ?, ?)', [
-      nombre,
-      email,
-      hashedPassword,
-    ]);
-
-    res.status(201).json({ message: 'Usuario registrado correctamente' });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Error en el servidor' });
+// Dar de baja usuario
+router.patch('/disable/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await db.query("UPDATE usuarios SET estado='inactivo' WHERE id=?", [id]);
+    res.json({ message:'Usuario dado de baja correctamente' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error:'Error al dar de baja usuario' });
   }
 });
 
