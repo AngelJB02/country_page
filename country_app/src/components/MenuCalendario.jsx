@@ -105,6 +105,7 @@ const MenuCalendario = () => {
           time: reserva.horario,
           nombre: reserva.nombre,
           edad: reserva.edad,
+          fecha: reserva.fecha,
           actividad: reserva.clase_tipo || reserva.actividad,
           estado: reserva.estado,
           usuario_id: reserva.usuario_id,
@@ -657,19 +658,32 @@ const MenuCalendario = () => {
                           const timeReservations = dayReservations.filter(res => 
                             res.time === horaStr && res.estado !== 'cancelada'
                           );
-                          const totalCupos = 6; // Límite máximo de 6 por horario
+                          const totalCupos = 6;
                           const available = Math.max(0, totalCupos - timeReservations.length);
                           const isSelected = selectedTime === horaStr;
+
+                          // NUEVO: Verifica si el usuario ya tiene reserva en ese horario
+                          const userHasReservation = dayReservations.some(res =>
+                            res.usuario_id === currentUser?.id &&
+                            res.time === horaStr &&
+                            res.estado !== 'cancelada'
+                          );
 
                           return (
                             <div
                               key={slot.id}
-                              className={`time-slot ${available === 0 ? 'occupied' : ''} ${isSelected ? 'selected' : ''}`}
-                              onClick={available > 0 ? () => selectTime(horaStr) : undefined}
+                              className={`time-slot ${available === 0 ? 'occupied' : ''} ${isSelected ? 'selected' : ''} ${userHasReservation ? 'blocked' : ''}`}
+                              onClick={
+                                available > 0 && !userHasReservation
+                                  ? () => selectTime(horaStr)
+                                  : undefined
+                              }
                               aria-label={`Horario ${horaStr}, ${available} lugares disponibles`}
+                              style={userHasReservation ? { pointerEvents: 'none', opacity: 0.5 } : {}}
                             >
                               <div className="time-label">{horaStr}</div>
                               {available === 0 && <span className="occupied-label">Sin lugares</span>}
+                              {userHasReservation && <span className="blocked-label">Reservado por ti</span>}
                             </div>
                           );
                         })
@@ -896,10 +910,9 @@ const MenuCalendario = () => {
         </div>
       )}
 
-      <ReservasInfo dayReservations={dayReservations} />
+      <ReservasInfo reservations={reservations} currentUser={currentUser} />
     </div>
   );
 };
 
 export default MenuCalendario;
-                    

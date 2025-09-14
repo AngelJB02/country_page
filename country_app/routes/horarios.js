@@ -5,54 +5,14 @@ import db from '../server/db.js';
 // GET /api/horarios - Obtener horarios dinámicamente desde la base de datos
 router.get('/', async (req, res) => {
   const { dia_semana } = req.query;
-  
   try {
-    let query = "SELECT id, hora, turno, dia_semana, disponible FROM horarios";
-    let params = [];
-    
-    // Filtrar por día de la semana si se proporciona
-    if (dia_semana) {
-      query += " WHERE dia_semana = ? AND disponible = 1";
-      params.push(dia_semana);
-    } else {
-      query += " WHERE disponible = 1";
-    }
-    
-    query += " ORDER BY hora ASC";
-    
-    const [rows] = await db.execute(query, params);
-    
-    // Si no hay horarios en la BD, usar fallback con límite de 6 horarios
-    if (rows.length === 0) {
-      const horariosDefault = [
-        { id: 1, hora: '08:00:00', turno: 'mañana', dia_semana: dia_semana || 'todos', disponible: 1 },
-        { id: 2, hora: '09:00:00', turno: 'mañana', dia_semana: dia_semana || 'todos', disponible: 1 },
-        { id: 3, hora: '10:00:00', turno: 'mañana', dia_semana: dia_semana || 'todos', disponible: 1 },
-        { id: 4, hora: '16:00:00', turno: 'tarde', dia_semana: dia_semana || 'todos', disponible: 1 },
-        { id: 5, hora: '17:00:00', turno: 'tarde', dia_semana: dia_semana || 'todos', disponible: 1 },
-        { id: 6, hora: '18:00:00', turno: 'tarde', dia_semana: dia_semana || 'todos', disponible: 1 }
-      ];
-      return res.json(horariosDefault);
-    }
-    
+    const [rows] = await db.execute(
+      "SELECT id, hora, turno, dia_semana FROM horarios WHERE dia_semana = ? ORDER BY hora ASC",
+      [dia_semana]
+    );
     res.json(rows);
   } catch (err) {
-    console.error('Error obteniendo horarios:', err);
-    
-    // En caso de error, devolver horarios por defecto con límite de 6
-    const horariosDefault = [
-      { id: 1, hora: '08:00:00', turno: 'mañana', dia_semana: dia_semana || 'todos', disponible: 1 },
-      { id: 2, hora: '09:00:00', turno: 'mañana', dia_semana: dia_semana || 'todos', disponible: 1 },
-      { id: 3, hora: '10:00:00', turno: 'mañana', dia_semana: dia_semana || 'todos', disponible: 1 },
-      { id: 4, hora: '16:00:00', turno: 'tarde', dia_semana: dia_semana || 'todos', disponible: 1 },
-      { id: 5, hora: '17:00:00', turno: 'tarde', dia_semana: dia_semana || 'todos', disponible: 1 },
-      { id: 6, hora: '18:00:00', turno: 'tarde', dia_semana: dia_semana || 'todos', disponible: 1 }
-    ];
-    
-    res.status(500).json({ 
-      error: "Error obteniendo horarios del servidor", 
-      horarios_default: horariosDefault 
-    });
+    res.status(500).json({ error: "Error obteniendo horarios" });
   }
 });
 
@@ -308,5 +268,5 @@ router.get('/ocupacion/:fecha', async (req, res) => {
     res.status(500).json({ error: "Error en el servidor obteniendo ocupación" });
   }
 });
-
-export default router;
+router.get('/ocupacion/:fecha', async (req, res) => {
+  const { fecha } = req.params;    try {    const fechaObj = new Date(fecha);    const diasSemana = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];    const diaSemana = diasSemana[fechaObj.getDay()];        const [ocupacion] = await db.execute(`      SELECT         h.id,        h.hora,        h.turno,        h.dia_semana,        COALESCE(reservas.total, 0) as ocupadas,        6 as capacidad_maxima,        (6 - COALESCE(reservas.total, 0)) as disponibles,        ROUND((COALESCE(reservas.total, 0) / 6) * 100, 2) as porcentaje_ocupacion      FROM horarios h      LEFT JOIN (        SELECT horario, COUNT(*) as total        FROM reservas r        JOIN clases c ON r.clase_id = c.id        WHERE r.fecha = ? AND r.estado = 'confirmada' AND c.tipo != 'salto'        GROUP BY horario      ) reservas ON TIME_FORMAT(h.hora, '%H:%i') = reservas.horario      WHERE h.dia_semana = ? AND h.disponible = 1      ORDER BY h.hora    `, [fecha, diaSemana]);        res.json({      fecha,      dia_semana: diaSemana,      horarios: ocupacion    });  } catch (err) {    console.error('Error obteniendo ocupación de horarios:', err);    res.status(500).json({ error: "Error en el servidor obteniendo ocupación" });  }});export default router;

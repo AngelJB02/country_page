@@ -212,7 +212,7 @@ router.post('/', async (req, res) => {
 
     // Obtener un caballo disponible según tipo de clase
     const [caballoRows] = await conn.execute(
-      "SELECT id, nombre FROM caballos WHERE tipo = ? AND disponible = 1 LIMIT 1",
+      "SELECT id FROM caballos WHERE tipo = ? AND disponible = 1 LIMIT 1",
       [tipo]
     );
     if (caballoRows.length === 0) {
@@ -223,11 +223,11 @@ router.post('/', async (req, res) => {
     }
 
     const caballo_id = caballoRows[0].id;
-    const caballo_nombre = caballoRows[0].nombre;
+    
 
     // Crear la reserva
     const [result] = await conn.execute(`
-      INSERT INTO reservas (usuario_id, clase_id, fecha, horario, nombre, edad, caballo_id, estado, created_at)
+      INSERT INTO reservas (usuario_id, clase_id, fecha, horario, nombre, edad, caballo_id, estado, fecha_creacion)
       VALUES (?, ?, ?, ?, ?, ?, ?, 'confirmada', NOW())
     `, [usuario_id, clase_id, fecha, horario, nombre, edad, caballo_id]);
 
@@ -261,7 +261,7 @@ router.post('/', async (req, res) => {
           hour: '2-digit',
           minute: '2-digit'
         }),
-        caballo_asignado: caballo_nombre
+         //caballo_asignado: caballo_nombre
       }
     };
 
