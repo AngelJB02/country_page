@@ -2,7 +2,8 @@
 
 /* ===== CONTENEDOR PRINCIPAL ===== */
 .calendar-container { 
-  font-family: var(--font-secondary);
+  font-family: var(--font-primary);
+  font-weight: 400;
   background: var(--terracotta--light-brown);
   padding: var(--spacing-lg);
   color: var(--dark-brown);

@@ -105,6 +105,7 @@ const MenuCalendario = () => {
           time: reserva.horario,
           nombre: reserva.nombre,
           edad: reserva.edad,
+          fecha: reserva.fecha,
           actividad: reserva.clase_tipo || reserva.actividad,
           estado: reserva.estado,
           usuario_id: reserva.usuario_id,
@@ -896,7 +897,7 @@ const MenuCalendario = () => {
         </div>
       )}
 
-      <ReservasInfo dayReservations={dayReservations} />
+      <ReservasInfo reservations={reservations} currentUser={currentUser} />
     </div>
   );
 };

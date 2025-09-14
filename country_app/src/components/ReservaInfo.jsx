@@ -1,24 +1,68 @@
 import React from "react";
+import "../CSS/ReservaInfo.css";
 
-const ReservaInfo = ({ dayReservations }) => (
-  <div className="reservas-dia">
-    <h3>Reservas del día</h3>
-    {dayReservations.filter(res => res.estado !== 'cancelada').length === 0 ? (
-      <p>No hay reservas activas para este día.</p>
-    ) : (
-      dayReservations
-        .filter(res => res.estado !== 'cancelada')
-        .map((reserva, idx) => (
+const ReservasInfo = ({ reservations, currentUser }) => {
+  // Unir todas las reservas en un solo array
+  const allReservations = Object.values(reservations).flat();
+
+  // Filtrar por usuario logueado
+  const userReservations = allReservations.filter(res => res.usuario_id === currentUser.id);
+
+  // Ordenar por fecha descendente (más recientes primero)
+  userReservations.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
+  return (
+    <div className="reservas-usuario">
+      <h3>Todas tus eservas</h3>
+      {userReservations.length === 0 ? (
+        <p>No tienes reservas registradas.</p>
+      ) : (
+        userReservations.map((reserva, idx) => (
           <div key={reserva.id || idx} className="reserva-item">
-            <p><strong>Nombre:</strong> {reserva.nombre}</p>
-            <p><strong>Edad:</strong> {reserva.edad}</p>
-            <p><strong>Actividad:</strong> {reserva.actividad}</p>
-            <p><strong>Hora:</strong> {reserva.time}</p>
+            <div className="detail-row">
+              <span className="detail-label">Nombre:</span>
+              <span className="detail-value">{reserva.nombre}</span>
+            </div>
+            <div className="detail-row">
+              <span className="detail-label">Edad:</span>
+              <span className="detail-value">{reserva.edad} años</span>
+            </div>
+            <div className="detail-row">
+              <span className="detail-label">Actividad:</span>
+              <span className="detail-value">{reserva.actividad.charAt(0).toUpperCase() + reserva.actividad.slice(1)}</span>
+            </div>
+            <div className="detail-row">
+            <span className="detail-label">Fecha:</span>
+            <span className="detail-value">
+              {reserva.fecha
+                ? new Date(reserva.fecha).toLocaleDateString('es-ES', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                  })
+                : 'Sin fecha'}
+            </span>
+          </div>
+            <div className="detail-row">
+              <span className="detail-label">Hora:</span>
+              <span className="detail-value">{reserva.time}</span>
+            </div>
+            {reserva.id && (
+              <div className="detail-row">
+                <span className="detail-label">ID de Reserva:</span>
+                <span className="detail-value">#{reserva.id}</span>
+              </div>
+            )}
+            <div className="detail-row">
+              <span className="detail-label">Estado:</span>
+              <span className="detail-value">{reserva.estado}</span>
+            </div>
             <hr />
           </div>
         ))
-    )}
-  </div>
-);
+      )}
+    </div>
+  );
+};
 
-export default ReservaInfo;
+export default ReservasInfo;
