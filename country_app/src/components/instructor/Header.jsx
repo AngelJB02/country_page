@@ -3,7 +3,7 @@ import React from 'react';
 
 const Header = ({ logoutComponent }) => (
   <div style={{ 
-    background: 'var(--cream-overlay)',
+    background: 'var(--warm-white)',
     backdropFilter: 'blur(10px)', 
     padding: '2rem', 
     borderRadius: 'var(--radius-xl)', 

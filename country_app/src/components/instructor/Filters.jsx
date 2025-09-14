@@ -1,7 +1,7 @@
 import React from 'react';
 
 const Filters = ({ viewMode, setViewMode, selectedDate, setSelectedDate, endDate, setEndDate, searchTerm, setSearchTerm }) => (
-  <div style={{ background: 'var(--cream-overlay)', backdropFilter: 'blur(10px)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--soft-shadow)', marginBottom: '2rem', border: '1px solid rgba(255,255,255,0.2)' }}>
+  <div style={{ background: 'var(--warm-white)', backdropFilter: 'blur(10px)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--soft-shadow)', marginBottom: '2rem', border: '1px solid rgba(255,255,255,0.2)' }}>
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', alignItems: 'end' }}>
       {/* Vista */}
       <div>

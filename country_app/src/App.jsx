@@ -6,6 +6,7 @@ import MenuCalendario from "./components/MenuCalendario";
 import Login from "./components/Login";
 import RegistroUsuarios from "./components/RegistroUsuarios";
 import InstructorClases from "./components/InstructorClases";  
+import Contabilidad from "./components/Contabilidad";
 
 function App() {
   return (
@@ -17,7 +18,8 @@ function App() {
         <Route path="/MenuCalendario" element={<MenuCalendario />} />
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<RegistroUsuarios />} />
-        <Route path="/InstructorClases" element={<InstructorClases />} />
+        <Route path="/instructor" element={<InstructorClases />} />
+        <Route path="/contabilidad" element={<Contabilidad />} />
       </Routes>
     </Router>
   );
