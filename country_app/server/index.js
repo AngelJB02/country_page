@@ -65,6 +65,7 @@ app.post("/login", async (req, res) => {
 app.use("/api/instructor", instructorRoutes);
 app.use("/api/reservas", reservasRoutes);
 app.use("/api/horarios", horariosRoutes);
+app.use("/api/users", usersRoutes);
 // ========================
 // Levantar servidor
 // ========================
