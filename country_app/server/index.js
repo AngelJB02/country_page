@@ -8,9 +8,6 @@ import reservasRoutes from '../routes/reservas.js';
 import horariosRoutes from '../routes/horarios.js'; 
 import usersRoutes from '../routes/users.js'; // crea este archivo si no existe
 
-app.use('/api/users', usersRoutes);
-
-
 const app = express();
 const PORT = 3001;
 
