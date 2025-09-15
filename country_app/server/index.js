@@ -80,5 +80,3 @@ app.use((err, req, res, next) => {
   console.error("Error global:", err);
   res.status(500).json({ error: "Error en el servidor" });
 });
-
-app.use('/api/users', usersRoutes);
