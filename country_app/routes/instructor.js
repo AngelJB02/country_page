@@ -6,15 +6,19 @@ const router = express.Router();
 // GET: Obtener reservas filtradas por fecha
 router.get('/reservas', async (req, res) => {
   const { start, end } = req.query;
-  if (!start) return res.status(400).json({ error: 'Se requiere start date' });
 
   try {
-    let query = 'SELECT * FROM reservas WHERE fecha >= ?';
-    const params = [start];
+    let query = 'SELECT * FROM reservas';
+    const params = [];
 
-    if (end) {
-      query += ' AND fecha <= ?';
-      params.push(end);
+    if (start) {
+      query += ' WHERE fecha >= ?';
+      params.push(start);
+
+      if (end) {
+        query += ' AND fecha <= ?';
+        params.push(end);
+      }
     }
 
     query += ' ORDER BY fecha ASC, horario ASC';
@@ -26,6 +30,7 @@ router.get('/reservas', async (req, res) => {
     res.status(500).json({ error: 'Error al obtener reservas' });
   }
 });
+
 
 // PATCH: Actualizar asistencia
 router.patch('/reservas/:id/asistencia', async (req, res) => {
