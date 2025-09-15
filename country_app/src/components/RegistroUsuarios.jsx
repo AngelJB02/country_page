@@ -13,7 +13,7 @@ const useUsuarios = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const API_URL = 'http://localhost:3001/api/users'; // puerto correcto del backend
+  const API_URL = 'https://elrefugiocountryclub.com/api/users'; // puerto correcto del backend
  // <-- Cambia esto a tu URL de backend
 
   useEffect(() => { obtenerUsuarios(); }, []);

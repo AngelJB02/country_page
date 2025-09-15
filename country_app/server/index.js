@@ -13,7 +13,7 @@ const PORT = 3001;
 
 // Middlewares
 app.use(cors({
-  origin: ["http://localhost:5173", "http://localhost:5174"],
+  origin: ["http://localhost:5173", "http://localhost:5174", "https://elrefugiocountryclub.com"],
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true
 }));
@@ -28,7 +28,7 @@ app.get("/", (req, res) => {
 // ========================
 // Login
 // ========================
-app.post("/login", async (req, res) => {
+app.post("/api/login", async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {

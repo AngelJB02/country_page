@@ -84,7 +84,7 @@ const MenuCalendario = () => {
       const startDate = `${year}-${month.toString().padStart(2, '0')}-01`;
       const endDate = new Date(year, month, 0).toISOString().split('T')[0];
 
-      const response = await axios.get('http://localhost:3001/api/reservas', {
+      const response = await axios.get('https://elrefugiocountryclub.com/api/reservas', {
         params: { 
           fecha_inicio: startDate, 
           fecha_fin: endDate 
@@ -127,7 +127,7 @@ const MenuCalendario = () => {
   // Función para obtener disponibilidad de una fecha específica
   const fetchAvailability = async (dateString) => {
     try {
-      const response = await axios.get('http://localhost:3001/api/reservas/availability', {
+      const response = await axios.get('https://elrefugiocountryclub.com/api/reservas/availability', {
         params: { fecha: dateString }
       });
       
@@ -359,7 +359,7 @@ const MenuCalendario = () => {
 
     setLoading(true);
     try {
-      await axios.delete(`http://localhost:3001/api/reservas/${reservaId}`);
+      await axios.delete(`https://elrefugiocountryclub.com/api/reservas/${reservaId}`);
       
       toast.success('Reserva cancelada exitosamente');
       
@@ -421,7 +421,7 @@ const MenuCalendario = () => {
         actividad: bookingData.actividad
       };
 
-      const response = await axios.post('http://localhost:3001/api/reservas', reservaData);
+      const response = await axios.post('https://elrefugiocountryclub.com/api/reservas', reservaData);
 
       // Actualizar inmediatamente después de crear la reserva
       await Promise.all([
@@ -532,7 +532,7 @@ const MenuCalendario = () => {
   // Función para obtener horarios disponibles según el día de la semana dinámicamente
   const fetchHorariosDia = async (diaSemana) => {
     try {
-      const response = await axios.get('http://localhost:3001/api/horarios', {
+      const response = await axios.get('https://elrefugiocountryclub.com/api/horarios', {
         params: { dia_semana: diaSemana }
       });
       setHorariosDia(response.data);
