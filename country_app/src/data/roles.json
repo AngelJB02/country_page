@@ -1,0 +1,8 @@
+{
+  "admin": "/dashboard-admin",
+  "instructor": "/dashboard-instructor",
+  "contabilidad": "/dashboard-contabilidad",
+  "viewer": "/dashboard-viewer",
+  "creadorcuentas": "/RegistroUsuarios",
+  "cliente": "/MenuCalendario"
+}
