@@ -6,12 +6,14 @@ const router = express.Router();
 router.get("/reservas", async (req, res) => {
   try {
     const [rows] = await db.query("SELECT * FROM reservas");
+    console.log("Reservas obtenidas:", rows.length); // <-- Log
     res.json(rows);
   } catch (err) {
-    console.error("Error al obtener reservas:", err);
-    res.status(500).json({ error: "Error en el servidor" });
+    console.error("Error al obtener reservas:", err); // <-- Log más detallado
+    res.status(500).json({ error: err.message });
   }
 });
+
 
 // Obtener un instructor por ID
 router.get("/:id", async (req, res) => {
