@@ -13,7 +13,7 @@ const ReservasInfo = ({ reservations, currentUser }) => {
 
   return (
     <div className="reservas-usuario">
-      <h3>Todas tus eservas</h3>
+      <h3>Todas tus Reservas</h3>
       {userReservations.length === 0 ? (
         <p>No tienes reservas registradas.</p>
       ) : (
