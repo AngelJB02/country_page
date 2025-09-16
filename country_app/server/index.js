@@ -8,6 +8,9 @@ import reservasRoutes from '../routes/reservas.js';
 import horariosRoutes from '../routes/horarios.js'; 
 import usersRoutes from '../routes/users.js'; 
 
+console.log("✅ Rutas importadas correctamente");
+console.log("📋 Reservas routes:", typeof reservasRoutes); 
+
 const app = express();
 const PORT = 3001;
 
@@ -59,8 +62,12 @@ app.post("/api/login", async (req, res) => {
 // ========================
 // Montar rutas
 // ========================
+console.log("🔧 Montando rutas...");
 app.use("/api/instructor", instructorRoutes);
-app.use("/api/reservas", reservasRoutes);
+app.use("/api/reservas", (req, res, next) => {
+  console.log(`📍 Ruta reservas: ${req.method} ${req.originalUrl}`);
+  next();
+}, reservasRoutes);
 app.use("/api/horarios", horariosRoutes);
 app.use("/api/users", usersRoutes);
 // ========================
