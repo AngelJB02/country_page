@@ -1,6 +1,5 @@
 import React from 'react';
 
-
 const ReservaItem = ({ reserva, updateAsistencia }) => {
 
   const getEstadoClass = (estado) => {
@@ -34,6 +33,8 @@ const ReservaItem = ({ reserva, updateAsistencia }) => {
         <div>
           <p><strong>📅 Fecha:</strong> {new Date(reserva.fecha).toLocaleDateString('es-ES')}</p>
           <p><strong>🐎 Caballo:</strong> {reserva.caballo || 'Sin asignar'}</p>
+          {/* Mostrando la clase_id */}
+          <p><strong>Clase:</strong> {reserva.clase_nombre}</p>
           <div className={`estado ${getEstadoClass(reserva.estado)}`}>
             {reserva.estado}
           </div>
