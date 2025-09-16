@@ -83,7 +83,6 @@ const FormularioUsuario = ({ onCrearUsuario, loading }) => {
     { value: 'admin', label: 'Administrador' },
     { value: 'cliente', label: 'Cliente' },
     { value: 'instructor', label: 'Instructor' },
-    { value: 'contabilidad', label: 'Contabilidad' },
     { value: 'viewer', label: 'Visualizador' },
     { value: 'creadorcuentas', label: 'Creador de Cuentas' }
   ];

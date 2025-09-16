@@ -51,35 +51,16 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET /reservas/:id - Obtener una reserva específica por ID
-router.get('/:id', async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    const [reservas] = await db.execute(`
-      SELECT r.*, c.tipo as clase_tipo, c.nombre as clase_nombre, 
-             cab.id as caballo_id, cab.tipo as caballo_tipo
-      FROM reservas r
-      JOIN clases c ON r.clase_id = c.id
-      LEFT JOIN caballos cab ON r.caballo_id = cab.id
-      WHERE r.id = ?
-    `, [id]);
-
-    if (reservas.length === 0) {
-      return res.status(404).json({ error: 'Reserva no encontrada' });
-    }
-
-    res.json(reservas[0]);
-  } catch (err) {
-    console.error('Error obteniendo reserva:', err);
-    res.status(500).json({ error: "Error en el servidor obteniendo reserva" });
-  }
-});
-
 // GET /reservas/availability - Devuelve la disponibilidad de todos los horarios para una fecha
 router.get('/availability', async (req, res) => {
+  console.log("🎯 Endpoint /availability ejecutándose");
+  console.log("📅 Query recibida:", req.query);
+  
   const { fecha } = req.query;
-  if (!fecha) return res.status(400).json({ error: 'La fecha es requerida' });
+  if (!fecha) {
+    console.log("❌ Error: Fecha no proporcionada");
+    return res.status(400).json({ error: 'La fecha es requerida' });
+  }
 
   try {
     // Configuración de horarios con límite máximo de 6 por horario
@@ -320,6 +301,31 @@ router.post('/', async (req, res) => {
     res.status(500).json({ error: "Error en el servidor creando reserva" });
   } finally {
     conn.release();
+  }
+});
+
+// GET /reservas/:id - Obtener una reserva específica por ID
+router.get('/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const [reservas] = await db.execute(`
+      SELECT r.*, c.tipo as clase_tipo, c.nombre as clase_nombre, 
+             cab.id as caballo_id, cab.tipo as caballo_tipo
+      FROM reservas r
+      JOIN clases c ON r.clase_id = c.id
+      LEFT JOIN caballos cab ON r.caballo_id = cab.id
+      WHERE r.id = ?
+    `, [id]);
+
+    if (reservas.length === 0) {
+      return res.status(404).json({ error: 'Reserva no encontrada' });
+    }
+
+    res.json(reservas[0]);
+  } catch (err) {
+    console.error('Error obteniendo reserva:', err);
+    res.status(500).json({ error: "Error en el servidor obteniendo reserva" });
   }
 });
 
