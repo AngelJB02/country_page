@@ -3,46 +3,49 @@ import db from '../server/db.js';
 
 const router = express.Router();
 
-// GET /instructor/clases
-router.get('/clases', async (req, res) => {
+// GET: Obtener reservas filtradas por fecha
+router.get('/reservas', async (req, res) => {
+  const { start, end } = req.query;
+
   try {
-    // Obtener todas las clases con datos de usuario y caballo
-    const [rows] = await db.execute(
-      `SELECT cl.id AS clase_id, cl.tipo, cl.fecha, cl.confirmacion_cita,
-              u.id AS usuario_id, u.nombre AS usuario_nombre, u.edad AS usuario_edad,
-              c.nombre AS caballo_nombre
-       FROM clases cl
-       LEFT JOIN usuarios u ON cl.usuario_id = u.id
-       LEFT JOIN caballos c ON cl.caballo_id = c.id
-       ORDER BY cl.fecha ASC`
-    );
+    let query = 'SELECT * FROM reservas';
+    const params = [];
 
-    // Agrupar reservas por clase
-    const clasesMap = {};
-    rows.forEach(r => {
-      if (!clasesMap[r.clase_id]) {
-        clasesMap[r.clase_id] = {
-          id: r.clase_id,
-          tipo: r.tipo,
-          fecha: r.fecha,
-          caballo_nombre: r.caballo_nombre,
-          reservas: []
-        };
+    if (start) {
+      query += ' WHERE fecha >= ?';
+      params.push(start);
+
+      if (end) {
+        query += ' AND fecha <= ?';
+        params.push(end);
       }
-      if (r.usuario_id) {
-        clasesMap[r.clase_id].reservas.push({
-          id: r.usuario_id,
-          usuario_nombre: r.usuario_nombre,
-          usuario_edad: r.usuario_edad
-        });
-      }
-    });
+    }
 
-    res.json(Object.values(clasesMap));
+    query += ' ORDER BY fecha ASC, horario ASC';
 
-  } catch (error) {
-    console.error('ERROR EN /instructor/clases:', error);
-    res.status(500).json({ message: 'Error al obtener las clases' });
+    const [rows] = await db.query(query, params);
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al obtener reservas' });
+  }
+});
+
+
+// PATCH: Actualizar asistencia
+router.patch('/reservas/:id/asistencia', async (req, res) => {
+  const { id } = req.params;
+  const { asistencia } = req.body;
+
+  if (!['asistio', 'falto', 'pendiente'].includes(asistencia))
+    return res.status(400).json({ error: 'Valor inválido de asistencia' });
+
+  try {
+    await db.query('UPDATE reservas SET asistencia = ? WHERE id = ?', [asistencia, id]);
+    res.json({ message: 'Asistencia actualizada correctamente' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al actualizar asistencia' });
   }
 });
 
