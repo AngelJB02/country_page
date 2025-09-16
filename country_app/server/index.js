@@ -6,7 +6,7 @@ import db from "./db.js"; // ruta relativa correcta, db.js al mismo nivel que se
 import instructorRoutes from '../routes/instructor.js'; 
 import reservasRoutes from '../routes/reservas.js'; 
 import horariosRoutes from '../routes/horarios.js'; 
-import usersRoutes from '../routes/users.js'; // crea este archivo si no existe
+import usersRoutes from '../routes/users.js'; 
 
 const app = express();
 const PORT = 3001;

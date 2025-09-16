@@ -16,6 +16,9 @@ const InstructorReservas = () => {
 
   const { reservas, loading, error, updateAsistencia } = useInstructor(selectedDate, endDate);
 
+   const API_URL = 'https://elrefugiocountryclub.com/api/instructor'; // puerto correcto del backend
+
+
   // Filtrar por búsqueda
   const filteredReservas = reservas.filter(r =>
     r.nombre.toLowerCase().includes(searchTerm.toLowerCase())

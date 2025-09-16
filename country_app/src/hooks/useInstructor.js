@@ -3,18 +3,23 @@ import axios from "axios";
 
 const API_URL = "https://elrefugiocountryclub.com/api/instructor";
 
-const useInstructor = () => {
+const useInstructor = (selectedDate, endDate) => {
   const [reservas, setReservas] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // ✅ Obtener todas las reservas de instructores
   const fetchReservas = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const { data } = await axios.get(`${API_URL}/reservas`);
+      let url = `${API_URL}/reservas`;
+      const params = [];
+      if (selectedDate) params.push(`start=${selectedDate}`);
+      if (endDate) params.push(`end=${endDate}`);
+      if (params.length) url += `?${params.join('&')}`;
+
+      const { data } = await axios.get(url);
       setReservas(data);
     } catch (err) {
       console.error(err);
@@ -24,14 +29,13 @@ const useInstructor = () => {
     }
   };
 
-  // ✅ Actualizar asistencia de una reserva
   const updateAsistencia = async (reservaId, asistencia) => {
     if (!["asistio", "falto", "pendiente"].includes(asistencia)) return;
 
     try {
       await axios.patch(`${API_URL}/reservas/${reservaId}/asistencia`, { asistencia });
-      setReservas((prev) =>
-        prev.map((r) => (r.id === reservaId ? { ...r, asistencia } : r))
+      setReservas(prev =>
+        prev.map(r => (r.id === reservaId ? { ...r, asistencia } : r))
       );
     } catch (err) {
       console.error(err);
@@ -39,10 +43,9 @@ const useInstructor = () => {
     }
   };
 
-  // Ejecuta fetch al montar el componente
   useEffect(() => {
     fetchReservas();
-  }, []);
+  }, [selectedDate, endDate]);
 
   return { reservas, loading, error, fetchReservas, updateAsistencia };
 };
