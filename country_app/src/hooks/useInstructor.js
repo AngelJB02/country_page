@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 
-const API_URL = 'http://localhost:3001/api/instructor';
+const API_URL = 'https://country-page.onrender.com/api/instructor';
 
 const useInstructor = () => {
   const [reservas, setReservas] = useState([]);
