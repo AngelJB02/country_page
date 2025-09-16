@@ -49,10 +49,16 @@ const DisponibilidadCaballos = ({ totalSpots = 11, reservations = [], selectedTi
     return null;
   }
 
-  // Usar la disponibilidad obtenida del backend o fallback
-  const horses = horsesAvailability.length > 0 
-    ? horsesAvailability 
-    : Array.from({ length: totalSpots }, (_, i) => ({ id: i + 1, ocupado: false }));
+  // Usar SIEMPRE la respuesta del backend si selectedDate y selectedTime existen
+  let horses = [];
+  if (selectedDate && selectedTime) {
+    if (horsesAvailability.length > 0) {
+      horses = horsesAvailability;
+    } else {
+      // Si el backend no responde, fallback
+      horses = Array.from({ length: totalSpots }, (_, i) => ({ id: i + 1, ocupado: false }));
+    }
+  }
 
   return (
     <div className="horse-availability-container">
@@ -65,13 +71,17 @@ const DisponibilidadCaballos = ({ totalSpots = 11, reservations = [], selectedTi
           <div
             key={horse.id || index}
             className={`horse-spot ${!horse.ocupado ? 'available' : 'occupied'}`}
-            title={!horse.ocupado ? `Caballo ${index + 1} - Disponible` : `Caballo ${index + 1} - Ocupado`}
+            title={
+              !horse.ocupado
+                ? `Caballo ${horse.nombre ? horse.nombre : index + 1} - Disponible`
+                : `Caballo ${horse.nombre ? horse.nombre : index + 1} - Ocupado`
+            }
           >
             <FontAwesomeIcon
               icon={faHorse}
               className={`horse-icon ${!horse.ocupado ? 'available-horse' : 'occupied-horse'}`}
             />
-            <span className="spot-number">{index + 1}</span>
+            <span className="spot-number">{horse.nombre ? horse.nombre : index + 1}</span>
           </div>
         ))}
       </div>
