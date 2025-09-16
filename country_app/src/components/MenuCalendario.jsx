@@ -55,7 +55,7 @@ const MenuCalendario = () => {
   // Cargar disponibilidad cuando se selecciona una fecha
   useEffect(() => {
     if (selectedDate) {
-      const diasSemana = ['domingo','lunes','martes','miercoles','jueves','viernes','sabado'];
+      const diasSemana = ['domingo','martes','miercoles','jueves','viernes','sabado'];
       const diaSemana = diasSemana[selectedDate.getDay()];
       fetchHorariosDia(diaSemana);
       fetchAvailability(selectedDate.toISOString().split('T')[0]);
@@ -211,10 +211,10 @@ const MenuCalendario = () => {
     if (dateAvailability && dateAvailability[timeSlot]) {
       const spotData = dateAvailability[timeSlot];
       const dayReservations = reservations[dateString] || [];
+      // Solo reservas confirmadas y que no sean de salto
       const timeReservations = dayReservations.filter(res => 
-        res.time === timeSlot && res.estado !== 'cancelada' && res.actividad !== 'salto'
+        res.time === timeSlot && res.estado === 'confirmada' && res.actividad !== 'salto'
       );
-      
       return {
         total: spotData.total,
         available: spotData.available,
@@ -225,9 +225,8 @@ const MenuCalendario = () => {
     // Fallback: usar configuración por defecto de 6 horarios máximo
     const dayReservations = reservations[dateString] || [];
     const timeReservations = dayReservations.filter(res => 
-      res.time === timeSlot && res.estado !== 'cancelada'
+      res.time === timeSlot && res.estado === 'confirmada'
     );
-    
     return {
       total: 6,
       available: Math.max(0, 6 - timeReservations.length),
@@ -631,21 +630,37 @@ const MenuCalendario = () => {
           <div className="date-modal" onClick={e => e.stopPropagation()}>
             <button className="close-btn" onClick={closeDateModal} aria-label="Cerrar modal">×</button>
             <div className="modal-header">
+              <button className="close-btn" onClick={closeDateModal} aria-label="Cerrar modal">×</button>
               <h2>Reserva para {dayNamesFull[selectedDate.getDay()]}, {selectedDate.toLocaleDateString('es-ES', {
                 day: 'numeric',
                 month: 'long',
                 year: 'numeric'
               })}</h2>
-              <div className="day-info">
-                <p>Reservas de salto disponibles: {5 - getSaltoReservationsCount(selectedDateString)}/5</p>
-                <button className="view-reservations-btn" onClick={showReservations}>
-                  Ver reservas del día ({dayReservations.filter(res => res.estado !== 'cancelada').length})
-                </button>
-              </div>
             </div>
             <div className="modal-content">
               {isWorkingToday ? (
                 <>
+                <div className="form-group">
+                        <label htmlFor="actividad">Actividad:</label>
+                        <select
+                          id="actividad"
+                          name="actividad"
+                          value={bookingData.actividad}
+                          onChange={handleInputChange}
+                          disabled={loading || !currentUser}
+                        >
+                          <option value="">Selecciona una actividad</option>
+                          {actividades.map(actividad => {
+                            const isDisabled = actividad === 'salto' && !canMakeSaltoReservation(selectedDateString);
+                            return (
+                              <option key={actividad} value={actividad} disabled={isDisabled}>
+                                {actividad.charAt(0).toUpperCase() + actividad.slice(1)}
+                                {isDisabled ? ' (Límite alcanzado)' : ''}
+                              </option>
+                            );
+                          })}
+                        </select>
+                      </div>
                   <h4>Horarios Disponibles</h4>
                   <div className="time-period">
                     <div className="time-slots-grid">
@@ -661,6 +676,7 @@ const MenuCalendario = () => {
                           const totalCupos = 6;
                           const available = Math.max(0, totalCupos - timeReservations.length);
                           const isSelected = selectedTime === horaStr;
+                          
 
                           // NUEVO: Verifica si el usuario ya tiene reserva en ese horario
                           const userHasReservation = dayReservations.some(res =>
@@ -693,9 +709,10 @@ const MenuCalendario = () => {
 
                   {/* Componente de disponibilidad de caballos */}
                   <DisponibilidadCaballos
-                    totalSpots={currentSpotAvailability.total}
-                    availableSpots={currentSpotAvailability.available}
+                    totalSpots={11}
+                    reservations={currentSpotAvailability.reservations ? currentSpotAvailability.reservations.filter(res => res.estado === 'confirmada') : []}
                     selectedTime={selectedTime}
+                    selectedDate={selectedDate}
                   />
 
                   {/* Formulario solo si se selecciona horario */}
@@ -733,27 +750,7 @@ const MenuCalendario = () => {
                           disabled={loading || !currentUser}
                         />
                       </div>
-                      <div className="form-group">
-                        <label htmlFor="actividad">Actividad:</label>
-                        <select
-                          id="actividad"
-                          name="actividad"
-                          value={bookingData.actividad}
-                          onChange={handleInputChange}
-                          disabled={loading || !currentUser}
-                        >
-                          <option value="">Selecciona una actividad</option>
-                          {actividades.map(actividad => {
-                            const isDisabled = actividad === 'salto' && !canMakeSaltoReservation(selectedDateString);
-                            return (
-                              <option key={actividad} value={actividad} disabled={isDisabled}>
-                                {actividad.charAt(0).toUpperCase() + actividad.slice(1)}
-                                {isDisabled ? ' (Límite alcanzado)' : ''}
-                              </option>
-                            );
-                          })}
-                        </select>
-                      </div>
+                      
 
                       <button
                         className="modal-btn primary"

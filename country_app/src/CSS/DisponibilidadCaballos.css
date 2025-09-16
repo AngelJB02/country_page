@@ -50,3 +50,30 @@
   width: 24px;
   height: 24px;
 }
+/* Agregar estos estilos al archivo DisponibilidadCaballos.css */
+
+/* Caballo disponible - verde */
+.available-horse {
+  color: #28a745; /* Verde para caballos disponibles */
+}
+
+/* Caballo ocupado - gris */
+.occupied-horse {
+  color: #6c757d; /* Gris para caballos ocupados */
+}
+
+/* Indicador de carga */
+.loading-indicator {
+  font-size: 0.8em;
+  color: #007bff;
+  margin-left: 10px;
+}
+
+/* Hover effects para mejor interacción */
+.horse-spot.available:hover .available-horse {
+  color: #218838; /* Verde más oscuro en hover */
+}
+
+.horse-spot.occupied:hover .occupied-horse {
+  color: #5a6268; /* Gris más oscuro en hover */
+}

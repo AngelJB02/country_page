@@ -141,6 +141,37 @@ router.get('/availability', async (req, res) => {
   }
 });
 
+// GET /reservas/horses-availability - Obtener caballos ocupados para una fecha y horario específico
+router.get('/horses-availability', async (req, res) => {
+  const { fecha, horario } = req.query;
+  
+  if (!fecha || !horario) {
+    return res.status(400).json({ error: 'Fecha y horario son requeridos' });
+  }
+
+  try {
+    // Obtener los IDs de caballos que están ocupados en esa fecha y horario
+    const [occupiedHorses] = await db.execute(`
+      SELECT DISTINCT r.caballo_id
+      FROM reservas r
+      WHERE r.fecha = ? AND r.horario = ? AND r.estado = 'confirmada'
+    `, [fecha, horario]);
+
+    const occupiedHorseIds = occupiedHorses.map(horse => horse.caballo_id).filter(id => id !== null);
+    
+    res.json({
+      fecha,
+      horario,
+      occupied_horses: occupiedHorseIds,
+      total_occupied: occupiedHorseIds.length
+    });
+
+  } catch (err) {
+    console.error('Error obteniendo disponibilidad de caballos:', err);
+    res.status(500).json({ error: "Error en el servidor obteniendo disponibilidad de caballos" });
+  }
+});
+
 // POST /reservas - Crear una nueva reserva con validaciones mejoradas
 router.post('/', async (req, res) => {
   const { usuario_id, clase_id, fecha, horario, nombre, edad } = req.body;
