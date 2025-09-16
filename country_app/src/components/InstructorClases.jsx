@@ -7,6 +7,7 @@ import NoReservations from './instructor/NoReservations';
 import ReservaList from './instructor/ReservaList';
 import LogoutButton from './LogoutBoton';
 import useInstructor from '../hooks/useInstructor';
+import '../CSS/ReservaItem.css';
 
 const InstructorReservas = () => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
