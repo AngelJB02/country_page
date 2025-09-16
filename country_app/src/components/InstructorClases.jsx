@@ -17,7 +17,7 @@ const InstructorReservas = () => {
 
   const { reservas, loading, error, updateAsistencia } = useInstructor(selectedDate, endDate);
   
-  const API_URL = 'http://localhost:3001/api/instructor';
+  const API_URL = 'https://country-page.onrender.com/api/instructor/reservas';
 
   // Filtrar por búsqueda
   const filteredReservas = reservas.filter(r =>
