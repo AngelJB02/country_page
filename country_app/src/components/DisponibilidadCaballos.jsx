@@ -62,6 +62,14 @@ const DisponibilidadCaballos = ({ totalSpots = 11, reservations = [], selectedTi
     }
   }
 
+  // Calcular cuántos caballos están ocupados en total
+  const totalOcupados = horses.filter(h => h.ocupado).length;
+
+  // Generar los 11 espacios visuales, ocupados según la cantidad real
+  const visualSpaces = Array.from({ length: totalSpots }, (_, i) => ({
+    ocupado: i < totalOcupados
+  }));
+
   return (
     <div className="horse-availability-container">
       <div className="availability-header">
@@ -69,21 +77,21 @@ const DisponibilidadCaballos = ({ totalSpots = 11, reservations = [], selectedTi
         {loading && <span className="loading-indicator">Cargando...</span>}
       </div>
       <div className="horses-grid">
-        {horses.map((horse, index) => (
+        {visualSpaces.map((space, index) => (
           <div
-            key={horse.id || index}
-            className={`horse-spot ${!horse.ocupado ? 'available' : 'occupied'}`}
+            key={index}
+            className={`horse-spot ${!space.ocupado ? 'available' : 'occupied'}`}
             title={
-              !horse.ocupado
-                ? `Caballo ${horse.nombre ? horse.nombre : index + 1} - Disponible`
-                : `Caballo ${horse.nombre ? horse.nombre : index + 1} - Ocupado`
+              !space.ocupado
+                ? `Caballo ${index + 1} - Disponible`
+                : `Caballo ${index + 1} - Ocupado`
             }
           >
             <FontAwesomeIcon
               icon={faHorse}
-              className={`horse-icon ${!horse.ocupado ? 'available-horse' : 'occupied-horse'}`}
+              className={`horse-icon ${!space.ocupado ? 'available-horse' : 'occupied-horse'}`}
             />
-            <span className="spot-number">{horse.nombre ? horse.nombre : index + 1}</span>
+            <span className="spot-number">{index + 1}</span>
           </div>
         ))}
       </div>

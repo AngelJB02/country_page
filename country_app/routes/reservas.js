@@ -145,7 +145,7 @@ router.get('/horses-availability', async (req, res) => {
 
     // Obtener todos los caballos
     const [allHorses] = await db.execute(`
-      SELECT id, nombre, tipo 
+      SELECT id, tipo 
       FROM caballos
     `);
 
