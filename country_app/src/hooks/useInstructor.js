@@ -3,7 +3,7 @@ import axios from "axios";
 
 const API_URL = "https://elrefugiocountryclub.com/api/instructor";
 
-const useInstructor = (selectedDate, endDate) => {
+const useInstructor = () => {
   const [reservas, setReservas] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -11,15 +11,8 @@ const useInstructor = (selectedDate, endDate) => {
   const fetchReservas = async () => {
     setLoading(true);
     setError(null);
-
     try {
-      let url = `${API_URL}/reservas`;
-      const params = [];
-      if (selectedDate) params.push(`start=${selectedDate}`);
-      if (endDate) params.push(`end=${endDate}`);
-      if (params.length) url += `?${params.join('&')}`;
-
-      const { data } = await axios.get(url);
+      const { data } = await axios.get(`${API_URL}/reservas`);
       setReservas(data);
     } catch (err) {
       console.error(err);
@@ -31,7 +24,6 @@ const useInstructor = (selectedDate, endDate) => {
 
   const updateAsistencia = async (reservaId, asistencia) => {
     if (!["asistio", "falto", "pendiente"].includes(asistencia)) return;
-
     try {
       await axios.patch(`${API_URL}/reservas/${reservaId}/asistencia`, { asistencia });
       setReservas(prev =>
@@ -45,9 +37,9 @@ const useInstructor = (selectedDate, endDate) => {
 
   useEffect(() => {
     fetchReservas();
-  }, [selectedDate, endDate]);
+  }, []);
 
-  return { reservas, loading, error, fetchReservas, updateAsistencia };
+  return { reservas, loading, error, updateAsistencia };
 };
 
 export default useInstructor;

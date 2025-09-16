@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import db from 'db.js'; // tu conexión MySQL
 import usersRoutes from './routes/users.js'; // tus rutas de usuarios
+import instructorRoutes from './routes/instructor.js'; // tus rutas de instructor
 
 const app = express();
 const PORT = 5000;
@@ -22,6 +23,7 @@ app.options('*', cors());
 
 // Montar rutas de usuarios bajo /api/users
 app.use('/api/users', usersRoutes);
+app.use('/api/instructor', instructorRoutes);
 
 // Ruta de prueba
 app.get('/', (req, res) => {

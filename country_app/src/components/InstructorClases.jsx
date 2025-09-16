@@ -15,9 +15,8 @@ const InstructorReservas = () => {
   const [viewMode, setViewMode] = useState('day');
 
   const { reservas, loading, error, updateAsistencia } = useInstructor(selectedDate, endDate);
-
-   const API_URL = 'https://elrefugiocountryclub.com/api/instructor'; // puerto correcto del backend
-
+  
+  const API_URL = 'https://country-page.onrender.com/api/instructor'; 
 
   // Filtrar por búsqueda
   const filteredReservas = reservas.filter(r =>
