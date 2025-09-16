@@ -142,6 +142,7 @@ router.get('/availability', async (req, res) => {
 });
 
 // GET /reservas/horses-availability - Obtener caballos ocupados para una fecha y horario específico
+// GET /reservas/horses-availability - Obtener caballos ocupados/libres para una fecha y horario
 router.get('/horses-availability', async (req, res) => {
   const { fecha, horario } = req.query;
   
@@ -150,20 +151,35 @@ router.get('/horses-availability', async (req, res) => {
   }
 
   try {
-    // Obtener los IDs de caballos que están ocupados en esa fecha y horario
+    // Obtener los IDs de caballos ocupados en esa fecha y horario
     const [occupiedHorses] = await db.execute(`
       SELECT DISTINCT r.caballo_id
       FROM reservas r
-      WHERE r.fecha = ? AND r.horario = ? AND r.estado = 'confirmada'
+      WHERE r.fecha = ? 
+        AND r.horario = ? 
+        AND r.estado = 'confirmada'
     `, [fecha, horario]);
 
     const occupiedHorseIds = occupiedHorses.map(horse => horse.caballo_id).filter(id => id !== null);
-    
+
+    // Obtener todos los caballos
+    const [allHorses] = await db.execute(`
+      SELECT id, nombre, tipo 
+      FROM caballos
+    `);
+
+    // Marcar si están ocupados o disponibles
+    const horses = allHorses.map(horse => ({
+      ...horse,
+      ocupado: occupiedHorseIds.includes(horse.id) // true = gris, false = verde
+    }));
+
     res.json({
       fecha,
       horario,
-      occupied_horses: occupiedHorseIds,
-      total_occupied: occupiedHorseIds.length
+      horses,
+      total_occupied: occupiedHorseIds.length,
+      total_available: allHorses.length - occupiedHorseIds.length
     });
 
   } catch (err) {

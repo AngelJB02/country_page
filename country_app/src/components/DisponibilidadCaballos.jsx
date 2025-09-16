@@ -4,8 +4,8 @@ import { faHorse } from '@fortawesome/free-solid-svg-icons';
 import axios from 'axios';
 import '../CSS/DisponibilidadCaballos.css';
 
-const DisponibilidadCaballos = ({ totalSpots = 11, reservations = [], selectedTime, selectedDate }) => {
-  const [horsesAvailability, setHorsesAvailability] = useState([]);
+const DisponibilidadCaballos = ({ selectedTime, selectedDate }) => {
+  const [horses, setHorses] = useState([]);
   const [loading, setLoading] = useState(false);
 
   // Obtener disponibilidad de caballos cuando cambia la fecha o el horario seleccionado
@@ -15,33 +15,26 @@ const DisponibilidadCaballos = ({ totalSpots = 11, reservations = [], selectedTi
     }
   }, [selectedDate, selectedTime]);
 
-  // Consultar al backend las reservas de caballos para una fecha específica
+  // Consultar al backend la disponibilidad de caballos
   const fetchHorsesAvailability = async () => {
     setLoading(true);
     try {
       const dateString = selectedDate.toISOString().split('T')[0];
-      const response = await axios.get('https://country-page.onrender.com/api/reservas/horses-availability', {
-        params: { 
-          fecha: dateString,
-          horario: selectedTime 
+      const response = await axios.get(
+        'https://country-page.onrender.com/api/reservas/horses-availability',
+        {
+          params: {
+            fecha: dateString,
+            horario: selectedTime,
+          },
         }
-      });
-      
-      // Procesar la respuesta para generar el array de disponibilidad
-      const availability = Array.from({ length: totalSpots }, (_, index) => {
-        const caballoId = index + 1;
-        const isOccupied = response.data.occupied_horses.includes(caballoId);
-        return !isOccupied; // true = disponible, false = ocupado
-      });
-      
-      setHorsesAvailability(availability);
-    } catch (error) {
-      console.error('Error obteniendo disponibilidad de caballos:', error);
-      // Fallback: usar lógica anterior basada en reservations prop
-      const fallbackAvailability = Array.from({ length: totalSpots }, (_, i) => 
-        i >= reservations.length
       );
-      setHorsesAvailability(fallbackAvailability);
+
+      // Guardamos directamente el array de caballos del backend
+      setHorses(response.data.horses || []);
+    } catch (error) {
+      console.error('❌ Error obteniendo disponibilidad de caballos:', error);
+      setHorses([]); // fallback vacío
     } finally {
       setLoading(false);
     }
@@ -51,31 +44,33 @@ const DisponibilidadCaballos = ({ totalSpots = 11, reservations = [], selectedTi
     return null;
   }
 
-  // Usar la disponibilidad obtenida del backend o fallback
-  const horses = horsesAvailability.length > 0 ? horsesAvailability : 
-    Array.from({ length: totalSpots }, (_, i) => i >= reservations.length);
-
   return (
     <div className="horse-availability-container">
       <div className="availability-header">
         <h5>Disponibilidad de Caballos</h5>
         {loading && <span className="loading-indicator">Cargando...</span>}
       </div>
+
       <div className="horses-grid">
-        {horses.map((isAvailable, index) => (
+        {horses.map((horse) => (
           <div
-            key={index}
-            className={`horse-spot ${isAvailable ? 'available' : 'occupied'}`}
-            title={isAvailable ? `Caballo ${index + 1} - Disponible` : `Caballo ${index + 1} - Ocupado`}
+            key={horse.id}
+            className={`horse-spot ${horse.ocupado ? 'occupied' : 'available'}`}
+            title={
+              horse.ocupado
+                ? `${horse.nombre || 'Caballo'} - Ocupado`
+                : `${horse.nombre || 'Caballo'} - Disponible`
+            }
           >
             <FontAwesomeIcon
               icon={faHorse}
-              className={`horse-icon ${isAvailable ? 'available-horse' : 'occupied-horse'}`}
+              className={`horse-icon ${horse.ocupado ? 'occupied-horse' : 'available-horse'}`}
             />
-            <span className="spot-number">{index + 1}</span>
+            <span className="spot-number">{horse.nombre || `#${horse.id}`}</span>
           </div>
         ))}
       </div>
+
       <div className="legend">
         <div className="legend-item">
           <FontAwesomeIcon icon={faHorse} className="legend-icon available-horse" />
