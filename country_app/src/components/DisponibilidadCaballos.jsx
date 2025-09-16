@@ -20,20 +20,22 @@ const DisponibilidadCaballos = ({ totalSpots = 11, reservations = [], selectedTi
     setLoading(true);
     try {
       const dateString = selectedDate.toISOString().split('T')[0];
+      // Formatear horario a HH:MM:SS
+      let horarioParam = selectedTime;
+      if (horarioParam && horarioParam.length === 5) {
+        horarioParam = horarioParam + ':00';
+      }
       const response = await axios.get('https://country-page.onrender.com/api/reservas/horses-availability', {
         params: { 
           fecha: dateString,
-          horario: selectedTime 
+          horario: horarioParam 
         }
       });
-      
       // El backend ahora devuelve todos los caballos con ocupado: true/false
       const horses = response.data.horses || [];
       setHorsesAvailability(horses);
-
     } catch (error) {
       console.error('Error obteniendo disponibilidad de caballos:', error);
-
       // Fallback: usar lógica anterior basada en reservations prop
       const fallbackAvailability = Array.from({ length: totalSpots }, (_, i) => ({
         id: i + 1,
