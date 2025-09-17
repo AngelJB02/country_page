@@ -46,10 +46,34 @@ app.post("/api/login", async (req, res) => {
 
     if (rows.length > 0) {
       const user = rows[0];
-      return res.json({
-        mensaje: "✅ Login correcto",
-        user: { id: user.id, nombre: user.nombre, rol: user.rol || "user" }
-      });
+        // Verificar estado del usuario
+        switch ((user.estado || '').toLowerCase()) {
+          case 'activo':
+            return res.json({
+              mensaje: "✅ Login correcto",
+              user: { id: user.id, nombre: user.nombre, rol: user.rol || "user", estado: user.estado }
+            });
+          case 'inactivo':
+            return res.json({
+              mensaje: "⚠️ Tu cuenta está inactiva. Comunícate con el administrador.",
+              user: { id: user.id, nombre: user.nombre, rol: user.rol || "user", estado: user.estado }
+            });
+          case 'pendiente':
+            return res.status(403).json({
+              mensaje: "⏳ Tienes pagos pendientes y no puedes iniciar sesión.",
+              user: { id: user.id, nombre: user.nombre, rol: user.rol || "user", estado: user.estado }
+            });
+          case 'bloqueado':
+            return res.status(403).json({
+              mensaje: "🚫 Tu cuenta está bloqueada y no puedes iniciar sesión.",
+              user: { id: user.id, nombre: user.nombre, rol: user.rol || "user", estado: user.estado }
+            });
+          default:
+            return res.status(403).json({
+              mensaje: "❌ Estado de usuario no permitido.",
+              user: { id: user.id, nombre: user.nombre, rol: user.rol || "user", estado: user.estado }
+            });
+        }
     } else {
       return res.status(401).json({ message: "❌ Usuario o contraseña incorrectos" });
     }
