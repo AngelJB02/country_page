@@ -1,69 +1,9 @@
 // src/components/GestionUsuarios.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import '../CSS/RegistroUsuarios.css';
-import { User, UserPlus, Eye, EyeOff, AlertCircle, CheckCircle, XCircle, Loader } from 'lucide-react';
+import { User, UserPlus, Eye, EyeOff, AlertCircle, CheckCircle, Loader, Save } from 'lucide-react';
 import LogoutButton from './LogoutBoton';
-import axios from 'axios';
-
-// ============================
-// Hook personalizado para gestión de usuarios
-// ============================
-const useUsuarios = () => {
-  const [usuarios, setUsuarios] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  const API_URL = 'https://country-page.onrender.com/api/users'; // puerto correcto del backend
- // <-- Cambia esto a tu URL de backend
-
-  useEffect(() => { obtenerUsuarios(); }, []);
-
-  const obtenerUsuarios = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const { data } = await axios.get(`${API_URL}/all`);
-      setUsuarios(data);
-    } catch (err) {
-      console.error(err);
-      setError('Error al obtener usuarios de la base de datos');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const crearUsuario = async (nuevoUsuario) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const { data } = await axios.post(`${API_URL}/register`, nuevoUsuario);
-      await obtenerUsuarios();
-      return { success: true, message: data.message };
-    } catch (err) {
-      console.error(err);
-      return { success: false, message: err.response?.data?.error || 'Error al registrar usuario' };
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const darDeBaja = async (id) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const { data } = await axios.patch(`${API_URL}/disable/${id}`);
-      await obtenerUsuarios();
-      return { success: true, message: data.message };
-    } catch (err) {
-      console.error(err);
-      return { success: false, message: 'Error al dar de baja usuario' };
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return { usuarios, loading, error, crearUsuario, darDeBaja };
-};
+import useUsuarios from '../hooks/useUsuarios';
 
 // ============================
 // Formulario de registro
@@ -173,31 +113,21 @@ const FormularioUsuario = ({ onCrearUsuario, loading }) => {
 };
 
 // ============================
-// Tabla de usuarios
+// Tabla de usuarios con edición de correo
 // ============================
-const TablaUsuarios = ({ usuarios, onDarDeBaja, loading }) => {
-  const getEstadoBadge = (estado) => {
-    const badges = {
-      activo: { icon:<CheckCircle size={14}/>, className:'status-badge badge-success', text:'Activo' },
-      inactivo: { icon:<XCircle size={14}/>, className:'status-badge badge-danger', text:'Inactivo' },
-      pendiente: { icon:<AlertCircle size={14}/>, className:'status-badge badge-warning', text:'Pendiente' },
-      bloqueado: { icon:<XCircle size={14}/>, className:'status-badge badge-error', text:'Bloqueado' }
-    };
-    const badge = badges[estado] || badges.pendiente;
-    return <span className={badge.className}>{badge.icon}{badge.text}</span>;
+const TablaUsuarios = ({ usuarios, onActualizarCorreo, loading }) => {
+  const [edits, setEdits] = useState({});
+
+  const handleChange = (id, value) => {
+    setEdits(prev => ({ ...prev, [id]: value }));
   };
 
-  const getRolLabel = (rol) => {
-    const roles = { admin:'Administrador', cliente:'Cliente', instructor:'Instructor', creadorcuentas:'Creador de Cuentas' };
-    return roles[rol] || rol;
-  };
-
-  const formatearFecha = (fecha) => new Date(fecha).toLocaleDateString('es-ES',{ year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
-
-  const handleDarDeBaja = async (usuario) => {
-    if(window.confirm(`¿Está seguro de dar de baja al usuario ${usuario.nombre} ${usuario.apellido}?`)) {
-      await onDarDeBaja(usuario.id);
+  const handleGuardar = async (id) => {
+    if (!edits[id] || edits[id].trim() === '') {
+      alert('El correo no puede estar vacío');
+      return;
     }
+    await onActualizarCorreo(id, edits[id]);
   };
 
   return (
@@ -213,21 +143,35 @@ const TablaUsuarios = ({ usuarios, onDarDeBaja, loading }) => {
         <div className="table-container">
           <table className="users-table">
             <thead>
-              <tr><th>ID</th><th>Nombre Completo</th><th>Email</th><th>Rol</th><th>Estado</th><th>Fecha Registro</th><th>Acciones</th></tr>
+              <tr>
+                <th>ID</th>
+                <th>Nombre Completo</th>
+                <th>Email</th>
+                <th>Rol</th>
+                <th>Fecha Registro</th>
+                <th>Acción</th>
+              </tr>
             </thead>
             <tbody>
-              {usuarios.map(usuario=>(
+              {usuarios.map(usuario => (
                 <tr key={usuario.id}>
                   <td>#{usuario.id}</td>
                   <td>{usuario.nombre} {usuario.apellido}</td>
-                  <td>{usuario.email}</td>
-                  <td>{getRolLabel(usuario.rol)}</td>
-                  <td>{getEstadoBadge(usuario.estado)}</td>
-                  <td>{formatearFecha(usuario.fecha_registro)}</td>
                   <td>
-                    {usuario.estado!=='inactivo' ? (
-                      <button className="action-btn btn-danger" onClick={()=>handleDarDeBaja(usuario)} disabled={loading}>Dar de baja</button>
-                    ) : <span className="inactive-label">Usuario inactivo</span>}
+                    <input
+                      type="email"
+                      value={edits[usuario.id] ?? usuario.email}
+                      onChange={(e) => handleChange(usuario.id, e.target.value)}
+                      className="form-input"
+                      disabled={loading}
+                    />
+                  </td>
+                  <td>{usuario.rol}</td>
+                  <td>{new Date(usuario.fecha_registro).toLocaleDateString('es-ES',{ year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' })}</td>
+                  <td>
+                    <button className="action-btn btn-success" onClick={() => handleGuardar(usuario.id)} disabled={loading}>
+                      <Save size={16} style={{marginRight:'0.3rem'}}/> Guardar
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -243,13 +187,23 @@ const TablaUsuarios = ({ usuarios, onDarDeBaja, loading }) => {
 // Componente principal
 // ============================
 const GestionUsuarios = () => {
-  const { usuarios, loading, error, crearUsuario, darDeBaja } = useUsuarios();
+  const { usuarios, loading, error, crearUsuario, actualizarCorreo } = useUsuarios();
   const [mensaje, setMensaje] = useState({ texto:'', tipo:'' });
 
-  const mostrarMensaje = (texto,tipo)=>{ setMensaje({texto,tipo}); setTimeout(()=>setMensaje({texto:'',tipo:''}),5000); };
-  const handleCrearUsuario = async (nuevoUsuario) => { const resultado = await crearUsuario(nuevoUsuario); mostrarMensaje(resultado.message, resultado.success?'success':'error'); return resultado; };
-  const handleDarDeBaja = async (id)=>{ const resultado = await darDeBaja(id); mostrarMensaje(resultado.message, resultado.success?'success':'error'); };
-  const handleLogout = ()=>{ localStorage.removeItem('token'); sessionStorage.clear(); window.location.href='/login'; };
+  const mostrarMensaje = (texto,tipo) => { setMensaje({texto,tipo}); setTimeout(()=>setMensaje({texto:'',tipo:''}),5000); };
+
+  const handleCrearUsuario = async (nuevoUsuario) => {
+    const resultado = await crearUsuario(nuevoUsuario);
+    mostrarMensaje(resultado.message, resultado.success?'success':'error');
+    return resultado;
+  };
+
+  const handleActualizarCorreo = async (id, email) => {
+    const resultado = await actualizarCorreo(id, email);
+    mostrarMensaje(resultado.message, resultado.success?'success':'error');
+  };
+
+  const handleLogout = () => { localStorage.removeItem('token'); sessionStorage.clear(); window.location.href='/login'; };
 
   return (
     <div className="user-management-container">
@@ -267,7 +221,7 @@ const GestionUsuarios = () => {
 
       <div className="user-management-content">
         <FormularioUsuario onCrearUsuario={handleCrearUsuario} loading={loading}/>
-        <TablaUsuarios usuarios={usuarios} onDarDeBaja={handleDarDeBaja} loading={loading}/>
+        <TablaUsuarios usuarios={usuarios} onActualizarCorreo={handleActualizarCorreo} loading={loading}/>
       </div>
     </div>
   );

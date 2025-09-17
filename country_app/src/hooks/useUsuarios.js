@@ -1,12 +1,13 @@
+// src/hooks/useUsuarios.js
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const API_URL = 'https://elrefugiocountryclub.com/api/users';
-
-export const useUsuarios = () => {
+const useUsuarios = () => {
   const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  const API_URL = 'http://localhost:3001/api/users'; // Cambiar según tu backend
 
   useEffect(() => {
     obtenerUsuarios();
@@ -35,29 +36,29 @@ export const useUsuarios = () => {
       return { success: true, message: data.message };
     } catch (err) {
       console.error(err);
-      return {
-        success: false,
-        message: err.response?.data?.error || 'Error al registrar usuario',
-      };
+      return { success: false, message: err.response?.data?.error || 'Error al registrar usuario' };
     } finally {
       setLoading(false);
     }
   };
+  
+    const actualizarCorreo = async (id, nuevoEmail) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const { data } = await axios.patch(`${API_URL}/update-email/${id}`, { email: nuevoEmail });
+        await obtenerUsuarios();
+        return { success: true, message: data.message || 'Correo actualizado correctamente' };
+      } catch (err) {
+        console.error(err);
+        return { success: false, message: err.response?.data?.error || 'Error al actualizar correo' };
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const darDeBaja = async (id) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const { data } = await axios.patch(`${API_URL}/disable/${id}`);
-      await obtenerUsuarios();
-      return { success: true, message: data.message };
-    } catch (err) {
-      console.error(err);
-      return { success: false, message: 'Error al dar de baja usuario' };
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  return { usuarios, loading, error, crearUsuario, darDeBaja };
+  return { usuarios, loading, error, crearUsuario, actualizarCorreo };
 };
+
+export default useUsuarios;

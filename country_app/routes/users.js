@@ -17,30 +17,39 @@ router.get('/all', async (req, res) => {
 // Registrar usuario
 router.post('/register', async (req, res) => {
   const { nombre, apellido, email, password, rol } = req.body;
-  if (!nombre || !apellido || !email || !password) return res.status(400).json({ error:'Faltan datos' });
+  if (!nombre || !apellido || !email || !password)
+    return res.status(400).json({ error: 'Faltan datos' });
 
   try {
     const [result] = await db.query(
       "INSERT INTO usuarios(nombre, apellido, email, password, rol, estado, fecha_registro) VALUES(?,?,?,?,?,'activo',NOW())",
       [nombre, apellido, email, password, rol]
     );
-    res.json({ message:'Usuario registrado correctamente', id: result.insertId });
+    res.json({ message: 'Usuario registrado correctamente', id: result.insertId });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error:'Error al registrar usuario' });
+    res.status(500).json({ error: 'Error al registrar usuario' });
   }
 });
 
-// Dar de baja usuario
-router.patch('/disable/:id', async (req, res) => {
+// Editar correo del usuario
+router.patch('/update-email/:id', async (req, res) => {
   const { id } = req.params;
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: 'El email es requerido' });
+
   try {
-    await db.query("UPDATE usuarios SET estado='inactivo' WHERE id=?", [id]);
-    res.json({ message:'Usuario dado de baja correctamente' });
+    const [result] = await db.query(
+      "UPDATE usuarios SET email=? WHERE id=?",
+      [email, id]
+    );
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
+    res.json({ message: 'Correo actualizado correctamente' });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error:'Error al dar de baja usuario' });
+    res.status(500).json({ error: 'Error al actualizar correo' });
   }
 });
+
 
 export default router;
