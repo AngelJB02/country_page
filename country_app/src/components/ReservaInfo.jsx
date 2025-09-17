@@ -35,11 +35,14 @@ const ReservasInfo = ({ reservations, currentUser }) => {
             <span className="detail-label">Fecha:</span>
             <span className="detail-value">
               {reserva.fecha
-                ? new Date(reserva.fecha).toLocaleDateString('es-ES', {
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric'
-                  })
+                ? (() => {
+                    // Extraer solo la parte de la fecha (YYYY-MM-DD) sin conversión de zona horaria
+                    const fechaStr = reserva.fecha.split('T')[0];
+                    const [year, month, day] = fechaStr.split('-');
+                    const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 
+                                   'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+                    return `${parseInt(day)} de ${meses[parseInt(month) - 1]} de ${year}`;
+                  })()
                 : 'Sin fecha'}
             </span>
           </div>

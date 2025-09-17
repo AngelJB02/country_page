@@ -7,19 +7,23 @@ const db = mysql.createPool({
   password: '&%0NW1ttSxb6sbnh',
   database: 'contry_refugiodb',
   waitForConnections: true,
-  connectionLimit: 10,
+  connectionLimit: 5, // Reducido para evitar sobrecarga
   queueLimit: 0,
-  acquireTimeout: 60000,
-  timeout: 60000,
+  acquireTimeout: 30000, // Reducido timeout
+  timeout: 30000,
   reconnect: true,
   charset: 'utf8mb4',
-  // Configuraciones adicionales para mejorar estabilidad
-  keepAliveInitialDelay: 0,
+  // Configuraciones mejoradas para estabilidad
+  keepAliveInitialDelay: 300000, // 5 minutos
   enableKeepAlive: true,
-  maxIdle: 10,
-  idleTimeout: 60000,
+  maxIdle: 2, // Máximo 2 conexiones inactivas
+  idleTimeout: 300000, // 5 minutos antes de cerrar conexión inactiva
   // Configuración de timezone
-  timezone: 'Z'
+  timezone: 'Z',
+  // Nuevas configuraciones para mejor manejo de errores
+  ssl: false,
+  supportBigNumbers: true,
+  bigNumberStrings: true
 });
 
 // Manejo de errores de conexión

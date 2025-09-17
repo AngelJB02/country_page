@@ -17,6 +17,24 @@ const Login = () => {
 
   const navigate = useNavigate();
 
+  // Verificar si ya hay una sesión activa
+  useEffect(() => {
+    const user = localStorage.getItem('user');
+    if (user) {
+      try {
+        const parsedUser = JSON.parse(user);
+        if (parsedUser && parsedUser.id && parsedUser.nombre) {
+          // Si ya hay sesión activa, redirigir según el rol
+          const redirectPath = getRedirectRoute(parsedUser.rol);
+          navigate(redirectPath, { replace: true });
+        }
+      } catch (error) {
+        // Si hay error al parsear, limpiar localStorage
+        localStorage.removeItem('user');
+      }
+    }
+  }, [navigate]);
+
   const validateField = (name, value) => {
     if (name === "password") {
       return value.length >= 4

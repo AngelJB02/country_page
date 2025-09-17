@@ -7,6 +7,7 @@ import Login from "./components/Login";
 import RegistroUsuarios from "./components/RegistroUsuarios";
 import InstructorClases from "./components/InstructorClases";  
 import Contabilidad from "./components/Contabilidad";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
   return (
@@ -15,10 +16,22 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/equitacion" element={<Equitacion />} />
         <Route path="/CalendarioReserva" element={<CalendarioReserva />} />
-        <Route path="/MenuCalendario" element={<MenuCalendario />} />
+        <Route path="/MenuCalendario" element={
+          <ProtectedRoute>
+            <MenuCalendario />
+          </ProtectedRoute>
+        } />
         <Route path="/login" element={<Login />} />
-        <Route path="/registro" element={<RegistroUsuarios />} />
-        <Route path="/instructor" element={<InstructorClases />} />
+        <Route path="/registro" element={
+          <ProtectedRoute>
+            <RegistroUsuarios />
+          </ProtectedRoute>
+        } />
+        <Route path="/instructor" element={
+          <ProtectedRoute>
+            <InstructorClases />
+          </ProtectedRoute>
+        } />
         <Route path="/contabilidad" element={<Contabilidad />} />
       </Routes>
     </Router>

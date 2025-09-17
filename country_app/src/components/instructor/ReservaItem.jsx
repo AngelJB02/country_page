@@ -31,7 +31,11 @@ const ReservaItem = ({ reserva, updateAsistencia }) => {
 
         {/* Detalles de la reserva */}
         <div>
-          <p><strong>📅 Fecha:</strong> {new Date(reserva.fecha).toLocaleDateString('es-ES')}</p>
+          <p><strong>📅 Fecha:</strong> {(() => {
+            const fechaStr = reserva.fecha.split('T')[0];
+            const [year, month, day] = fechaStr.split('-');
+            return `${day}/${month}/${year}`;
+          })()}</p>
           <p><strong>🐎 Caballo:</strong> {reserva.caballo || 'Sin asignar'}</p>
           {/* Mostrando la clase_id */}
           <p><strong>Clase:</strong> {reserva.clase_nombre}</p>

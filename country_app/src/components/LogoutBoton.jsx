@@ -19,6 +19,7 @@ const LogoutButton = ({
     localStorage.removeItem('authToken');
     localStorage.removeItem('instructorData');
     localStorage.removeItem('userData');
+    localStorage.removeItem('user'); // Agregar limpieza del usuario actual
 
     // ✅ Llamar función de logout si existe
     if (onLogout) {

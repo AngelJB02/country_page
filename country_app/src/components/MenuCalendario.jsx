@@ -3,6 +3,7 @@ import '../CSS/MenuCalendario.css';
 import '../CSS/DisponibilidadCaballos.css';
 import TituloReserva from './TituloReserva';
 import DisponibilidadCaballos from './DisponibilidadCaballos';
+import LogoutButton from './LogoutBoton';
 import axios from 'axios';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -28,7 +29,7 @@ const MenuCalendario = () => {
   const [availability, setAvailability] = useState({});
   const [loading, setLoading] = useState(false);
 
-  // Estado para usuario logueado (simulado)
+  // Estado para usuario logueado
   const [currentUser, setCurrentUser] = useState(null);
 
   // Estado para horarios del día cargados dinámicamente
@@ -41,10 +42,18 @@ const MenuCalendario = () => {
     'salto': 3
   };
 
-  // Simulación de verificación de usuario
+  // Obtener usuario real del localStorage al montar el componente
   useEffect(() => {
-    const mockUser = { id: 1, nombre: 'Usuario Test' };
-    setCurrentUser(mockUser);
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        setCurrentUser(JSON.parse(storedUser));
+      } catch (e) {
+        setCurrentUser(null);
+      }
+    } else {
+      setCurrentUser(null);
+    }
   }, []);
 
   // Cargar reservas existentes al montar el componente y cambiar mes
@@ -91,17 +100,24 @@ const MenuCalendario = () => {
       const startDate = `${year}-${month.toString().padStart(2, '0')}-01`;
       const endDate = new Date(year, month, 0).toISOString().split('T')[0];
 
-      const response = await axios.get('http://localhost:3001/api/reservas', {
+      const response = await axios.get('https://country-page.onrender.com/api/reservas', {
         params: { 
           fecha_inicio: startDate, 
           fecha_fin: endDate 
-        }
+        },
+        timeout: 10000 // 10 segundos de timeout
       });
 
       // Organizar reservas por fecha
       const reservasPorFecha = {};
       response.data.forEach(reserva => {
-        const fechaKey = reserva.fecha.split('T')[0];
+        // Si la fecha viene como '2025-09-18T00:00:00.000Z', solo tomar la parte de la fecha
+        let fechaKey = reserva.fecha;
+        if (typeof fechaKey === 'string' && fechaKey.includes('T')) {
+          fechaKey = fechaKey.split('T')[0];
+        } else if (typeof fechaKey === 'string' && fechaKey.length >= 10) {
+          fechaKey = fechaKey.substring(0, 10);
+        }
         
         if (!reservasPorFecha[fechaKey]) {
           reservasPorFecha[fechaKey] = [];
@@ -125,7 +141,22 @@ const MenuCalendario = () => {
 
     } catch (error) {
       console.error('Error cargando reservas:', error);
-      toast.error('Error al cargar las reservas del servidor');
+      
+      if (error.code === 'ECONNABORTED') {
+        toast.error('La conexión tardó demasiado. Intenta de nuevo.');
+      } else if (error.response?.status === 503) {
+        toast.error('Problema temporal con el servidor. Reintentando en unos segundos...');
+        // Reintentar después de 3 segundos
+        setTimeout(() => {
+          fetchReservationsForMonth();
+        }, 3000);
+      } else if (error.response) {
+        toast.error(error.response.data.error || 'Error al cargar las reservas del servidor');
+      } else if (error.request) {
+        toast.error('No se pudo conectar con el servidor. Verifica tu conexión a internet.');
+      } else {
+        toast.error('Error inesperado al cargar las reservas');
+      }
     } finally {
       setLoading(false);
     }
@@ -134,8 +165,9 @@ const MenuCalendario = () => {
   // Función para obtener disponibilidad de una fecha específica
   const fetchAvailability = async (dateString) => {
     try {
-      const response = await axios.get('http://localhost:3001/api/reservas/availability', {
-        params: { fecha: dateString }
+      const response = await axios.get('https://country-page.onrender.com/api/reservas/availability', {
+        params: { fecha: dateString },
+        timeout: 8000 // 8 segundos de timeout
       });
       
       setAvailability(prev => ({
@@ -145,13 +177,31 @@ const MenuCalendario = () => {
 
     } catch (error) {
       console.error('Error cargando disponibilidad:', error);
-      const dayReservations = reservations[dateString] || [];
-      const fallbackAvailability = calculateFallbackAvailability(dayReservations);
       
-      setAvailability(prev => ({
-        ...prev,
-        [dateString]: fallbackAvailability
-      }));
+      if (error.response?.status === 503) {
+        // Error temporal del servidor, usar fallback y reintentar
+        const dayReservations = reservations[dateString] || [];
+        const fallbackAvailability = calculateFallbackAvailability(dayReservations);
+        
+        setAvailability(prev => ({
+          ...prev,
+          [dateString]: fallbackAvailability
+        }));
+        
+        // Reintentar después de 2 segundos
+        setTimeout(() => {
+          fetchAvailability(dateString);
+        }, 2000);
+      } else {
+        // Para otros errores, usar fallback
+        const dayReservations = reservations[dateString] || [];
+        const fallbackAvailability = calculateFallbackAvailability(dayReservations);
+        
+        setAvailability(prev => ({
+          ...prev,
+          [dateString]: fallbackAvailability
+        }));
+      }
     }
   };
 
@@ -190,11 +240,12 @@ const MenuCalendario = () => {
 
   const actividades = ['iniciacion', 'caminata', 'salto'];
 
-  // Verificar si un cliente ya tiene una reserva en una fecha específica
-  const clientHasReservationOnDate = (nombre, dateString) => {
+  // Verificar si el usuario actual ya tiene una reserva en una fecha específica
+  const userHasReservationOnDate = (userId, dateString) => {
+    if (!userId) return false;
     const dayReservations = reservations[dateString] || [];
     return dayReservations.some(reservation => 
-      reservation.nombre.toLowerCase() === nombre.toLowerCase() &&
+      reservation.usuario_id === userId &&
       reservation.estado !== 'cancelada'
     );
   };
@@ -365,7 +416,7 @@ const MenuCalendario = () => {
 
     setLoading(true);
     try {
-      await axios.delete(`http://localhost:3001/api/reservas/${reservaId}`);
+      await axios.delete(`https://country-page.onrender.com/api/reservas/${reservaId}`);
       
       toast.success('Reserva cancelada exitosamente');
       
@@ -401,9 +452,9 @@ const MenuCalendario = () => {
       return;
     }
 
-    // Verificar si el cliente ya tiene una reserva ese día
-    if (clientHasReservationOnDate(bookingData.nombre, dateString)) {
-      toast.error('Ya tienes una reserva para este día. Solo se permite una reserva por día por cliente.');
+    // Verificar si el usuario ya tiene una reserva ese día
+    if (userHasReservationOnDate(currentUser.id, dateString)) {
+      toast.error('Ya tienes una reserva para este día. Solo se permite una reserva por día por usuario.');
       return;
     }
 
@@ -427,7 +478,7 @@ const MenuCalendario = () => {
         actividad: bookingData.actividad
       };
 
-      const response = await axios.post('http://localhost:3001/api/reservas', reservaData);
+      const response = await axios.post('https://country-page.onrender.com/api/reservas', reservaData);
 
       // Actualizar inmediatamente después de crear la reserva
       await Promise.all([
@@ -538,7 +589,7 @@ const MenuCalendario = () => {
   // Función para obtener horarios disponibles según el día de la semana dinámicamente
   const fetchHorariosDia = async (diaSemana) => {
     try {
-      const response = await axios.get('http://localhost:3001/api/horarios', {
+      const response = await axios.get('https://country-page.onrender.com/api/horarios', {
         params: { dia_semana: diaSemana }
       });
       setHorariosDia(response.data);
@@ -561,6 +612,16 @@ const MenuCalendario = () => {
 
   return (
     <div className="calendar-container">
+      {/* Botón de logout */}
+      <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 100 }}>
+        {currentUser && (
+          <LogoutButton 
+            userName={currentUser.nombre || 'Usuario'} 
+            showUserName={true}
+          />
+        )}
+      </div>
+
       <ToastContainer
         position="top-right"
         autoClose={5000}
@@ -770,7 +831,7 @@ const MenuCalendario = () => {
                           !bookingData.edad || 
                           !bookingData.actividad || 
                           currentSpotAvailability.available <= 0 ||
-                          clientHasReservationOnDate(bookingData.nombre, selectedDateString) ||
+                          userHasReservationOnDate(currentUser.id, selectedDateString) ||
                           (bookingData.actividad === 'salto' && !canMakeSaltoReservation(selectedDateString))
                         }
                         aria-label="Confirmar reserva"

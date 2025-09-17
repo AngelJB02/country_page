@@ -7,7 +7,10 @@ const router = express.Router();
 router.get('/', async (req, res) => {
   const { fecha_inicio, fecha_fin, usuario_id } = req.query;
 
+  let connection;
   try {
+    connection = await db.getConnection();
+    
     let query = `
       SELECT r.id, r.usuario_id, r.fecha, r.horario, r.nombre, r.edad, r.estado,
              c.tipo as clase_tipo, c.nombre as clase_nombre, c.descripcion as clase_descripcion,
@@ -42,12 +45,22 @@ router.get('/', async (req, res) => {
 
     query += " ORDER BY r.fecha, r.horario";
 
-    const [reservas] = await db.execute(query, params);
+    const [reservas] = await connection.execute(query, params);
     
     res.json(reservas);
   } catch (err) {
     console.error('Error obteniendo reservas:', err);
-    res.status(500).json({ error: "Error en el servidor obteniendo reservas" });
+    
+    // Manejo específico de errores de conexión
+    if (err.code === 'ECONNRESET' || err.code === 'PROTOCOL_CONNECTION_LOST') {
+      res.status(503).json({ 
+        error: "Problema temporal de conexión con la base de datos. Intenta de nuevo en unos segundos." 
+      });
+    } else {
+      res.status(500).json({ error: "Error en el servidor obteniendo reservas" });
+    }
+  } finally {
+    if (connection) connection.release();
   }
 });
 
@@ -62,7 +75,10 @@ router.get('/availability', async (req, res) => {
     return res.status(400).json({ error: 'La fecha es requerida' });
   }
 
+  let connection;
   try {
+    connection = await db.getConnection();
+    
     // Configuración de horarios con límite máximo de 6 por horario
     const horariosConfig = {
       "08:00": { total: 6 },
@@ -84,7 +100,7 @@ router.get('/availability', async (req, res) => {
     });
 
     // Contar reservas activas por horario (excluyendo salto)
-    const [reservasHorario] = await db.execute(`
+    const [reservasHorario] = await connection.execute(`
       SELECT horario, COUNT(*) as total
       FROM reservas r
       JOIN clases c ON r.clase_id = c.id
@@ -102,7 +118,7 @@ router.get('/availability', async (req, res) => {
     });
 
     // Contar reservas de salto
-    const [saltoReservas] = await db.execute(`
+    const [saltoReservas] = await connection.execute(`
       SELECT COUNT(*) as total
       FROM reservas r
       JOIN clases c ON r.clase_id = c.id
@@ -118,7 +134,16 @@ router.get('/availability', async (req, res) => {
     res.json(disponibilidad);
   } catch (err) {
     console.error('Error obteniendo disponibilidad:', err);
-    res.status(500).json({ error: "Error en el servidor obteniendo disponibilidad" });
+    
+    if (err.code === 'ECONNRESET' || err.code === 'PROTOCOL_CONNECTION_LOST') {
+      res.status(503).json({ 
+        error: "Problema temporal de conexión. Intenta de nuevo en unos segundos." 
+      });
+    } else {
+      res.status(500).json({ error: "Error en el servidor obteniendo disponibilidad" });
+    }
+  } finally {
+    if (connection) connection.release();
   }
 });
 
