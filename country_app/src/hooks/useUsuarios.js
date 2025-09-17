@@ -7,7 +7,7 @@ const useUsuarios = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const API_URL = 'http://localhost:3001/api/users'; // Cambiar según tu backend
+  const API_URL = 'https://country-page.onrender.com/api/users'; // Cambiar según tu backend
 
   useEffect(() => {
     obtenerUsuarios();
@@ -41,7 +41,7 @@ const useUsuarios = () => {
       setLoading(false);
     }
   };
-  
+
     const actualizarCorreo = async (id, nuevoEmail) => {
       setLoading(true);
       setError(null);
