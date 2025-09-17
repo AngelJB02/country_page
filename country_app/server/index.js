@@ -17,7 +17,7 @@ const PORT = 3001;
 // Middlewares
 app.use(cors({
   origin: ["http://localhost:5173", "http://localhost:5174", "https://elrefugiocountryclub.com"],
-  methods: ["GET", "POST", "PUT", "DELETE"],
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
   credentials: true
 }));
 
