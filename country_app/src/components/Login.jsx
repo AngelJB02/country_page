@@ -13,6 +13,7 @@ const Login = () => {
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [estadoMsg, setEstadoMsg] = useState("");
 
   const navigate = useNavigate();
 
@@ -62,18 +63,37 @@ const Login = () => {
         throw new Error("Servidor no respondió correctamente (no JSON)");
       }
 
-      if (response.ok) {
-        setShowSuccess(true);
-
-        // Guardar info en localStorage o context
-        localStorage.setItem("user", JSON.stringify(data.user));
-
-        setTimeout(() => {
-          const redirectPath = getRedirectRoute(data.user.rol);
-          navigate(redirectPath);
-        }, 1000);
+      // Manejo de estados
+      if (response.ok && data.user) {
+        const estado = (data.user.estado || "").toLowerCase();
+        if (estado === "activo") {
+          setShowSuccess(true);
+          localStorage.setItem("user", JSON.stringify(data.user));
+          setEstadoMsg("");
+          setTimeout(() => {
+            const redirectPath = getRedirectRoute(data.user.rol);
+            navigate(redirectPath);
+          }, 1000);
+        } else if (estado === "inactivo") {
+          setShowSuccess(true);
+          setEstadoMsg("⚠️ Tu cuenta está inactiva. Comunícate con el administrador.");
+          localStorage.setItem("user", JSON.stringify(data.user));
+          setTimeout(() => {
+            const redirectPath = getRedirectRoute(data.user.rol);
+            navigate(redirectPath);
+          }, 2000);
+        } else if (estado === "pendiente") {
+          setShowSuccess(false);
+          setEstadoMsg("⏳ Tienes pagos pendientes y no puedes iniciar sesión.");
+        } else if (estado === "bloqueado") {
+          setShowSuccess(false);
+          setEstadoMsg("🚫 Tu cuenta está bloqueada y no puedes iniciar sesión.");
+        } else {
+          setShowSuccess(false);
+          setEstadoMsg("❌ Estado de usuario no permitido.");
+        }
       } else {
-        throw new Error(data.message || "Usuario o contraseña incorrectos");
+        throw new Error(data.mensaje || data.message || "Usuario o contraseña incorrectos");
       }
     } catch (error) {
       console.error("Login error:", error);
@@ -83,6 +103,7 @@ const Login = () => {
             ? "No se pudo conectar al servidor. Verifica que esté corriendo."
             : error.message,
       });
+      setEstadoMsg("");
     } finally {
       setIsLoading(false);
     }
@@ -137,6 +158,7 @@ const Login = () => {
         </div>
 
         {showSuccess && <div className="success-message">¡Login exitoso!</div>}
+        {estadoMsg && <div className="estado-message">{estadoMsg}</div>}
         {errors.general && (
           <div className="general-error">{errors.general}</div>
         )}

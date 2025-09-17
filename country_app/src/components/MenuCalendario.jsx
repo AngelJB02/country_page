@@ -55,10 +55,17 @@ const MenuCalendario = () => {
   // Cargar disponibilidad cuando se selecciona una fecha
   useEffect(() => {
     if (selectedDate) {
-      const diasSemana = ['domingo','martes','miercoles','jueves','viernes','sabado'];
+      // Array completo para mapear getDay()
+      const diasSemana = ['domingo','lunes','martes','miercoles','jueves','viernes','sabado'];
+      // Solo estos días existen en tu tabla
+      const diasValidos = ['martes','miercoles','jueves','viernes','sabado','domingo'];
       const diaSemana = diasSemana[selectedDate.getDay()];
-      fetchHorariosDia(diaSemana);
-      fetchAvailability(selectedDate.toISOString().split('T')[0]);
+      if (diasValidos.includes(diaSemana)) {
+        fetchHorariosDia(diaSemana);
+        fetchAvailability(selectedDate.toISOString().split('T')[0]);
+      } else {
+        setHorariosDia([]); // Lunes: no hay horarios
+      }
     }
   }, [selectedDate]);
 
@@ -84,7 +91,7 @@ const MenuCalendario = () => {
       const startDate = `${year}-${month.toString().padStart(2, '0')}-01`;
       const endDate = new Date(year, month, 0).toISOString().split('T')[0];
 
-      const response = await axios.get('https://country-page.onrender.com/api/reservas', {
+      const response = await axios.get('http://localhost:3001/api/reservas', {
         params: { 
           fecha_inicio: startDate, 
           fecha_fin: endDate 
@@ -127,7 +134,7 @@ const MenuCalendario = () => {
   // Función para obtener disponibilidad de una fecha específica
   const fetchAvailability = async (dateString) => {
     try {
-      const response = await axios.get('https://country-page.onrender.com/api/reservas/availability', {
+      const response = await axios.get('http://localhost:3001/api/reservas/availability', {
         params: { fecha: dateString }
       });
       
@@ -178,8 +185,8 @@ const MenuCalendario = () => {
     'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
   ];
 
-  const dayNames = ['Dom', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-  const dayNamesFull = ['Domingo', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+  const dayNames = ['Dom', 'Mar', 'Mié', 'Jue', 'Vie', 'Sab'];
+  const dayNamesFull = ['Domingo', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sabado'];
 
   const actividades = ['iniciacion', 'caminata', 'salto'];
 
@@ -358,7 +365,7 @@ const MenuCalendario = () => {
 
     setLoading(true);
     try {
-      await axios.delete(`https://country-page.onrender.com/api/reservas/${reservaId}`);
+      await axios.delete(`http://localhost:3001/api/reservas/${reservaId}`);
       
       toast.success('Reserva cancelada exitosamente');
       
@@ -420,7 +427,7 @@ const MenuCalendario = () => {
         actividad: bookingData.actividad
       };
 
-      const response = await axios.post('https://country-page.onrender.com/api/reservas', reservaData);
+      const response = await axios.post('http://localhost:3001/api/reservas', reservaData);
 
       // Actualizar inmediatamente después de crear la reserva
       await Promise.all([
@@ -531,7 +538,7 @@ const MenuCalendario = () => {
   // Función para obtener horarios disponibles según el día de la semana dinámicamente
   const fetchHorariosDia = async (diaSemana) => {
     try {
-      const response = await axios.get('https://country-page.onrender.com/api/horarios', {
+      const response = await axios.get('http://localhost:3001/api/horarios', {
         params: { dia_semana: diaSemana }
       });
       setHorariosDia(response.data);
