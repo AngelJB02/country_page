@@ -32,7 +32,11 @@ function App() {
             <InstructorClases />
           </ProtectedRoute>
         } />
-        <Route path="/contabilidad" element={<Contabilidad />} />
+        <Route path="/contabilidad" element={
+          <ProtectedRoute>
+            <Contabilidad />
+          </ProtectedRoute>
+        } />
       </Routes>
     </Router>
   );

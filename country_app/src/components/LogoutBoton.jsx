@@ -15,18 +15,19 @@ const LogoutButton = ({
   const confirmLogout = () => {
     setShowLogoutModal(false);
 
-    // ✅ Limpiar datos de sesión
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('instructorData');
-    localStorage.removeItem('userData');
-    localStorage.removeItem('user'); // Agregar limpieza del usuario actual
+    console.log('Cerrando sesión y limpiando datos...');
+    
+    // ✅ Limpiar datos de sesión completamente
+    localStorage.clear(); // Limpia todo el localStorage
+    sessionStorage.clear(); // Limpia también sessionStorage por si acaso
 
     // ✅ Llamar función de logout si existe
     if (onLogout) {
       onLogout();
     }
 
-    // ✅ Redirigir al login
+    // ✅ Forzar recarga completa de la página para asegurar limpieza
+    console.log('Redirigiendo al login...');
     window.location.href = '/login';
   };
 

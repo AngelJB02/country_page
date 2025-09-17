@@ -1,8 +1,7 @@
-"use client"
-
 import { useState, useEffect, useRef } from "react"
 import ReactDOM from "react-dom"
 import "../CSS/Contabilidad.css"
+import LogoutButton from './LogoutBoton'
 import { UserPlus, Eye, XCircle, CheckCircle, Loader, Search } from "lucide-react"
 
 const MembershipAdminDashboard = () => {
@@ -14,6 +13,7 @@ const MembershipAdminDashboard = () => {
   const [selectedMember, setSelectedMember] = useState(null)
   const [originalMember, setOriginalMember] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [currentUser, setCurrentUser] = useState(null)
   const [newClient, setNewClient] = useState({
     nombre: "",
     apellido: "",
@@ -43,6 +43,20 @@ const MembershipAdminDashboard = () => {
   useEffect(() => {
     refreshUsersList()
   }, [])
+
+  // Obtener usuario actual del localStorage
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        setCurrentUser(JSON.parse(storedUser));
+      } catch (e) {
+        setCurrentUser(null);
+      }
+    } else {
+      setCurrentUser(null);
+    }
+  }, []);
 
   // Bloquear scroll cuando un modal está abierto
   useEffect(() => {
@@ -256,6 +270,12 @@ const MembershipAdminDashboard = () => {
             <p className="header-subtitle">Gestiona usuarios y membresías de tu plataforma</p>
           </div>
           <div className="header-actions">
+            {currentUser && (
+              <LogoutButton 
+                userName={currentUser.nombre || 'Admin'} 
+                showUserName={true}
+              />
+            )}
             <button className="add-client-btn" onClick={openAddClientModal} type="button">
               <UserPlus size={20} /> Nuevo Cliente
             </button>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import image10 from "../img/image_10.jpg"; // Ajusta la ruta según tu proyecto
 import { getRedirectRoute } from "../utils/roleRedirect"; // importa tu helper
 
@@ -16,24 +16,28 @@ const Login = () => {
   const [estadoMsg, setEstadoMsg] = useState("");
 
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Verificar si ya hay una sesión activa
   useEffect(() => {
+    console.log('Login: Verificando sesión existente');
     const user = localStorage.getItem('user');
     if (user) {
       try {
         const parsedUser = JSON.parse(user);
         if (parsedUser && parsedUser.id && parsedUser.nombre) {
-          // Si ya hay sesión activa, redirigir según el rol
-          const redirectPath = getRedirectRoute(parsedUser.rol);
+          console.log('Login: Sesión activa encontrada, redirigiendo:', parsedUser.nombre);
+          // Si ya hay sesión activa, redirigir según el rol o a donde venía
+          const redirectPath = location.state?.from || getRedirectRoute(parsedUser.rol);
           navigate(redirectPath, { replace: true });
         }
       } catch (error) {
-        // Si hay error al parsear, limpiar localStorage
-        localStorage.removeItem('user');
+        console.log('Login: Error al parsear usuario, limpiando localStorage:', error);
+        // Si hay error al parsear, limpiar localStorage completamente
+        localStorage.clear();
       }
     }
-  }, [navigate]);
+  }, [navigate, location]);
 
   const validateField = (name, value) => {
     if (name === "password") {
