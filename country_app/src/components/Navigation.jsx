@@ -60,7 +60,7 @@ const Navigation = () => {
 
         <ul className={`nav-links ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
           <li>
-            <button onClick={() => scrollToSection('banner-evento')}>Inicio</button>
+            <button onClick={() => scrollToSection('hero')}>Inicio</button>
           </li>
           <li>
             <button onClick={() => scrollToSection('eventos')}>Eventos</button>
