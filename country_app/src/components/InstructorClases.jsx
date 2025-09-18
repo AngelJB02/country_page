@@ -7,9 +7,12 @@ import NoReservations from './instructor/NoReservations';
 import ReservaList from './instructor/ReservaList';
 import LogoutButton from './LogoutBoton';
 import useInstructor from '../hooks/useInstructor';
+import useRoleGuard from '../hooks/useRoleGuard';
 import '../CSS/ReservaItem.css';
 
 const InstructorReservas = () => {
+  useRoleGuard(['instructor']);
+
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState('');
   const [searchTerm, setSearchTerm] = useState('');

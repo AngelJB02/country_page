@@ -46,7 +46,7 @@ const Navigation = () => {
         <div className="nav-logo">
           <Logo size="small" />
         </div>
-        
+
         {/* Hamburger Menu Button */}
         <button 
           className={`hamburger-menu ${isMobileMenuOpen ? 'active' : ''}`}
@@ -57,22 +57,22 @@ const Navigation = () => {
           <span></span>
           <span></span>
         </button>
-        
+
         <ul className={`nav-links ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
           <li>
-            <button onClick={() => scrollToSection('hero')}>Inicio</button>
-          </li>
-          <li>
-            <button onClick={() => scrollToSection('banner-evento')}>Refugio</button>
+            <button onClick={() => scrollToSection('banner-evento')}>Inicio</button>
           </li>
           <li>
             <button onClick={() => scrollToSection('eventos')}>Eventos</button>
           </li>
           <li>
+            <button onClick={() => window.location.href = '/equitacion'}>Equitación</button>
+          </li>
+          <li>
             <button onClick={() => scrollToSection('contacto')}>Contacto</button>
           </li>
         </ul>
-        
+
         {/* Overlay para cerrar menú móvil */}
         {isMobileMenuOpen && (
           <div 

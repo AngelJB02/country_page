@@ -4,6 +4,7 @@ import '../CSS/RegistroUsuarios.css';
 import { User, UserPlus, Eye, EyeOff, AlertCircle, CheckCircle, Loader, Save } from 'lucide-react';
 import LogoutButton from './LogoutBoton';
 import useUsuarios from '../hooks/useUsuarios';
+import useRoleGuard from '../hooks/useRoleGuard';
 
 // ============================
 // Formulario de registro
@@ -189,6 +190,8 @@ const TablaUsuarios = ({ usuarios, onActualizarCorreo, loading }) => {
 const GestionUsuarios = () => {
   const { usuarios, loading, error, crearUsuario, actualizarCorreo } = useUsuarios();
   const [mensaje, setMensaje] = useState({ texto:'', tipo:'' });
+
+  useRoleGuard(['creadorcuentas']);
 
   const mostrarMensaje = (texto,tipo) => { setMensaje({texto,tipo}); setTimeout(()=>setMensaje({texto:'',tipo:''}),5000); };
 

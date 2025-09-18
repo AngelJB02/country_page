@@ -55,15 +55,10 @@ const Navigation = () => {
         </button>
         
         <ul className={`nav-links ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
-          <li>
-            <button onClick={() => scrollToSection('hero')}>Inicio</button>
-          </li>
+  
           <li>
             {/* 👇 este cambia de scroll a navigate */}
-            <button onClick={() => navigate('/')}>Refugio</button>
-          </li>
-          <li>
-            <button onClick={() => scrollToSection('contacto')}>Contacto</button>
+            <button onClick={() => navigate('/')}>Inicio</button>
           </li>
         </ul>
         

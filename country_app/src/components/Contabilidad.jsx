@@ -3,8 +3,11 @@ import ReactDOM from "react-dom"
 import "../CSS/Contabilidad.css"
 import LogoutButton from './LogoutBoton'
 import { UserPlus, Eye, XCircle, CheckCircle, Loader, Search } from "lucide-react"
+import useRoleGuard from '../hooks/useRoleGuard';
 
 const MembershipAdminDashboard = () => {
+  useRoleGuard(['admin', 'contabilidad']);
+
   const [members, setMembers] = useState([])
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("")

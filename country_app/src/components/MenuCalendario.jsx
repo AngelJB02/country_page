@@ -8,8 +8,11 @@ import axios from 'axios';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import ReservasInfo from "./ReservaInfo";
+import useRoleGuard from '../hooks/useRoleGuard';
 
 const MenuCalendario = () => {
+  useRoleGuard(['cliente']);
+
   const [currentDate, setCurrentDate] = useState(new Date(2025, 8, 1));
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTime, setSelectedTime] = useState(null);

@@ -82,15 +82,7 @@ const EventsSection = () => {
                     <li key={index}>{caracteristica}</li>
                   ))}
                 </ul>
-                 {/* Solo mostrar botón si es el evento con id 5 */}
-                  {evento.id === 5 && (
-                    <button
-                      className="cta-button rustic-button"
-                      onClick={() => navigate('/equitacion')}
-                    >
-                      Más Información
-                    </button>
-                  )}
+                {/* El botón de equitación se movió al header de navegación */}
               </div>
             </div>
           ))}
