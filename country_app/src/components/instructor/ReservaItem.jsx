@@ -16,6 +16,7 @@ const ReservaItem = ({ reserva, updateAsistencia }) => {
       case 'asistio': return 'asistio';
       case 'falto': return 'no-asistio';
       case 'pendiente': return 'pendiente';
+      case 'cancelar': return 'cancelada';
       default: return '';
     }
   };
@@ -48,8 +49,9 @@ const ReservaItem = ({ reserva, updateAsistencia }) => {
         <div>
           <p>Estado de Asistencia:</p>
           <span className={`asistencia-badge ${getAsistenciaClass(reserva.asistencia)}`}>
-            {reserva.asistencia === 'asistio' ? '✅ Asistió' :
-             reserva.asistencia === 'falto' ? '❌ No Asistió' :
+            { reserva.asistencia === 'asistio' ? '✅ Asistió' :
+              reserva.asistencia === 'falto' ? '❌ No Asistió' :
+              reserva.asistencia === 'cancelar' ? '🚫 Cancelada' :
              '⏳ Pendiente'}
           </span>
         </div>
@@ -70,6 +72,13 @@ const ReservaItem = ({ reserva, updateAsistencia }) => {
           className="button-no-asistio"
         >
           ❌ No Asistió
+        </button>
+                <button
+          onClick={() => updateAsistencia(reserva.id, 'cancelar')}
+          disabled={reserva.asistencia === 'cancelar'}
+          className="button-cancelar"
+        >
+          🚫 Cancelar clase
         </button>
       </div>
     </div>
