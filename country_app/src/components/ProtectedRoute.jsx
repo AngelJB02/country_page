@@ -46,12 +46,9 @@ const ProtectedRoute = ({ children }) => {
     // Verificar inmediatamente
     checkAuth();
 
-    // Verificar cada vez que cambia la ruta
-    const intervalId = setInterval(checkAuth, 1000); // Verificar cada segundo
-
     // Escuchar cambios en localStorage (cuando se hace logout desde otra pestaña)
     const handleStorageChange = (e) => {
-      if (e.key === 'user' || e.key === null) { // null significa que se limpió todo el localStorage
+      if (e.key === 'user' || e.key === null) {
         console.log('Cambio en localStorage detectado');
         checkAuth();
       }
@@ -71,15 +68,25 @@ const ProtectedRoute = ({ children }) => {
       }
     };
 
+    // Solución para navegadores: recargar si la página se muestra desde el historial y no hay sesión
+    const handlePageShow = (event) => {
+      const user = localStorage.getItem('user');
+      if (!user && event.persisted) {
+        // Si no hay sesión y la página viene del historial, recargar
+        window.location.reload();
+      }
+    };
+
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('focus', handleFocus);
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('pageshow', handlePageShow);
 
     return () => {
-      clearInterval(intervalId);
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pageshow', handlePageShow);
     };
   }, [location.pathname]);
 
@@ -113,4 +120,4 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
-export default ProtectedRoute;
+export default ProtectedRoute; 
