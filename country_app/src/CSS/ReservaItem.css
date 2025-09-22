@@ -17,6 +17,9 @@
 .reserva-item.no-asistio {
   border-left-color: var(--terracotta);
 }
+.reserva-item.cancelar {
+  border-left-color: #A63924;
+}
 
 /* Grid interno mejorado */
 .reserva-item-grid {
@@ -132,7 +135,7 @@
   background: linear-gradient(135deg, var(--terracotta), #d4751f);
 }
 .estado-cancelada {
-  background: linear-gradient(135deg, var(--charcoal), #2d2d2d);
+  background: linear-gradient(135deg, var(--charcoal), #A63924);
 }
 .estado-otro {
   background: linear-gradient(135deg, var(--stone-gray), #8a8a8a);
@@ -169,6 +172,10 @@
   background: linear-gradient(135deg, var(--terracotta), #d4751f);
 }
 
+.asistencia-badge.cancelar {
+  background: linear-gradient(135deg, var(--stone-gray), #A63924);
+  color: var(--cream);
+}
 .asistencia-badge.pendiente {
   background: linear-gradient(135deg, var(--stone-gray), #8a8a8a);
   color: var(--cream);
@@ -197,6 +204,7 @@
 }
 
 .button-asistio,
+.button-cancelar,
 .button-no-asistio {
   border: none;
   padding: 0.75rem 1.5rem;
@@ -236,8 +244,19 @@
   background: var(--terracotta);
 }
 
+.button-cancelar {
+  background: #A63924;
+}
+
+.button-cancelar:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  background: #A63924;
+}
+
 /* Hover para botones */
 .button-asistio:hover:not(:disabled),
+.button-cancelar:hover:not(:disabled),
 .button-no-asistio:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
