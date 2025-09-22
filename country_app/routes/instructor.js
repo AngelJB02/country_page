@@ -30,4 +30,28 @@ router.get("/reservas", async (req, res) => {
   }
 });
 
+// Actualizar solo el campo de asistencia de una reserva
+router.put("/reservas/:id/asistencia", async (req, res) => {
+  const { id } = req.params;
+  const { asistencia } = req.body;
+  console.log("Valor recibido en asistencia:", asistencia);
+
+  if (!["asistio", "falto", "cancelada", "pendiente"].includes(asistencia)) {
+    return res.status(400).json({ error: "Valor de asistencia no válido" });
+  }
+
+  try {
+    const [result] = await db.query(
+      "UPDATE reservas SET asistencia = ? WHERE id = ?",
+      [asistencia, id]
+    );
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Reserva no encontrada" });
+    }
+    res.json({ message: "Asistencia actualizada correctamente", asistencia });
+  } catch (err) {
+    console.error("Error al actualizar asistencia:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
 export default router;

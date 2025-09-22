@@ -23,9 +23,9 @@ const useInstructor = () => {
   };
 
   const updateAsistencia = async (reservaId, asistencia) => {
-    if (!["asistio", "falto", "pendiente"].includes(asistencia)) return;
+  if (!["asistio", "falto", "pendiente", "cancelada"].includes(asistencia)) return;
     try {
-      await axios.patch(`${API_URL}/reservas/${reservaId}/asistencia`, { asistencia });
+      await axios.put(`${API_URL}/reservas/${reservaId}/asistencia`, { asistencia });
       setReservas(prev =>
         prev.map(r => (r.id === reservaId ? { ...r, asistencia } : r))
       );

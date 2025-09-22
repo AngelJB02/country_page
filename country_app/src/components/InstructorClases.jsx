@@ -19,8 +19,6 @@ const InstructorReservas = () => {
   const [viewMode, setViewMode] = useState('day');
 
   const { reservas, loading, error, updateAsistencia } = useInstructor(selectedDate, endDate);
-  
-  const API_URL = 'https://country-page.onrender.com/api/instructor/reservas';
 
   // Filtrar por búsqueda
   const filteredReservas = reservas.filter(r =>
