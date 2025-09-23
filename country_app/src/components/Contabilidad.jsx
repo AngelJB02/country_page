@@ -82,6 +82,17 @@ const MembershipAdminDashboard = () => {
     return isNaN(date.getTime()) ? "" : date.toISOString().split("T")[0]
   }
 
+  // Función para formatear números con separadores de miles
+  const formatCurrency = (amount) => {
+    if (!amount && amount !== 0) return ""
+    const num = parseFloat(amount)
+    if (isNaN(num)) return ""
+    return num.toLocaleString('en-US', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2
+    })
+  }
+
   // Función para mostrar notificaciones
   const showNotification = (message, type = "success") => {
     setNotification({ show: true, message, type })
@@ -734,7 +745,7 @@ const MembershipAdminDashboard = () => {
                           <option value="Pendiente">Pendiente</option>
                         </select>
                       </td>
-                      <td style={{ fontWeight: "600", color: "var(--primary-brown)" }}>${member.monthlyFee}</td>
+                      <td style={{ fontWeight: "600", color: "var(--primary-brown)" }}>${formatCurrency(member.monthlyFee)}</td>
                       <td>{formatDate(member.lastPaymentDate)}</td>
                       <td
                         style={{
@@ -1025,7 +1036,7 @@ const MembershipAdminDashboard = () => {
                     {paymentHistory.map((payment, index) => (
                       <div key={index} className="payment-item">
                         <div className="payment-info">
-                          <div className="payment-amount">${payment.monto}</div>
+                          <div className="payment-amount">${formatCurrency(payment.monto)}</div>
                           <div className="payment-method">Método: {payment.metodo_pago}</div>
                           <div className="payment-dates">
                             <span>Pago: {formatDate(payment.fecha_pago)}</span>
