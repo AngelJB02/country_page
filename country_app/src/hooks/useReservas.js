@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-const API_URL = "https://elrefugiocountryclub.com/api/reservas"; 
+const API_URL = "https://country-page.onrender.com/api/reservas"; 
 
 export function useReservas() {
   const [availability, setAvailability] = useState({});
