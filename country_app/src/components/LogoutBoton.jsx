@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { LogOut } from 'lucide-react';
+import './instructor/LogoutBar.css';
 
 const LogoutButton = ({ 
   userName = "Usuario", 
@@ -39,14 +40,7 @@ const LogoutButton = ({
     <>
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
         {showUserName && (
-          <span style={{
-            fontSize: '1rem',
-            fontWeight: '600',
-            color: 'var(--primary-brown)',
-            fontFamily: 'var(--font-primary)'
-          }}>
-            {userName}
-          </span>
+          <span className="logoutbar-user">{userName}</span>
         )}
 
         <button

@@ -33,7 +33,7 @@ const ReservaList = ({ reservas, updateAsistencia }) => {
           return a.horario.localeCompare(b.horario)
         })
         return (
-          <div key={date} className="reserva-dia-container" style={{ background: "var(--cream-overlay)", borderRadius: "25px" }}>
+          <div key={date} className="reserva-dia-container">
             <div className="reserva-dia-header">
               📅 {date}
               <span className="reserva-dia-indicator">

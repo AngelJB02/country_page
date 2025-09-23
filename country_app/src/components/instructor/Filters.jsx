@@ -1,36 +1,157 @@
-import React from 'react';
+// Filters.jsx – versión compacta, accesible y sin estilos inline
+import React from "react";
+import { FaCalendarDay, FaCalendarWeek, FaSearch, FaListUl, FaFilter } from "react-icons/fa";
 
-const Filters = ({ viewMode, setViewMode, selectedDate, setSelectedDate, endDate, setEndDate, searchTerm, setSearchTerm }) => (
-  <div style={{ background: 'var(--warm-white)', backdropFilter: 'blur(10px)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--soft-shadow)', marginBottom: '2rem', border: '1px solid rgba(255,255,255,0.2)' }}>
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', alignItems: 'end' }}>
-      {/* Vista */}
-      <div>
-        <label style={{ display: 'block', color: 'var(--primary-brown)', fontWeight: '600', marginBottom: '0.5rem' }}>Vista:</label>
-        <select value={viewMode} onChange={e => setViewMode(e.target.value)} style={{ width:'100%', padding:'0.75rem', border:'2px solid var(--stone-gray)', borderRadius:'var(--radius-md)', background:'var(--warm-white)', color:'var(--primary-brown)', fontSize:'1rem' }}>
-          <option value="day">Vista Diaria</option>
-          <option value="week">Vista Semanal</option>
-        </select>
+/**
+ * Props esperadas:
+ * viewMode: "day" | "week"
+ * setViewMode, selectedDate, setSelectedDate, endDate, setEndDate,
+ * searchTerm, setSearchTerm
+ */
+
+const Filters = ({
+  viewMode,
+  setViewMode,
+  selectedDate,
+  setSelectedDate,
+  endDate,
+  setEndDate,
+  searchTerm,
+  setSearchTerm,
+}) => {
+  const today = new Date().toISOString().split("T")[0];
+
+  const handleViewModeChange = (e) => {
+    const mode = e.target.value;
+    setViewMode(mode);
+    if (mode === "day" || mode === "week") {
+      setSelectedDate(today);
+      setEndDate("");
+    }
+  };
+
+  const handleShowAll = () => {
+    setSelectedDate("all");
+    setEndDate("");
+  };
+
+  return (
+    <section className="filters">
+      {/* Vista: segmented control */}
+      <div className="filters__segment">
+        <div className="segment" role="tablist" aria-label="Cambiar vista">
+          <input
+            id="view-day"
+            className="segment__input"
+            type="radio"
+            name="view-mode"
+            value="day"
+            checked={viewMode === "day"}
+            onChange={(e) => handleViewModeChange({ target: { value: e.target.value } })}
+          />
+          <label className="segment__item" htmlFor="view-day" role="tab" aria-selected={viewMode === "day"}>
+            <FaCalendarDay />
+            <span>Diaria</span>
+          </label>
+
+          <input
+            id="view-week"
+            className="segment__input"
+            type="radio"
+            name="view-mode"
+            value="week"
+            checked={viewMode === "week"}
+            onChange={(e) => handleViewModeChange({ target: { value: e.target.value } })}
+          />
+          <label className="segment__item" htmlFor="view-week" role="tab" aria-selected={viewMode === "week"}>
+            <FaCalendarWeek />
+            <span>Semanal</span>
+          </label>
+        </div>
       </div>
 
       {/* Fecha inicio */}
-      <div>
-        <label style={{ display: 'block', color: 'var(--primary-brown)', fontWeight: '600', marginBottom: '0.5rem' }}>{viewMode==='day'?'Fecha:':'Fecha Inicio:'}</label>
-        <input type="date" value={selectedDate} onChange={e=>setSelectedDate(e.target.value)} style={{ width:'100%', padding:'0.75rem', border:'2px solid var(--stone-gray)', borderRadius:'var(--radius-md)', background:'var(--warm-white)', color:'var(--primary-brown)', fontSize:'1rem' }} />
-      </div>
+      {selectedDate !== "all" && (
+        <div className="filters__field">
+          <label htmlFor="start-date" className="filters__label">
+            <FaCalendarDay aria-hidden="true" />
+            <span>Inicio</span>
+          </label>
+          <input
+            id="start-date"
+            className="input input--date"
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+          />
+        </div>
+      )}
 
       {/* Fecha fin */}
-      {viewMode==='week' && <div>
-        <label style={{ display: 'block', color: 'var(--primary-brown)', fontWeight: '600', marginBottom: '0.5rem' }}>Fecha Fin (opcional):</label>
-        <input type="date" value={endDate} onChange={e=>setEndDate(e.target.value)} min={selectedDate} style={{ width:'100%', padding:'0.75rem', border:'2px solid var(--stone-gray)', borderRadius:'var(--radius-md)', background:'var(--warm-white)', color:'var(--primary-brown)', fontSize:'1rem' }} />
-      </div>}
+      {viewMode === "week" && selectedDate !== "all" && (
+        <div className="filters__field">
+          <label htmlFor="end-date" className="filters__label">
+            <FaCalendarWeek aria-hidden="true" />
+            <span>Fin</span>
+          </label>
+          <input
+            id="end-date"
+            className="input input--date"
+            type="date"
+            value={endDate}
+            min={selectedDate}
+            onChange={(e) => setEndDate(e.target.value)}
+          />
+        </div>
+      )}
 
       {/* Búsqueda */}
-      <div>
-        <label style={{ display: 'block', color: 'var(--primary-brown)', fontWeight: '600', marginBottom: '0.5rem' }}>Buscar por nombre:</label>
-        <input type="text" placeholder="Nombre del cliente..." value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} style={{ width:'100%', padding:'0.75rem', border:'2px solid var(--stone-gray)', borderRadius:'var(--radius-md)', background:'var(--warm-white)', color:'var(--primary-brown)', fontSize:'1rem' }} />
+      <div className="filters__search">
+        <FaSearch className="input__icon" aria-hidden="true" />
+        <input
+          id="search"
+          className="input input--search"
+          type="text"
+          placeholder="Buscar cliente…"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+        {searchTerm && (
+          <button
+            type="button"
+            className="btn btn--ghost"
+            onClick={() => setSearchTerm("")}
+            aria-label="Borrar búsqueda"
+          >
+            ×
+          </button>
+        )}
       </div>
-    </div>
-  </div>
-);
+
+      {/* Acciones */}
+      <div className="filters__actions">
+        {selectedDate !== "all" ? (
+          <button type="button" className="btn btn--primary" onClick={handleShowAll}>
+            <FaListUl />
+            <span>Todas</span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="btn btn--primary"
+            onClick={() => {
+              setSelectedDate(today);
+              setEndDate("");
+            }}
+          >
+            <FaFilter />
+            <span>Filtros</span>
+          </button>
+        )}
+      </div>
+    </section>
+  );
+};
 
 export default Filters;
+

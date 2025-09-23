@@ -1,0 +1,16 @@
+.logoutbar-user {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--primary-brown);
+  font-family: var(--font-primary);
+  letter-spacing: 0.01em;
+  padding: 0.2em 0.7em;
+  border-radius: 8px;
+  background: rgba(255, 245, 230, 0.7);
+  box-shadow: 0 1px 4px rgba(90,59,46,0.06);
+  margin-right: 0.5rem;
+  transition: background 0.2s;
+}
+.logoutbar-user:hover {
+  background: var(--cream-overlay);
+}
