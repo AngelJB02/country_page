@@ -9,14 +9,36 @@ import LogoutButton from './LogoutBoton';
 import useInstructor from '../hooks/useInstructor';
 import useRoleGuard from '../hooks/useRoleGuard';
 import '../CSS/ReservaItem.css';
+import "../CSS/Filters.css";
 
 const InstructorReservas = () => {
   useRoleGuard(['instructor']);
 
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+
+  // Día actual en formato YYYY-MM-DD
+  const today = new Date().toISOString().split('T')[0];
+  const [selectedDate, setSelectedDate] = useState(today);
   const [endDate, setEndDate] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('day');
+
+  // Si cambia el modo de vista, reiniciar fechas
+  const handleSetViewMode = (mode) => {
+    setViewMode(mode);
+    if (mode === 'day') {
+      setSelectedDate(today);
+      setEndDate('');
+    } else if (mode === 'week') {
+      setSelectedDate(today);
+      setEndDate('');
+    }
+  };
+
+  // Si se selecciona 'ver todas', selectedDate será 'all'
+  const handleSetSelectedDate = (date) => {
+    setSelectedDate(date);
+    if (date === 'all') setEndDate('');
+  };
 
   const { reservas, loading, error, updateAsistencia } = useInstructor(selectedDate, endDate);
 
@@ -45,8 +67,8 @@ const InstructorReservas = () => {
 
       {/* Filtros */}
       <Filters
-        viewMode={viewMode} setViewMode={setViewMode}
-        selectedDate={selectedDate} setSelectedDate={setSelectedDate}
+        viewMode={viewMode} setViewMode={handleSetViewMode}
+        selectedDate={selectedDate} setSelectedDate={handleSetSelectedDate}
         endDate={endDate} setEndDate={setEndDate}
         searchTerm={searchTerm} setSearchTerm={setSearchTerm}
       />

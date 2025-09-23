@@ -1,7 +1,135 @@
-/* Bloque de hora en la parte superior de cada tarjeta */
+/* ===============================
+   TOKENS Y BASE
+   =============================== */
+:root {
+  --cream: #fff9f2;
+  --cream-overlay: rgba(255, 249, 242, 0.65);
+  --warm-white: #fffdf9;
+  --primary-brown: #5a3b2e;
+  --secondary-brown: #7a523e;
+  --stone-gray: #8a8a8a;
+  --charcoal: #424242;
+  --terracotta: #c05621;
+  --sage-green: #4a7c59;
 
-/* Contenedor que posiciona el chip sin romper la tarjeta */
-/* Píldora flotante más grande */
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+
+  --soft-shadow: 0 8px 24px rgba(0,0,0,0.08);
+  --medium-shadow: 0 16px 40px rgba(0,0,0,0.12);
+}
+
+/* ===============================
+   CONTENEDOR GENERAL (lista por día)
+   =============================== */
+.reserva-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  max-width: 1370px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Fondo del día ancho */
+.reserva-dia-container {
+  background: var(--cream-overlay);
+  border-radius: 25px;
+  padding: 1.5rem 2rem;
+  box-shadow: var(--medium-shadow);
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+/* Header del día grande y protagonista */
+.reserva-dia-header {
+  background: var(--primary-brown);
+  color: var(--warm-white);
+  padding: 1.5rem 2rem;
+  font-size: 1.6rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-radius: 24px;
+}
+
+.reserva-dia-indicator {
+  background: var(--terracotta);
+  color: #fff;
+  padding: 0.5rem 1.25rem;
+  border-radius: 20px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.10);
+  letter-spacing: 0.4px;
+}
+
+.reserva-hora-list { padding: 1rem; }
+
+/* ===============================
+   TARJETA DE RESERVA (más pequeña y centrada)
+   =============================== */
+.reserva-item-wrap { position: relative; padding-top: 20px; } /* espacio para el chip */
+
+/* Tarjeta compacta y centrada */
+.reserva-item {
+  position: relative;
+  background: var(--cream);
+  border: 2px solid rgba(139, 69, 19, 0.2);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  margin: 1.5rem auto;
+  box-shadow: var(--soft-shadow);
+  transition: all 0.3s ease;
+  border-left-width: 5px;
+
+  width: 100%;
+  max-width: 1100px;      /* 👈 la tarjeta no se hace gigante */
+}
+
+/* Borde lateral según asistencia (además del overlay) */
+.reserva-item.asistio { border-left-color: var(--sage-green); }
+.reserva-item.no-asistio { border-left-color: var(--terracotta); }
+.reserva-item.cancelada { border-left-color: #A63924; }
+
+/* Overlay por asistencia (reducido y con contorno) */
+.reserva-item.asistio::after,
+.reserva-item.no-asistio::after,
+.reserva-item.cancelada::after {
+  content: "";
+  position: absolute;
+  top: -2px; left: -4px; right: -4px; bottom: -2px;  /* ajusta posición/tamaño del cuadro de color */
+  border: 4px solid transparent;
+  border-radius: var(--radius-md);
+  pointer-events: none;
+  z-index: 1;
+}
+.reserva-item.asistio::after {
+  background: rgba(74, 124, 89, 0.45);
+  border-color: var(--sage-green);
+}
+.reserva-item.no-asistio::after {
+  background: rgba(214, 61, 61, 0.45);
+  border-color: var(--terracotta);
+}
+.reserva-item.cancelada::after {
+  background: rgba(80, 80, 80, 0.45);
+  border-color: #A63924;
+}
+
+/* Si prefieres contorno completo según estado (opcional):
+.reserva-item.asistio { border-color: var(--sage-green); }
+.reserva-item.no-asistio { border-color: var(--terracotta); }
+.reserva-item.cancelada { border-color: #505050; }
+*/
+
+/* ===============================
+   CHIP DE HORA (grande)
+   =============================== */
 .hora-pill {
   position: absolute;
   top: -14px;
@@ -12,12 +140,12 @@
   align-items: center;
   gap: 10px;
 
-  height: 44px;               /* antes 30px */
-  padding: 0 18px;            /* más aire */
+  height: 44px;
+  padding: 0 18px;
   border-radius: 999px;
 
   font-weight: 900;
-  font-size: 1.15rem;         /* más grande */
+  font-size: 1.15rem;
   letter-spacing: .4px;
   color: #fff;
 
@@ -26,566 +154,237 @@
   outline: 2px solid rgba(255,255,255,.3);
   outline-offset: -2px;
 }
+.hora-pill__icon { font-size: 1.3rem; line-height: 1; }
+.hora-pill__text { line-height: 1; transform: translateY(-0.5px); }
 
-.hora-pill__icon {
-  font-size: 1.3rem;          /* ícono más grande */
-  line-height: 1;
-}
-
-.hora-pill__text {
-  line-height: 1;
-  transform: translateY(-0.5px);
-}
-
-/* Ajusta la tarjeta para no quedar tapada */
-.reserva-item-wrap { padding-top: 20px; }
-
-/* Responsive: que no desborde en pantallas pequeñas */
-@media (max-width: 640px) {
-  .hora-pill {
-    height: 38px;
-    padding: 0 14px;
-    font-size: 1rem;
-    gap: 8px;
-  }
-  .hora-pill__icon { font-size: 1.1rem; }
-}
-
-/* Sombreado según asistencia */
-/* Sombreado como capa extra según asistencia */
-.reserva-item.asistio::after,
-.reserva-item.no-asistio::after,
-.reserva-item.cancelada::after {
-  content: "";
-  position: absolute;
-  top: -2px;      /* empuja hacia abajo */
-  left: -4px;     /* empuja hacia la derecha */
-  width: 100%;
-  height: 100%;
-  border: 4px solid transparent; 
-  border-radius: var(--radius-md);
-  pointer-events: none;
-  z-index: 1;
-}
-.reserva-item.asistio::after {
-  background: rgba(74, 124, 89, 0.45); /* verde intenso */
-  border-color: var(--sage-green); /* verde */
-}
-.reserva-item.no-asistio::after {
-  background: rgba(214, 61, 61, 0.45); /* rojo intenso */
-  border-color: var(--terracotta); /* terracota */
-}
-.reserva-item.cancelada::after {
-  background: rgba(80, 80, 80, 0.45); /* gris intenso */
-  border-color: #A63924; /* rojo oscuro */
-}
-
-.reserva-item {
-  position: relative;
-} 
-/* Indicador de cantidad de reservas por día */
-.reserva-dia-indicator {
-  background: var(--terracotta); /* Puedes cambiar por otro color sólido si prefieres */
-  color: #fff;
-  padding: 0.35rem 1rem;
-  border-radius: 16px;
-  font-size: 1rem;
-  font-weight: 600;
-  margin-left: 1rem;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.10);
-  display: inline-block;
-  letter-spacing: 0.5px;
-}
-/* Contenedor de cada reserva */
-.reserva-item {
-  background: var(--cream);
-  border: 2px solid rgba(139, 69, 19, 0.2);
-  border-radius: var(--radius-md);
-  padding: 1.5rem;
-  margin-bottom: 1rem;
-  box-shadow: var(--soft-shadow);
-  transition: all 0.3s ease;
-  border-left-width: 5px;
-}
-
-/* Bordes según asistencia */
-.reserva-item.asistio {
-  border-left-color: var(--sage-green);
-}
-.reserva-item.no-asistio {
-  border-left-color: var(--terracotta);
-}
-.reserva-item.cancelar {
-  border-left-color: #A63924;
-}
-
-/* Grid interno mejorado */
+/* ===============================
+   LAYOUT INTERNO (aprovechar ancho)
+   =============================== */
 .reserva-item-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 1.5rem;
-  margin-bottom: 1.5rem;
+  grid-template-columns: 1.2fr 2fr 1.2fr;  /* cliente / detalles / asistencia */
+  gap: 2rem;
+  margin-bottom: 2rem;
+  width: 100%;
 }
 
-/* Secciones del grid */
+/* Secciones (cajas) */
 .reserva-item-grid > div {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-}
-
-/* Información del cliente - mejorado para móviles */
-.reserva-item-grid > div:first-child {
-  background: rgba(139, 69, 19, 0.05);
-  padding: 1rem;
-  border-radius: 8px;
-  border: 1px solid rgba(139, 69, 19, 0.1);
+  gap: 1rem;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  padding: 1.25rem 1rem;
+  border-radius: 12px;
+  border: 1.5px solid rgba(139, 69, 19, 0.12);
   position: relative;
 }
 
-.reserva-item-grid > div:first-child::before {
-  content: '👤';
-  position: absolute;
-  top: 0.5rem;
-  right: 0.75rem;
-  font-size: 1.2rem;
-  opacity: 0.6;
-}
+/* Estéticos por sección */
+.reserva-item-grid > div:first-child { background: rgba(139, 69, 19, 0.05); }
+.reserva-item-grid > div:nth-child(2) { background: rgba(139, 69, 19, 0.03); }
+.reserva-item-grid > div:last-child  { background: rgba(139, 69, 19, 0.08); }
 
-/* Detalles de la reserva - mejorado */
-.reserva-item-grid > div:nth-child(2) {
-  background: rgba(139, 69, 19, 0.03);
-  padding: 1rem;
-  border-radius: 8px;
-  border: 1px solid rgba(139, 69, 19, 0.08);
-  position: relative;
-}
+/* Iconitos decorativos */
+.reserva-item-grid > div:first-child::before { content: "👤"; position: absolute; top: .5rem; right: .75rem; opacity: .6; }
+.reserva-item-grid > div:nth-child(2)::before { content: "📋"; position: absolute; top: .5rem; right: .75rem; opacity: .6; }
+.reserva-item-grid > div:last-child::before  { content: "✓";  position: absolute; top: .5rem; right: .75rem; opacity: .6; }
 
-.reserva-item-grid > div:nth-child(2)::before {
-  content: '📋';
-  position: absolute;
-  top: 0.5rem;
-  right: 0.75rem;
-  font-size: 1.2rem;
-  opacity: 0.6;
-}
-
-/* Estado de asistencia - mejorado */
-.reserva-item-grid > div:last-child {
-  background: rgba(139, 69, 19, 0.08);
-  padding: 1rem;
-  border-radius: 8px;
-  border: 1px solid rgba(139, 69, 19, 0.15);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  position: relative;
-}
-
-.reserva-item-grid > div:last-child::before {
-  content: '✓';
-  position: absolute;
-  top: 0.5rem;
-  right: 0.75rem;
-  font-size: 1.2rem;
-  opacity: 0.6;
-}
-
-/* Nombre mejorado */
+/* Tipografía interna */
 .reserva-nombre {
   color: var(--primary-brown);
-  font-size: 1.2rem;
-  font-weight: 700;
-  margin: 0 0 0.5rem 0;
+  font-size: 2rem;
+  font-weight: 800;
+  margin: 0 0 .7rem 0;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: .7rem;
 }
 
-/* Etiquetas de información - mejoradas */
 .reserva-item-grid p {
-  margin: 0.35rem 0;
+  margin: .35rem 0;
   color: var(--primary-brown);
-  font-size: 0.9rem;
+  font-size: .95rem;
   display: flex;
   align-items: flex-start;
-  gap: 0.5rem;
-  line-height: 1.4;
+  gap: .5rem;
+  line-height: 1.5;
 }
-
 .reserva-item-grid p strong {
   color: var(--secondary-brown);
   font-weight: 600;
   min-width: 60px;
-  font-size: 0.8rem;
+  font-size: .85rem;
   text-transform: uppercase;
-  letter-spacing: 0.3px;
+  letter-spacing: .3px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: .25rem;
 }
+.reserva-item-grid p strong[data-field="edad"]::before   { content: "🎂"; }
+.reserva-item-grid p strong[data-field="fecha"]::before  { content: "📅"; }
+.reserva-item-grid p strong[data-field="caballo"]::before{ content: "🐎"; }
+.reserva-item-grid p strong[data-field="clase"]::before  { content: "🏇"; }
 
-/* Iconos específicos para cada tipo de información */
-.reserva-item-grid p strong[data-field="edad"]::before {
-  content: '🎂';
-  font-size: 0.9rem;
-}
-
-.reserva-item-grid p strong[data-field="fecha"]::before {
-  content: '📅';
-  font-size: 0.9rem;
-}
-
-.reserva-item-grid p strong[data-field="caballo"]::before {
-  content: '🐎';
-  font-size: 0.9rem;
-}
-
-.reserva-item-grid p strong[data-field="clase"]::before {
-  content: '🏇';
-  font-size: 0.9rem;
-}
-
-/* Estado de la reserva mejorado */
+/* Estado (confirmada/pendiente/cancelada) */
 .estado {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: white;
-  padding: 0.5rem 1rem;
-  border-radius: 25px;
-  font-size: 0.8rem;
-  font-weight: 600;
+  color: #fff;
+  padding: .8rem 1.7rem;
+  border-radius: 30px;
+  font-size: 1.1rem;
+  font-weight: 700;
   text-transform: uppercase;
-  margin-top: 0.5rem;
-  letter-spacing: 0.5px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  transition: all 0.3s ease;
+  margin-top: .7rem;
+  letter-spacing: .6px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  border: 2px solid rgba(255,255,255,0.2);
+  transition: all .3s ease;
 }
+.estado:hover { transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,0,0,0.3); }
+.estado-confirmada { background: linear-gradient(135deg, var(--sage-green), #4a7c59); }
+.estado-pendiente  { background: linear-gradient(135deg, var(--terracotta), #d4751f); }
+.estado-cancelada  { background: linear-gradient(135deg, var(--charcoal), #A63924); }
 
-.estado:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-}
-
-.estado-confirmada {
-  background: linear-gradient(135deg, var(--sage-green), #4a7c59);
-}
-.estado-pendiente {
-  background: linear-gradient(135deg, var(--terracotta), #d4751f);
-}
-.estado-cancelada {
-  background: linear-gradient(135deg, var(--charcoal), #A63924);
-}
-.estado-otro {
-  background: linear-gradient(135deg, var(--stone-gray), #8a8a8a);
-}
-
-/* Estado de asistencia mejorado */
+/* Asistencia (badge grande) */
 .asistencia-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: white;
-  padding: 0.75rem 1.25rem;
-  border-radius: var(--radius-md);
-  font-size: 0.9rem;
-  font-weight: 600;
+  color: #fff;
+  padding: 1rem 2rem;
+  border-radius: var(--radius-lg);
+  font-size: 1.05rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  transition: all 0.3s ease;
-  margin-top: 0.5rem;
+  letter-spacing: .6px;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+  border: 2px solid rgba(255,255,255,0.2);
+  transition: all .3s ease;
+  margin-top: .7rem;
 }
+.asistencia-badge:hover { transform: translateY(-2px); box-shadow: 0 5px 12px rgba(0,0,0,0.3); }
+.asistencia-badge.asistio     { background: linear-gradient(135deg, var(--sage-green), #4a7c59); }
+.asistencia-badge.no-asistio  { background: linear-gradient(135deg, var(--terracotta), #d4751f); }
+.asistencia-badge.cancelar    { background: linear-gradient(135deg, var(--stone-gray), #A63924); color: var(--cream); }
+.asistencia-badge.pendiente   { background: linear-gradient(135deg, var(--stone-gray), #8a8a8a); color: var(--cream); }
 
-.asistencia-badge:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 12px rgba(0, 0, 0, 0.3);
-}
-
-.asistencia-badge.asistio {
-  background: linear-gradient(135deg, var(--sage-green), #4a7c59);
-}
-
-.asistencia-badge.no-asistio {
-  background: linear-gradient(135deg, var(--terracotta), #d4751f);
-}
-
-.asistencia-badge.cancelar {
-  background: linear-gradient(135deg, var(--stone-gray), #A63924);
-  color: var(--cream);
-}
-.asistencia-badge.pendiente {
-  background: linear-gradient(135deg, var(--stone-gray), #8a8a8a);
-  color: var(--cream);
-}
-
-/* Texto para estado de asistencia */
-.reserva-item-grid > div:last-child > p {
-  color: var(--primary-brown);
-  font-weight: 600;
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 0.75rem;
-  text-align: center;
-}
-
-/* Botones mejorados */
+/* ===============================
+   BOTONES
+   =============================== */
 .reserva-item-buttons {
   display: flex;
-  gap: 2rem; /* Más espacio entre botones */
-  justify-content: flex-end; /* Botones alineados a la derecha */
+  gap: 2rem;
+  justify-content: center; /* centrados */
   align-items: center;
   border-top: 1px solid rgba(139, 69, 19, 0.2);
   padding-top: 1.5rem;
   margin-top: 1rem;
 }
-
 .button-asistio,
-.button-cancelar,
-.button-no-asistio {
+.button-no-asistio,
+.button-cancelar {
   border: none;
   padding: 1rem 1.5rem;
   border-radius: var(--radius-md);
-  color: white;
+  color: #fff;
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: .9rem;
   text-transform: uppercase;
   min-width: 140px;
-  min-height: 48px; /* Touch friendly */
+  min-height: 48px;
   cursor: pointer;
-  transition: all 0.3s ease;
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  transition: all .3s ease;
+  border: 2px solid rgba(255,255,255,0.2);
   letter-spacing: 1px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  position: relative;
-  overflow: hidden;
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  position: relative; overflow: hidden;
 }
+.button-asistio { background: linear-gradient(135deg, var(--sage-green), #4a7c59); }
+.button-no-asistio { background: linear-gradient(135deg, var(--terracotta), #d4751f); }
+.button-cancelar { background: #A63924; }
+.button-asistio:disabled,
+.button-no-asistio:disabled,
+.button-cancelar:disabled { opacity: .7; cursor: not-allowed; }
 
-.button-asistio {
-  background: linear-gradient(135deg, var(--sage-green), #4a7c59);
-}
-
-.button-asistio:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-  background: var(--sage-green);
-}
-
-.button-no-asistio {
-  background: linear-gradient(135deg, var(--terracotta), #d4751f);
-}
-
-.button-no-asistio:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-  background: var(--terracotta);
-}
-
-.button-cancelar {
-  background: #A63924;
-}
-
-.button-cancelar:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-  background: #A63924;
-}
-
-/* Hover para botones */
-.button-asistio:hover:not(:disabled),
-.button-cancelar:hover:not(:disabled),
-.button-no-asistio:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-/* Estados activos para touch */
-.button-asistio:active,
-.button-cancelar:active,
-.button-no-asistio:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-}
-
-/* Responsive para el grid */
+/* ===============================
+   RESPONSIVE
+   =============================== */
 @media (max-width: 768px) {
-  .reserva-item {
-    padding: 1rem;
-    margin-bottom: 0.75rem;
-  }
-  
-  .reserva-item-grid {
-    grid-template-columns: 1fr;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
-  }
-  
-  .reserva-item-grid > div {
-    padding: 0.75rem;
-    gap: 0.5rem;
-  }
-  
-  .reserva-item-grid > div:last-child {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-    text-align: left;
-  }
-  
-  .reserva-nombre {
-    font-size: 1.1rem;
-    margin-bottom: 0.25rem;
-  }
-  
-  .reserva-item-grid p {
-    font-size: 0.85rem;
-    margin: 0.15rem 0;
-  }
-  
-  .reserva-item-grid p strong {
-    min-width: 45px;
-    font-size: 0.8rem;
-  }
-  
-  .reserva-item-buttons {
-    flex-direction: column;
-    gap: 0.5rem;
-    align-items: stretch;
-    padding-top: 1rem;
-  }
-  
-  .button-asistio,
-  .button-no-asistio,
-  .button-cancelar {
-    width: 100%;
-    justify-content: center;
-    padding: 0.875rem 1rem;
-    font-size: 0.85rem;
-    min-width: auto;
-  }
-}
-
-/* Responsive mejorado para móviles pequeños */
-@media (max-width: 480px) {
-  .reserva-item {
-    padding: 0.75rem;
-    border-radius: var(--radius-sm);
-  }
-  
   .hora-pill {
-    top: -12px;
-    left: 12px;
-    height: 36px;
-    padding: 0 12px;
-    font-size: 1rem;
-    gap: 6px;
+    height: 38px; padding: 0 14px; font-size: 1rem; gap: 8px;
   }
-  
-  .hora-pill__icon {
-    font-size: 1.1rem;
-  }
-  
+  .reserva-item { padding: 1rem; margin: 1rem auto; }
   .reserva-item-grid {
-    margin-top: 1.8rem;
-    gap: 0.5rem;
+    grid-template-columns: 1fr;  /* apilado en móvil */
+    gap: 1rem; margin-bottom: 1rem;
   }
-  
-  .reserva-item-grid > div {
-    padding: 0.5rem;
-    border-radius: 6px;
+  .reserva-item-grid > div { padding: .75rem; gap: .5rem; }
+  .reserva-item-grid > div:last-child {
+    flex-direction: row; justify-content: space-between; align-items: center; text-align: left;
   }
-  
-  .reserva-nombre {
-    font-size: 1rem;
-  }
-  
-  .reserva-item-grid p {
-    font-size: 0.8rem;
-  }
-  
-  .estado {
-    padding: 0.4rem 0.8rem;
-    font-size: 0.7rem;
-  }
-  
-  .asistencia-badge {
-    padding: 0.5rem 1rem;
-    font-size: 0.8rem;
-  }
+  .reserva-nombre { font-size: 1.25rem; }
+  .reserva-item-grid p { font-size: .9rem; }
+  .reserva-item-buttons { flex-direction: column; gap: .5rem; align-items: center; padding-top: 1rem; }
+  .button-asistio, .button-no-asistio, .button-cancelar { width: 100%; padding: .875rem 1rem; font-size: .85rem; }
 }
 
-/* Animación sutil para las secciones */
-.reserva-item-grid > div {
-  animation: fadeInUp 0.6s ease forwards;
-  opacity: 0;
-  transform: translateY(20px);
+@media (max-width: 480px) {
+  .hora-pill { top: -12px; left: 12px; height: 36px; padding: 0 12px; font-size: 1rem; gap: 6px; }
+  .reserva-item { padding: .75rem; border-radius: var(--radius-sm); }
+  .reserva-item-grid { gap: .5rem; }
+  .reserva-item-grid > div { padding: .5rem; border-radius: 6px; }
+  .reserva-nombre { font-size: 1.05rem; }
+  .estado { padding: .45rem .9rem; font-size: .8rem; }
+  .asistencia-badge { padding: .6rem 1.1rem; font-size: .9rem; }
 }
 
-.reserva-item-grid > div:first-child {
-  animation-delay: 0.1s;
+/* ===============================
+   ANIMACIONES SUTILES
+   =============================== */
+@keyframes fadeInUp { from {opacity: 0; transform: translateY(14px);} to {opacity: 1; transform: translateY(0);} }
+.reserva-hora-block { animation: fadeInUp .5s ease both; }
+
+/* ===============================
+   TIPOGRAFÍA MÁS GRANDE
+   =============================== */
+
+/* Nombre del cliente */
+.reserva-nombre {
+  font-size: 1.4rem; /* antes 2rem */
 }
 
-.reserva-item-grid > div:nth-child(2) {
-  animation-delay: 0.2s;
+/* Texto general dentro de la tarjeta */
+.reserva-item-grid p {
+  font-size: 1.2rem;   /* antes 0.9–0.95rem */
 }
 
-.reserva-item-grid > div:last-child {
-  animation-delay: 0.3s;
+/* Etiquetas (Edad, Fecha, Caballo, Clase) */
+.reserva-item-grid p strong {
+  font-size: 1.2rem; /* antes 0.8–0.85rem */
+  font-weight: 800;
 }
 
-@keyframes fadeInUp {
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* Estado (Confirmada, Pendiente, etc.) */
+.estado {
+  font-size: 1.5rem; /* antes 1.1rem */
 }
 
-/* Contenedores por hora (sin cambios) */
-.reserva-list {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
+/* Badge de asistencia */
+.asistencia-badge {
+  font-size: 1.3rem; /* antes 1.05rem */
 }
 
-.reserva-hora-container {
-  background: var(--cream-overlay);
-  backdrop-filter: blur(10px);
-  border-radius: var(--radius-lg);
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  box-shadow: var(--medium-shadow);
-  overflow: hidden;
-}
-
+/* Header de cada día */
 .reserva-dia-header {
-  background: var(--primary-brown); /* Color sólido */
-  color: var(--warm-white);
-  padding: 1rem 1.5rem;
-  font-size: 1.3rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  border-radius: 20px; /* Bordes redondeados */
+  font-size: 1.7rem;  /* antes 1.6rem */
 }
 
-.reserva-hora-count {
-  background: rgba(255, 255, 255, 0.2);
-  padding: 0.25rem 0.75rem;
-  border-radius: 20px;
-  font-size: 0.9rem;
-  font-weight: 500;
-}
-
-.reserva-hora-list {
-  padding: 1rem;
+.reserva-dia-indicator {
+  font-size: 1.2rem;  /* antes 1.1rem */
 }
