@@ -746,3 +746,442 @@ body.no-scroll {
   opacity: 0.9;
   transform: translateY(-1px);
 }
+
+/* ESTILOS PARA MODAL DE HISTORIAL DE PAGOS */
+.payment-history-modal {
+  max-width: 700px;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.payment-history-list {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid var(--soft-gray);
+  border-radius: var(--radius-md);
+  background: var(--warm-white);
+}
+
+.payment-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--soft-gray);
+  transition: background-color 0.2s ease;
+}
+
+.payment-item:last-child {
+  border-bottom: none;
+}
+
+.payment-item:hover {
+  background: var(--cream);
+}
+
+.payment-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  width: 100%;
+}
+
+.payment-amount {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--primary-brown);
+}
+
+.payment-method {
+  font-size: 0.9rem;
+  color: var(--stone-gray);
+  text-transform: capitalize;
+  font-weight: 500;
+}
+
+.payment-dates {
+  display: flex;
+  gap: var(--spacing-lg);
+  font-size: 0.9rem;
+  color: var(--charcoal);
+}
+
+.payment-dates span {
+  display: flex;
+  align-items: center;
+  font-weight: 500;
+}
+
+/* Estilos responsivos para historial de pagos */
+@media (max-width: 768px) {
+  .payment-history-modal {
+    max-width: 95%;
+    margin: var(--spacing-sm);
+  }
+  
+  .payment-dates {
+    flex-direction: column;
+    gap: var(--spacing-xs);
+  }
+  
+  .payment-amount {
+    font-size: 1.1rem;
+  }
+}
+
+/* ESTILOS PARA NOTIFICACIONES */
+.notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10000;
+  min-width: 300px;
+  max-width: 500px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--strong-shadow);
+  animation: slideInRight 0.3s ease-out;
+  transition: all 0.3s ease;
+}
+
+.notification.success {
+  background: linear-gradient(135deg, var(--sage-green), #7a9b6a);
+  border-left: 4px solid #5d7a52;
+}
+
+.notification.error {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  border-left: 4px solid #a93226;
+}
+
+.notification-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-md) var(--spacing-lg);
+  color: white;
+}
+
+.notification-message {
+  font-weight: 500;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  flex: 1;
+  margin-right: var(--spacing-md);
+}
+
+.notification-close {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.2rem;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s ease;
+  opacity: 0.8;
+}
+
+.notification-close:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+  opacity: 1;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Responsive para notificaciones */
+@media (max-width: 768px) {
+  .notification {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+    min-width: auto;
+    max-width: none;
+  }
+}
+
+/* ESTILOS PARA BADGE DE CONTEO DE PAGOS */
+.history-btn {
+  position: relative !important;
+}
+
+.payment-badge {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  background: #e74c3c;
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 900;
+  min-width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(231, 76, 60, 0.5);
+  border: 3px solid white;
+  line-height: 1;
+  padding: 2px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  z-index: 10;
+}
+
+.payment-badge:empty {
+  display: none;
+}
+
+/* Animación llamativa para el badge */
+.payment-badge {
+  animation: badgePulse 0.5s ease-out;
+}
+
+@keyframes badgePulse {
+  0% {
+    transform: scale(0) rotate(0deg);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.3) rotate(180deg);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1) rotate(360deg);
+    opacity: 1;
+  }
+}
+
+/* Alertas de estado de pago */
+.payment-alert {
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  padding: 4px 6px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  z-index: 15;
+  border: 2px solid white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  animation: alertPulse 2s infinite;
+}
+
+.payment-alert-overdue {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  color: white;
+}
+
+.payment-alert-due-soon {
+  background: linear-gradient(135deg, #f39c12, #e67e22);
+  color: white;
+}
+
+.alert-text {
+  font-size: 0.65rem;
+  line-height: 1;
+  margin-left: 2px;
+}
+
+@keyframes alertPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.05);
+  }
+}
+
+/* Hacer el botón de historial más ancho para acomodar las alertas */
+.history-btn {
+  min-width: 120px !important;
+  position: relative;
+}
+
+/* Estilos para edición de pagos */
+.payment-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.edit-payment-btn {
+  background: linear-gradient(135deg, var(--terracotta), var(--primary-brown));
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 36px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.edit-payment-btn:hover {
+  background: linear-gradient(135deg, var(--primary-brown), var(--terracotta));
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.edit-payment-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Ajuste del contenedor de información del pago */
+.payment-info {
+  flex: 1;
+}
+
+/* Mejoras específicas para el modal de edición de pagos */
+.modal-overlay .modal {
+  min-width: 500px;
+  max-width: 600px;
+  padding: 0;
+  border-radius: 12px;
+  background: white;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Asegurar que el header esté al tope sin espacios */
+.modal-header {
+  margin: 0;
+  padding: 20px 24px;
+  background: linear-gradient(135deg, var(--terracotta), var(--primary-brown));
+  color: white;
+  border-radius: 12px 12px 0 0;
+  position: relative;
+}
+
+/* Botón de cerrar mejor posicionado */
+.modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  z-index: 10;
+}
+
+.modal-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
+}
+
+.modal-content {
+  padding: 24px 32px 24px;
+  background: white;
+  margin: 0;
+}
+
+.modal-field {
+  margin-bottom: 24px;
+}
+
+.modal-field:last-child {
+  margin-bottom: 40px;
+}
+
+.modal-field label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: var(--primary-brown);
+  font-size: 0.95rem;
+}
+
+.modal-field input,
+.modal-field select {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  background: white;
+  box-sizing: border-box;
+}
+
+.modal-field input:focus,
+.modal-field select:focus {
+  outline: none;
+  border-color: var(--terracotta);
+  box-shadow: 0 0 0 3px rgba(191, 103, 72, 0.1);
+}
+
+/* Botones completamente integrados dentro del contenido blanco */
+.modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.modal-buttons .btn {
+  padding: 12px 24px;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 8px;
+  min-width: 120px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+}
+
+.modal-buttons .cancel-btn {
+  background: #6c757d;
+  color: white;
+}
+
+.modal-buttons .cancel-btn:hover {
+  background: #5a6268;
+  transform: translateY(-1px);
+}
+
+.modal-buttons .submit-btn {
+  background: linear-gradient(135deg, var(--terracotta), var(--primary-brown));
+  color: white;
+}
+
+.modal-buttons .submit-btn:hover {
+  background: linear-gradient(135deg, var(--primary-brown), var(--terracotta));
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(191, 103, 72, 0.3);
+}
+
+/* Remover el modal-footer ya que no se usa */
+.modal-footer {
+  display: none;
+}

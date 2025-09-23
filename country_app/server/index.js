@@ -94,12 +94,6 @@ app.use("/api/reservas", (req, res, next) => {
 }, reservasRoutes);
 app.use("/api/horarios", horariosRoutes);
 app.use("/api/users", usersRoutes);
-// ========================
-// Levantar servidor
-// ========================
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
-});
 
 // Capturar errores de rutas no encontradas
 app.use((req, res) => {
@@ -110,4 +104,11 @@ app.use((req, res) => {
 app.use((err, req, res, next) => {
   console.error("Error global:", err);
   res.status(500).json({ error: "Error en el servidor" });
+});
+
+// ========================
+// Levantar servidor
+// ========================
+app.listen(PORT, () => {
+  console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
 });

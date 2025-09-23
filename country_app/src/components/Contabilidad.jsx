@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react"
 import ReactDOM from "react-dom"
 import "../CSS/Contabilidad.css"
 import LogoutButton from './LogoutBoton'
-import { UserPlus, Eye, XCircle, CheckCircle, Loader, Search } from "lucide-react"
+import { UserPlus, Eye, XCircle, CheckCircle, Loader, Search, History, AlertTriangle, Clock, AlertCircle, Edit } from "lucide-react"
 import useRoleGuard from '../hooks/useRoleGuard';
 
 const MembershipAdminDashboard = () => {
@@ -13,10 +13,23 @@ const MembershipAdminDashboard = () => {
   const [statusFilter, setStatusFilter] = useState("")
   const [modalOpen, setModalOpen] = useState(false)
   const [addClientModalOpen, setAddClientModalOpen] = useState(false)
+  const [paymentHistoryModalOpen, setPaymentHistoryModalOpen] = useState(false)
+  const [editPaymentModalOpen, setEditPaymentModalOpen] = useState(false)
   const [selectedMember, setSelectedMember] = useState(null)
   const [originalMember, setOriginalMember] = useState(null)
+  const [paymentHistory, setPaymentHistory] = useState([])
+  const [editingPayment, setEditingPayment] = useState(null)
+  const [newPayment, setNewPayment] = useState({
+    monto: "",
+    fecha_pago: "",
+    proxima_fecha: "",
+    metodo_pago: "efectivo",
+  })
   const [loading, setLoading] = useState(true)
   const [currentUser, setCurrentUser] = useState(null)
+  const [notification, setNotification] = useState({ show: false, message: "", type: "" })
+  const [paymentCounts, setPaymentCounts] = useState({})
+  const [paymentStatus, setPaymentStatus] = useState({})
   const [newClient, setNewClient] = useState({
     nombre: "",
     apellido: "",
@@ -25,6 +38,7 @@ const MembershipAdminDashboard = () => {
     monto: "",
     fecha_pago: "",
     proxima_fecha: "",
+    metodo_pago: "efectivo",
   })
 
   // Refs para controlar foco y autofill
@@ -37,14 +51,87 @@ const MembershipAdminDashboard = () => {
     return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase()
   }
 
+  // Función para obtener icono y estilo de alerta de pago
+  const getPaymentAlert = (memberId) => {
+    const status = paymentStatus[memberId]
+    if (!status) return null
+    
+    switch (status.estado_pago) {
+      case 'vencido':
+        return {
+          icon: <AlertTriangle size={14} />,
+          className: 'payment-alert payment-alert-overdue',
+          title: `Pago vencido. Venció: ${status.proxima_fecha}`,
+          text: 'VENCIDO'
+        }
+      case 'proximo_vencer':
+        return {
+          icon: <Clock size={14} />,
+          className: 'payment-alert payment-alert-due-soon',
+          title: `Próximo a vencer en ${status.dias_restantes} días. Vence: ${status.proxima_fecha}`,
+          text: `${status.dias_restantes}d`
+        }
+      default:
+        return null
+    }
+  }
+
   const formatDate = (dateString) => {
     if (!dateString) return ""
     const date = new Date(dateString)
     return isNaN(date.getTime()) ? "" : date.toISOString().split("T")[0]
   }
 
+  // Función para mostrar notificaciones
+  const showNotification = (message, type = "success") => {
+    setNotification({ show: true, message, type })
+    setTimeout(() => {
+      setNotification({ show: false, message: "", type: "" })
+    }, 4000) // Ocultar después de 4 segundos
+  }
+
+  // Función para cargar conteo de pagos
+  const loadPaymentCounts = async () => {
+    try {
+      const response = await fetch("http://localhost:3001/api/users/payment-counts")
+      if (response.ok) {
+        const counts = await response.json()
+        const countsMap = {}
+        counts.forEach(item => {
+          countsMap[item.id_usuario] = item.total_pagos
+        })
+        setPaymentCounts(countsMap)
+      }
+    } catch (error) {
+      console.error("Error cargando conteo de pagos:", error)
+    }
+  }
+
+  // Función para cargar estado de pagos (vencidos, próximos a vencer)
+  const loadPaymentStatus = async () => {
+    try {
+      const response = await fetch("http://localhost:3001/api/users/payment-status")
+      if (response.ok) {
+        const status = await response.json()
+        const statusMap = {}
+        status.forEach(item => {
+          statusMap[item.id] = {
+            estado_pago: item.estado_pago,
+            dias_restantes: item.dias_restantes,
+            proxima_fecha: item.proxima_fecha
+          }
+        })
+        setPaymentStatus(statusMap)
+      }
+    } catch (error) {
+      console.error("Error cargando estado de pagos:", error)
+    }
+  }
+
   useEffect(() => {
     refreshUsersList()
+    loadPaymentCounts()
+    loadPaymentStatus()
   }, [])
 
   // Obtener usuario actual del localStorage
@@ -63,11 +150,11 @@ const MembershipAdminDashboard = () => {
 
   // Bloquear scroll cuando un modal está abierto
   useEffect(() => {
-    const anyModalOpen = modalOpen || addClientModalOpen
+    const anyModalOpen = modalOpen || addClientModalOpen || paymentHistoryModalOpen
     if (anyModalOpen) document.body.classList.add("no-scroll")
     else document.body.classList.remove("no-scroll")
     return () => document.body.classList.remove("no-scroll")
-  }, [modalOpen, addClientModalOpen])
+  }, [modalOpen, addClientModalOpen, paymentHistoryModalOpen])
 
   // Cerrar con ESC
   useEffect(() => {
@@ -75,11 +162,12 @@ const MembershipAdminDashboard = () => {
       if (e.key === "Escape") {
         if (modalOpen) closeModal()
         if (addClientModalOpen) closeAddClientModal()
+        if (paymentHistoryModalOpen) closePaymentHistoryModal()
       }
     }
     window.addEventListener("keydown", onKeyDown)
     return () => window.removeEventListener("keydown", onKeyDown)
-  }, [modalOpen, addClientModalOpen])
+  }, [modalOpen, addClientModalOpen, paymentHistoryModalOpen])
 
   const normalize = (str) => (str || "").toLowerCase().replace(/\s+/g, "")
   const filteredMembers = members
@@ -115,6 +203,7 @@ const MembershipAdminDashboard = () => {
       monto: "",
       fecha_pago: "",
       proxima_fecha: "",
+      metodo_pago: "efectivo",
     })
     searchRef.current?.blur() // Quitar foco del buscador
     setAddClientModalOpen(true)
@@ -131,26 +220,206 @@ const MembershipAdminDashboard = () => {
       monto: "",
       fecha_pago: "",
       proxima_fecha: "",
+      metodo_pago: "efectivo",
     })
+  }
+
+  const openPaymentHistoryModal = async (member) => {
+    setSelectedMember(member)
+    setNewPayment({
+      monto: "",
+      fecha_pago: "",
+      proxima_fecha: "",
+      metodo_pago: "efectivo",
+    })
+    
+    // Cargar historial de pagos
+    try {
+      const response = await fetch(`http://localhost:3001/api/users/payment-history/${member.id}`)
+      if (response.ok) {
+        const history = await response.json()
+        setPaymentHistory(history)
+      } else {
+        setPaymentHistory([])
+      }
+    } catch (error) {
+      console.error("Error cargando historial:", error)
+      setPaymentHistory([])
+    }
+    
+    setPaymentHistoryModalOpen(true)
+  }
+
+  const closePaymentHistoryModal = () => {
+    setPaymentHistoryModalOpen(false)
+    setSelectedMember(null)
+    setPaymentHistory([])
+    setNewPayment({
+      monto: "",
+      fecha_pago: "",
+      proxima_fecha: "",
+      metodo_pago: "efectivo",
+    })
+  }
+
+  // Funciones para el modal de edición de pagos
+  const openEditPaymentModal = (payment) => {
+    setEditingPayment({
+      ...payment,
+      fecha_pago: formatDate(payment.fecha_pago),
+      proxima_fecha: formatDate(payment.proxima_fecha)
+    })
+    setEditPaymentModalOpen(true)
+  }
+
+  const closeEditPaymentModal = () => {
+    setEditPaymentModalOpen(false)
+    setEditingPayment(null)
+  }
+
+  const updatePayment = async () => {
+    try {
+      if (!editingPayment.monto || !editingPayment.fecha_pago || !editingPayment.proxima_fecha) {
+        showNotification("Por favor completa todos los campos", "error")
+        return
+      }
+
+      // Validar que la fecha de próximo pago no sea anterior a la fecha de pago
+      const fechaPago = new Date(editingPayment.fecha_pago)
+      const proximaFecha = new Date(editingPayment.proxima_fecha)
+      
+      if (proximaFecha < fechaPago) {
+        showNotification("La fecha de próximo pago no puede ser anterior a la fecha de pago", "error")
+        return
+      }
+
+      const response = await fetch(`http://localhost:3001/api/users/payment/${editingPayment.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          monto: editingPayment.monto,
+          fecha_pago: editingPayment.fecha_pago,
+          proxima_fecha: editingPayment.proxima_fecha,
+          metodo_pago: editingPayment.metodo_pago,
+        }),
+      })
+
+      if (response.ok) {
+        // Recargar el historial de pagos
+        await openPaymentHistoryModal(selectedMember)
+        
+        // Actualizar conteos y estados
+        loadPaymentCounts()
+        loadPaymentStatus()
+        
+        // Mostrar notificación y cerrar modal
+        showNotification("Pago actualizado correctamente", "success")
+        closeEditPaymentModal()
+      } else {
+        const error = await response.json()
+        showNotification("Error al actualizar pago: " + (error?.error ?? "Error desconocido"), "error")
+      }
+    } catch (error) {
+      console.error("Error actualizando pago:", error)
+      showNotification("Error al actualizar pago", "error")
+    }
+  }
+
+  const addNewPayment = async () => {
+    try {
+      if (!newPayment.monto || !newPayment.fecha_pago || !newPayment.proxima_fecha) {
+        showNotification("Por favor completa todos los campos del pago", "error")
+        return
+      }
+
+      // Validar que la fecha de próximo pago no sea anterior a la fecha de pago
+      const fechaPago = new Date(newPayment.fecha_pago)
+      const proximaFecha = new Date(newPayment.proxima_fecha)
+      
+      if (proximaFecha < fechaPago) {
+        showNotification("La fecha de próximo pago no puede ser anterior a la fecha de pago", "error")
+        return
+      }
+
+      const paymentData = {
+        id_usuario: selectedMember.id,
+        monto: parseFloat(newPayment.monto),
+        fecha_pago: newPayment.fecha_pago,
+        proxima_fecha: newPayment.proxima_fecha,
+        metodo_pago: newPayment.metodo_pago
+      }
+
+      const response = await fetch("http://localhost:3001/api/users/add-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(paymentData),
+      })
+
+      if (response.ok) {
+        // Recargar historial de pagos
+        const historyResponse = await fetch(`http://localhost:3001/api/users/payment-history/${selectedMember.id}`)
+        if (historyResponse.ok) {
+          const history = await historyResponse.json()
+          setPaymentHistory(history)
+        }
+        
+        // Actualizar lista de usuarios
+        refreshUsersList()
+        
+        // Actualizar conteo de pagos
+        loadPaymentCounts()
+        loadPaymentStatus()
+        
+        // Mostrar notificación de éxito
+        showNotification("Pago agregado correctamente", "success")
+        
+        // Cerrar modal después de un breve delay
+        setTimeout(() => {
+          closePaymentHistoryModal()
+        }, 1500)
+        
+      } else {
+        const error = await response.json()
+        showNotification("Error al agregar pago: " + (error?.error ?? "Error desconocido"), "error")
+      }
+    } catch (error) {
+      showNotification("Error de conexión. Inténtalo de nuevo.", "error")
+    }
   }
 
   const createNewClient = async () => {
     try {
       if (!newClient.nombre || !newClient.apellido || !newClient.email || !newClient.password) {
-        alert("Por favor completa todos los datos del cliente")
+        showNotification("Por favor completa todos los datos del cliente", "error")
         return
       }
       if (!newClient.monto || !newClient.fecha_pago || !newClient.proxima_fecha) {
-        alert("Por favor completa toda la información de pagos")
+        showNotification("Por favor completa toda la información de pagos", "error")
         return
       }
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
       if (!emailRegex.test(newClient.email)) {
-        alert("Por favor ingresa un email válido")
+        showNotification("Por favor ingresa un email válido", "error")
+        return
+      }
+      
+      if (newClient.password.length < 5) {
+        showNotification("La contraseña debe tener al menos 5 caracteres", "error")
         return
       }
 
-      const response = await fetch("https://country-page.onrender.com/api/users/register-cliente", {
+      // Validar que la fecha de próximo pago no sea anterior a la fecha de pago
+      const fechaPago = new Date(newClient.fecha_pago)
+      const proximaFecha = new Date(newClient.proxima_fecha)
+      
+      if (proximaFecha < fechaPago) {
+        showNotification("La fecha de próximo pago no puede ser anterior a la fecha de pago", "error")
+        return
+      }
+
+      const response = await fetch("http://localhost:3001/api/users/register-cliente", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newClient),
@@ -159,20 +428,22 @@ const MembershipAdminDashboard = () => {
       if (response.ok) {
         await response.json()
         refreshUsersList()
+        loadPaymentCounts()
+        loadPaymentStatus()
         closeAddClientModal()
-        alert("Cliente registrado correctamente")
+        showNotification("Cliente registrado correctamente", "success")
       } else {
         const error = await response.json()
-        alert("Error al crear cliente: " + (error?.error ?? "Error desconocido"))
+        showNotification("Error al crear cliente: " + (error?.error ?? "Error desconocido"), "error")
       }
     } catch (error) {
-      alert("Error de conexión. Inténtalo de nuevo.")
+      showNotification("Error de conexión. Inténtalo de nuevo.", "error")
     }
   }
 
   const refreshUsersList = () => {
     setLoading(true)
-    fetch("https://country-page.onrender.com/api/users/with-payments")
+    fetch("http://localhost:3001/api/users/users-with-payments")
       .then((res) => res.json())
       .then((data) => {
         const mapped = data.map((u) => ({
@@ -181,8 +452,8 @@ const MembershipAdminDashboard = () => {
           email: u.email,
           status: capitalizeStatus(u.estado),
           monthlyFee: u.monto || 0,
-          paymentDate: u.proximo_pago || "",
-          lastPaymentDate: u.ultimo_pago || "",
+          paymentDate: u.proxima_fecha || "",
+          lastPaymentDate: u.fecha_pago || "",
           rol: u.rol || "",
         }))
         setMembers(mapped)
@@ -205,7 +476,7 @@ const MembershipAdminDashboard = () => {
       }
       if (selectedMember.lastPaymentDate !== originalMember.lastPaymentDate) {
         if (!selectedMember.lastPaymentDate) {
-          alert("Por favor completa la fecha de último pago")
+          showNotification("Por favor completa la fecha de último pago", "error")
           return
         }
         changes.fecha_pago = selectedMember.lastPaymentDate
@@ -213,7 +484,7 @@ const MembershipAdminDashboard = () => {
       }
       if (selectedMember.paymentDate !== originalMember.paymentDate) {
         if (!selectedMember.paymentDate) {
-          alert("Por favor completa la fecha de próximo pago")
+          showNotification("Por favor completa la fecha de próximo pago", "error")
           return
         }
         changes.proxima_fecha = selectedMember.paymentDate
@@ -227,7 +498,7 @@ const MembershipAdminDashboard = () => {
 
       changes.id_usuario = selectedMember.id
 
-      const paymentResponse = await fetch("https://country-page.onrender.com/api/users/payments", {
+      const paymentResponse = await fetch("http://localhost:3001/api/users/payments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(changes),
@@ -236,12 +507,13 @@ const MembershipAdminDashboard = () => {
       if (paymentResponse.ok) {
         setMembers((prev) => prev.map((m) => (m.id === selectedMember.id ? selectedMember : m)))
         closeModal()
+        showNotification("Información de pago actualizada correctamente", "success")
       } else {
         const error = await paymentResponse.json()
-        alert("Error al guardar información de pago: " + (error?.error ?? "Error desconocido"))
+        showNotification("Error al guardar información de pago: " + (error?.error ?? "Error desconocido"), "error")
       }
     } catch {
-      alert("Error de conexión. Inténtalo de nuevo.")
+      showNotification("Error de conexión. Inténtalo de nuevo.", "error")
     }
   }
 
@@ -417,7 +689,7 @@ const MembershipAdminDashboard = () => {
                             const newStatus = e.target.value
                             try {
                               const response = await fetch(
-                                `https://country-page.onrender.com/api/users/update-status/${member.id}`,
+                                `http://localhost:3001/api/users/update-status/${member.id}`,
                                 {
                                   method: "PATCH",
                                   headers: { "Content-Type": "application/json" },
@@ -428,12 +700,13 @@ const MembershipAdminDashboard = () => {
                                 setMembers((prev) =>
                                   prev.map((m) => (m.id === member.id ? { ...m, status: newStatus } : m)),
                                 )
+                                showNotification("Estado actualizado correctamente", "success")
                               } else {
                                 const error = await response.json()
-                                alert("Error al actualizar el estado: " + (error?.error ?? "Error desconocido"))
+                                showNotification("Error al actualizar el estado: " + (error?.error ?? "Error desconocido"), "error")
                               }
                             } catch {
-                              alert("Error de conexión. Inténtalo de nuevo.")
+                              showNotification("Error de conexión. Inténtalo de nuevo.", "error")
                             }
                           }}
                           style={{
@@ -473,16 +746,35 @@ const MembershipAdminDashboard = () => {
                       </td>
                       <td>
                         <button
-                          className="btn"
-                          onClick={() => openModal(member)}
+                          className="btn history-btn"
+                          onClick={() => openPaymentHistoryModal(member)}
                           type="button"
                           style={{
                             background: "linear-gradient(135deg, var(--terracotta), var(--primary-brown))",
                             color: "white",
                             border: "none",
+                            position: "relative",
                           }}
                         >
-                          <Eye size={16} /> Editar
+                          <History size={16} /> Historial
+                          {paymentCounts[member.id] && paymentCounts[member.id] > 0 && (
+                            <span className="payment-badge">
+                              {paymentCounts[member.id]}
+                            </span>
+                          )}
+                          {/* Alerta de pago vencido o próximo a vencer */}
+                          {(() => {
+                            const alert = getPaymentAlert(member.id)
+                            return alert ? (
+                              <span 
+                                className={alert.className}
+                                title={alert.title}
+                              >
+                                {alert.icon}
+                                <span className="alert-text">{alert.text}</span>
+                              </span>
+                            ) : null
+                          })()}
                         </button>
                       </td>
                     </tr>
@@ -619,7 +911,24 @@ const MembershipAdminDashboard = () => {
                     name="newclient-password"
                     data-lpignore="true"
                     data-form-type="other"
+                    style={{
+                      borderColor: newClient.password.length === 0 ? '#ddd' : 
+                                  newClient.password.length >= 5 ? '#9caf88' : '#c17b4a'
+                    }}
                   />
+                  {newClient.password.length > 0 && (
+                    <div style={{
+                      fontSize: '0.85rem',
+                      marginTop: '4px',
+                      color: newClient.password.length >= 5 ? '#9caf88' : '#c17b4a',
+                      fontWeight: '500'
+                    }}>
+                      {newClient.password.length >= 5 ? 
+                        '✓ La contraseña cumple con el mínimo de 5 caracteres' : 
+                        `Faltan ${5 - newClient.password.length} caracteres (mínimo 5)`
+                      }
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -637,7 +946,7 @@ const MembershipAdminDashboard = () => {
                         monto: val === "" ? "" : Number.parseFloat(val)
                       });
                     }}
-                    placeholder="150.00"
+                    placeholder="Ej: 200.00"
                     step="0.01"
                     min="0"
                     autoComplete="off"
@@ -668,6 +977,20 @@ const MembershipAdminDashboard = () => {
                     data-form-type="other"
                   />
                 </div>
+                <div className="modal-field">
+                  <label>Método de Pago *:</label>
+                  <select
+                    value={newClient.metodo_pago}
+                    onChange={(e) => setNewClient({ ...newClient, metodo_pago: e.target.value })}
+                    className="status-filter"
+                    data-lpignore="true"
+                    data-form-type="other"
+                  >
+                    <option value="efectivo">Efectivo</option>
+                    <option value="transferencia">Transferencia</option>
+                    <option value="link">Link de Pago</option>
+                  </select>
+                </div>
               </div>
 
               <div className="modal-actions">
@@ -680,6 +1003,212 @@ const MembershipAdminDashboard = () => {
               </div>
             </div>
           </div>,
+        )}
+
+      {/* MODAL HISTORIAL DE PAGOS (Portal) */}
+      {paymentHistoryModalOpen &&
+        selectedMember &&
+        renderPortal(
+          <div className="modal-overlay" onClick={closePaymentHistoryModal}>
+            <div className="modal-content payment-history-modal" onClick={(e) => e.stopPropagation()}>
+              <h2>Historial de Pagos - {selectedMember.name}</h2>
+
+              {/* Historial de pagos existentes */}
+              <div className="modal-section">
+                <h3>Pagos Realizados</h3>
+                {paymentHistory.length === 0 ? (
+                  <p style={{ color: "var(--stone-gray)", fontStyle: "italic" }}>
+                    No hay pagos registrados
+                  </p>
+                ) : (
+                  <div className="payment-history-list">
+                    {paymentHistory.map((payment, index) => (
+                      <div key={index} className="payment-item">
+                        <div className="payment-info">
+                          <div className="payment-amount">${payment.monto}</div>
+                          <div className="payment-method">Método: {payment.metodo_pago}</div>
+                          <div className="payment-dates">
+                            <span>Pago: {formatDate(payment.fecha_pago)}</span>
+                            <span>Próximo: {formatDate(payment.proxima_fecha)}</span>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          className="edit-payment-btn"
+                          onClick={() => openEditPaymentModal(payment)}
+                          title="Editar pago"
+                        >
+                          <Edit size={16} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Formulario para agregar nuevo pago */}
+              <div className="modal-section">
+                <h3>Agregar Nuevo Pago</h3>
+                <div className="modal-field">
+                  <label>Monto *:</label>
+                  <input
+                    type="number"
+                    value={newPayment.monto === 0 ? "" : newPayment.monto}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setNewPayment({
+                        ...newPayment,
+                        monto: val === "" ? "" : Number.parseFloat(val)
+                      });
+                    }}
+                    placeholder="Ej: 200.00"
+                    step="0.01"
+                    min="0"
+                    autoComplete="off"
+                    inputMode="decimal"
+                    data-lpignore="true"
+                    data-form-type="other"
+                  />
+                </div>
+                <div className="modal-field">
+                  <label>Fecha de Pago *:</label>
+                  <input
+                    type="date"
+                    value={newPayment.fecha_pago}
+                    onChange={(e) => setNewPayment({ ...newPayment, fecha_pago: e.target.value })}
+                    autoComplete="off"
+                    data-lpignore="true"
+                    data-form-type="other"
+                  />
+                </div>
+                <div className="modal-field">
+                  <label>Próximo Pago *:</label>
+                  <input
+                    type="date"
+                    value={newPayment.proxima_fecha}
+                    onChange={(e) => setNewPayment({ ...newPayment, proxima_fecha: e.target.value })}
+                    autoComplete="off"
+                    data-lpignore="true"
+                    data-form-type="other"
+                  />
+                </div>
+                <div className="modal-field">
+                  <label>Método de Pago *:</label>
+                  <select
+                    value={newPayment.metodo_pago}
+                    onChange={(e) => setNewPayment({ ...newPayment, metodo_pago: e.target.value })}
+                    className="status-filter"
+                    data-lpignore="true"
+                    data-form-type="other"
+                  >
+                    <option value="efectivo">Efectivo</option>
+                    <option value="transferencia">Transferencia</option>
+                    <option value="link">Link de Pago</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="modal-actions">
+                <button className="btn btn-primary" onClick={addNewPayment} type="button">
+                  <CheckCircle size={16} /> Agregar Pago
+                </button>
+                <button className="btn btn-secondary" onClick={closePaymentHistoryModal} type="button">
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>,
+        )}
+
+      {/* MODAL DE EDICIÓN DE PAGO (Portal) */}
+      {editPaymentModalOpen &&
+        renderPortal(
+          <div className="modal-overlay" onClick={closeEditPaymentModal}>
+            <div className="modal" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h2>Editar Pago</h2>
+                <button className="modal-close" onClick={closeEditPaymentModal}>
+                  <XCircle size={24} />
+                </button>
+              </div>
+              
+              <div className="modal-content">
+                <div className="modal-field">
+                  <label>Monto *:</label>
+                  <input
+                    type="number"
+                    value={editingPayment?.monto || ""}
+                    onChange={(e) => setEditingPayment({...editingPayment, monto: e.target.value})}
+                    placeholder="Ingresa el monto"
+                  />
+                </div>
+
+                <div className="modal-field">
+                  <label>Fecha de Pago *:</label>
+                  <input
+                    type="date"
+                    value={editingPayment?.fecha_pago || ""}
+                    onChange={(e) => setEditingPayment({...editingPayment, fecha_pago: e.target.value})}
+                  />
+                </div>
+
+                <div className="modal-field">
+                  <label>Próxima Fecha de Pago *:</label>
+                  <input
+                    type="date"
+                    value={editingPayment?.proxima_fecha || ""}
+                    onChange={(e) => setEditingPayment({...editingPayment, proxima_fecha: e.target.value})}
+                  />
+                </div>
+
+                <div className="modal-field">
+                  <label>Método de Pago:</label>
+                  <select
+                    value={editingPayment?.metodo_pago || "efectivo"}
+                    onChange={(e) => setEditingPayment({...editingPayment, metodo_pago: e.target.value})}
+                  >
+                    <option value="efectivo">Efectivo</option>
+                    <option value="transferencia">Transferencia</option>
+                    <option value="link">Link de Pago</option>
+                  </select>
+                </div>
+
+                {/* Botones integrados dentro del contenido */}
+                <div className="modal-buttons">
+                  <button 
+                    className="btn cancel-btn" 
+                    onClick={closeEditPaymentModal}
+                    type="button"
+                  >
+                    Cancelar
+                  </button>
+                  <button 
+                    className="btn submit-btn" 
+                    onClick={updatePayment}
+                    type="button"
+                  >
+                    Actualizar Pago
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>,
+        )}
+
+      {/* NOTIFICACIÓN (Portal) */}
+      {notification.show &&
+        renderPortal(
+          <div className={`notification ${notification.type}`}>
+            <div className="notification-content">
+              <span className="notification-message">{notification.message}</span>
+              <button 
+                className="notification-close" 
+                onClick={() => setNotification({ show: false, message: "", type: "" })}
+              >
+                ×
+              </button>
+            </div>
+          </div>
         )}
     </div>
   )
