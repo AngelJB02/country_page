@@ -1,135 +1,150 @@
-/* ===== CONTENEDOR PRINCIPAL DE RESERVAS DEL USUARIO ===== */
-.reservas-usuario {
-  background: var(--warm-white);
-  border-radius: 20px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  min-width: 800px;
-  border: 1px solid rgba(107, 68, 35, 0.08);
-  padding: 0;
-  margin: 0 auto 32px auto;
-  width: 100%;
-  max-width: 900px;
-  font-weight: 400;
+/* ===== TOKENS BÁSICOS ===== */
+:root{
+  --rs-bg: var(--warm-white, #fffaf5);
+  --rs-card: var(--cream, #f8f6f3);
+  --rs-border: rgba(107,68,35,.10);
+  --rs-border-soft: rgba(107,68,35,.08);
+  --rs-ink: var(--charcoal, #3a3a3a);
+  --rs-ink-soft: rgba(0,0,0,.60);
+  --rs-primary: var(--primary-brown, #6b4423);
+  --rs-secondary: var(--secondary-brown, #8a5a2b);
+
+  /* Estado chips */
+  --ok-bg:#eaf8f1;    --ok-fg:#1e7a46;   --ok-br:#c8ecd9;
+  --warn-bg:#fff6e5;  --warn-fg:#9a6b14; --warn-br:#fae3b5;
+  --bad-bg:#fdecec;   --bad-fg:#a43232;  --bad-br:#f4c3c3;
+
+  /* Activity pills */
+  --ini-bg:#eef3ff; --ini-fg:#3156c4; --ini-br:#cfdcff;
+  --cam-bg:#effaf2; --cam-fg:#2f8a4b; --cam-br:#cfeedd;
+  --sal-bg:#fff0f2; --sal-fg:#b2324b; --sal-br:#ffd1d8;
 }
 
-/* ===== TÍTULO ===== */
-.reservas-usuario h3 {
-  background: linear-gradient(135deg, var(--primary-brown) 0%, var(--secondary-brown) 100%);
-  color: var(--warm-white);
-  font-family: var(--font-primary);
-  font-size: 2.2rem;
-  font-weight: 300;
-  letter-spacing: -0.8px;
-  margin: 0;
-  padding: 28px 32px;
-  text-align: center;
-  border-radius: 20px 20px 0 0;
-}
-
-/* ===== MENSAJE SIN RESERVAS ===== */
-.reservas-usuario p {
-  margin: 24px 0;
-  font-size: 1.1rem;
-  color: var(--charcoal);
-  text-align: center;
-}
-
-/* ===== ITEM DE RESERVA ===== */
-.reserva-item {
-  background: var(--cream, #f8f8f8);
+/* ===== CONTENEDOR ===== */
+.reservas-usuario{
+  background: var(--rs-bg);
+  border: 1px solid var(--rs-border);
   border-radius: 16px;
-  box-shadow: 0 2px 8px rgba(107, 68, 35, 0.06);
-  padding: 18px 16px;
-  margin: 18px 32px;
-  border: 1px solid rgba(107, 68, 35, 0.08);
-  transition: box-shadow 0.2s;
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
+  box-shadow: 0 8px 22px rgba(0,0,0,.06);
+  overflow: hidden;
+  width: 100%;
+  max-width: 840px;      /* ancho amplio para darle protagonismo */
+  margin: 0;
+}
+
+/* ===== HEADER ===== */
+.reservas-usuario h3{
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: 16px 16px 0 0;
+  background: linear-gradient(135deg,var(--rs-primary),var(--rs-secondary));
+  color: #fff;
+  font: 600 1.15rem/1 var(--font-primary, system-ui);
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+}
+.reservas-usuario .count-badge{
+  background: rgba(255,255,255,.18);
+  border: 1px solid rgba(255,255,255,.25);
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: .85rem;
+}
+
+/* ===== LISTA ===== */
+.reservas-lista-amplia{
+  display:flex; flex-direction:column; gap:14px;
+  padding: 14px;
+  max-height: calc(100vh - 180px); /* scroll interno si hay muchas */
+  overflow: auto;
+  scrollbar-width: thin;
+}
+.reservas-lista-amplia::-webkit-scrollbar{ width: 8px; }
+.reservas-lista-amplia::-webkit-scrollbar-thumb{
+  background: rgba(0,0,0,.15); border-radius: 999px;
+}
+
+/* ===== TARJETA ===== */
+.reserva-item-amplia{
+  background: var(--rs-card);
+  border: 1px solid var(--rs-border-soft);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.06);
+  padding: 12px 14px;
+  display:flex; flex-direction:column; gap:6px;
+  /* ↓ Texto más pequeño dentro de la tarjeta */
+  font-size: .94rem;
+}
+
+/* Fila etiqueta/valor */
+.reserva-row{ display:flex; align-items:center; gap:10px; }
+.reserva-label{
+  color: var(--rs-ink-soft);
+  min-width: 88px;
+  font: 500 .88rem/1.2 var(--font-primary, system-ui);
+}
+.reserva-value{
+  color: var(--rs-ink);
+  font: 700 .96rem/1.25 var(--font-primary, system-ui);
+}
+
+/* Hora un poco más discreta */
+.reserva-value.hora{
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--rs-border-soft);
+  background: #fff7;
+}
+
+/* ===== PILL ACTIVIDAD ===== */
+.pill-actividad{
+  display:inline-flex; align-items:center; gap:6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: .85rem;
+  border: 1px solid transparent;
+}
+.pill-ini{ background:var(--ini-bg); color:var(--ini-fg); border-color:var(--ini-br); }
+.pill-cam{ background:var(--cam-bg); color:var(--cam-fg); border-color:var(--cam-br); }
+.pill-sal{ background:var(--sal-bg); color:var(--sal-fg); border-color:var(--sal-br); }
+
+/* ===== CHIP ESTADO ===== */
+/* Chip de estado más compacto */
+.estado-chip {
+  display: inline-flex;
   align-items: center;
-  gap: 0;
+  justify-content: center;
+  padding: 2px 8px;         /* antes 4px 12px */
+  border-radius: 999px;
+  font-weight: 600;         /* antes 800 */
+  font-size: 0.78rem;       /* antes 0.85rem */
+  line-height: 1;
+  text-transform: capitalize;
+  border: 1px solid transparent;
+  min-width: 60px;          /* opcional: asegura consistencia */
+  text-align: center;
 }
 
-.reserva-item:last-child {
-  margin-bottom: 32px;
-}
+/* Colores de estado */
+.estado-chip.confirmada { background: var(--ok-bg); color: var(--ok-fg); border-color: var(--ok-br); }
+.estado-chip.pendiente  { background: var(--warn-bg); color: var(--warn-fg); border-color: var(--warn-br); }
+.estado-chip.cancelada  { background: var(--bad-bg); color: var(--bad-fg); border-color: var(--bad-br); }
 
-/* ===== FILA DE DETALLE ===== */
-.detail-row {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  border-bottom: none;
-  margin-right: 24px;
-  margin-bottom: 0;
-  padding: 0;
-}
-
-/* ===== INFO DE DETALLE ===== */
-.detail-info {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  min-width: 110px;
-  margin-right: 8px;
-}
-
-/* ===== ETIQUETA Y VALOR ===== */
-.detail-label {
-  font-family: var(--font-primary);
-  font-size: 0.97rem;
-  color: var(--charcoal);
-  font-weight: 400;
-  margin-bottom: 2px;
-  opacity: 0.8;
-}
-
-.detail-value {
-  font-size: 1.08rem;
-  color: var(--primary-brown);
-  font-weight: 600;
-  font-family: var(--font-primary);
-}
-
-/* ===== ESTADO DE RESERVA ===== */
-.detail-row .detail-label:last-child,
-.detail-row .detail-value:last-child {
-  font-size: 1rem;
-  color: var(--secondary-brown);
-  font-weight: 500;
+/* ===== VACÍO ===== */
+.reservas-usuario > p{
+  margin: 18px;
+  text-align:center;
+  color: var(--rs-ink-soft);
+  font-size: .98rem;
 }
 
 /* ===== RESPONSIVE ===== */
-@media (max-width: 1400px) {
-  .reservas-usuario {
-    min-width: unset;
-    max-width: 98vw;
-    border-radius: 14px;
-  }
-  .reserva-item {
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 10px 6px;
-    border-radius: 10px;
-    margin: 12px 8px;
-  }
-  .detail-row {
-    margin-right: 0;
-    margin-bottom: 4px;
-  }
-  .detail-info {
-    min-width: unset;
-    margin-right: 0;
-  }
-  .detail-label, .detail-value {
-    font-size: 0.95rem;
-  }
-  .reservas-usuario h3 {
-    font-size: 1.4rem;
-    padding: 18px 12px;
-    border-radius: 14px 14px 0 0;
-  }
+@media (max-width: 720px){
+  .reservas-usuario{ max-width: 100%; }
+  .reserva-item-amplia{ font-size: .92rem; }
+  .reserva-label{ min-width: 78px; font-size: .86rem; }
+  .reserva-value{ font-size: .94rem; }
 }

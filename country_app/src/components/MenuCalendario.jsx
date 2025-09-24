@@ -612,9 +612,13 @@ const MenuCalendario = () => {
       default: return '#6c757d';           // Gris
     }
   };
-
   return (
+    
     <div className="calendar-container">
+
+       {/* Título de la sección */}
+      <TituloReserva />
+
       {/* Botón de logout */}
       <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 100 }}>
         {currentUser && (
@@ -640,8 +644,9 @@ const MenuCalendario = () => {
 
       {/* Indicador de carga */}
       {loading && (
-        <div className="loading-overlay">
-          <div className="loading-spinner">Cargando...</div>
+        <div class="loading-overlay" role="status" aria-busy="true">
+          <span class="sr-only">Cargando…</span>
+          <div class="spinner spinner-dual-ring md"></div>
         </div>
       )}
 
@@ -856,9 +861,6 @@ const MenuCalendario = () => {
         </div>
       )}
       
-      {/* Título de la sección */}
-      <TituloReserva />
-
       {/* Sección del Calendario */}
       <div className="calendar-section">
         <div className="calendar-header">
@@ -915,7 +917,6 @@ const MenuCalendario = () => {
               <button className="close-btn2" onClick={closeSuccessModal} aria-label="Cerrar modal">×</button>
               <h2>¡Cita Confirmada!</h2>
             </div>
-            
             <div className="modal-content">
               <div className="booking-details">
                 <div className="detail-row">
@@ -924,55 +925,40 @@ const MenuCalendario = () => {
                     <span className="detail-value">{confirmedBooking.nombre}</span>
                   </div>
                 </div>
-                
                 <div className="detail-row">
                   <div className="detail-info">
                     <span className="detail-label">Edad:</span>
                     <span className="detail-value">{confirmedBooking.edad} años</span>
                   </div>
                 </div>
-                
                 <div className="detail-row">
                   <div className="detail-info">
                     <span className="detail-label">Actividad:</span>
                     <span className="detail-value">{confirmedBooking.actividad.charAt(0).toUpperCase() + confirmedBooking.actividad.slice(1)}</span>
                   </div>
                 </div>
-                
                 <div className="detail-row">
                   <div className="detail-info">
                     <span className="detail-label">Fecha:</span>
                     <span className="detail-value">{confirmedBooking.fecha}</span>
                   </div>
                 </div>
-                
                 <div className="detail-row">
                   <div className="detail-info">
                     <span className="detail-label">Hora:</span>
                     <span className="detail-value">{confirmedBooking.hora}</span>
                   </div>
                 </div>
-
-                {confirmedBooking.id && (
-                  <div className="detail-row">
-                    <div className="detail-info">
-                      <span className="detail-label">ID de Reserva:</span>
-                      <span className="detail-value">#{confirmedBooking.id}</span>
-                    </div>
-                  </div>
-                )}
               </div>
-              
               <div className="success-message">
                 <p>Tu cita ha sido reservada exitosamente. Te esperamos el <strong>{confirmedBooking.dayName}</strong> a las <strong>{confirmedBooking.hora}</strong>.</p>
                 <p>¡Nos vemos pronto!</p>
               </div>
-            </div>
-            
-            <div className="modal-actions">
-              <button className="modal-btn primary" onClick={closeSuccessModal}>
-                Aceptar
-              </button>
+              <div className="modal-actions">
+                <button className="modal-btn primary" onClick={closeSuccessModal}>
+                  Aceptar
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -2,67 +2,77 @@ import React from "react";
 import "../CSS/ReservaInfo.css";
 
 const ReservasInfo = ({ reservations, currentUser }) => {
-  // Unir todas las reservas en un solo array
+  if (!currentUser) return null;
+
   const allReservations = Object.values(reservations).flat();
+  const userReservations = allReservations
+    .filter(res => res.usuario_id === currentUser.id)
+    .sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 
-  // Filtrar por usuario logueado
-  const userReservations = allReservations.filter(res => res.usuario_id === currentUser.id);
+  const actividadClass = (a = "") => {
+    const k = a.toLowerCase();
+    if (k.startsWith("ini")) return "pill-actividad pill-ini";
+    if (k.startsWith("pas")) return "pill-actividad pill-cam";
+    if (k.startsWith("sal")) return "pill-actividad pill-sal";
+    return "pill-actividad";
+  };
 
-  // Ordenar por fecha descendente (más recientes primero)
-  userReservations.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+  const fmtFecha = (iso) => {
+    if (!iso) return "Sin fecha";
+    const fechaStr = iso.split("T")[0];
+    const [, m, d] = fechaStr.split("-");
+    const meses = [
+      "enero","febrero","marzo","abril","mayo","junio",
+      "julio","agosto","septiembre","octubre","noviembre","diciembre"
+    ];
+    return `${parseInt(d, 10)} ${meses[parseInt(m, 10) - 1]}`;
+  };
 
   return (
     <div className="reservas-usuario">
-      <h3>Todas tus Reservas</h3>
+      <h3>
+        Todas tus Reservas
+        <span className="count-badge">{userReservations.length}</span>
+      </h3>
+
       {userReservations.length === 0 ? (
         <p>No tienes reservas registradas.</p>
       ) : (
-        userReservations.map((reserva, idx) => (
-          <div key={reserva.id || idx} className="reserva-item">
-            <div className="detail-row">
-              <span className="detail-label">Nombre:</span>
-              <span className="detail-value">{reserva.nombre}</span>
-            </div>
-            <div className="detail-row">
-              <span className="detail-label">Edad:</span>
-              <span className="detail-value">{reserva.edad} años</span>
-            </div>
-            <div className="detail-row">
-              <span className="detail-label">Actividad:</span>
-              <span className="detail-value">{reserva.actividad.charAt(0).toUpperCase() + reserva.actividad.slice(1)}</span>
-            </div>
-            <div className="detail-row">
-            <span className="detail-label">Fecha:</span>
-            <span className="detail-value">
-              {reserva.fecha
-                ? (() => {
-                    // Extraer solo la parte de la fecha (YYYY-MM-DD) sin conversión de zona horaria
-                    const fechaStr = reserva.fecha.split('T')[0];
-                    const [year, month, day] = fechaStr.split('-');
-                    const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 
-                                   'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
-                    return `${parseInt(day)} de ${meses[parseInt(month) - 1]} de ${year}`;
-                  })()
-                : 'Sin fecha'}
-            </span>
-          </div>
-            <div className="detail-row">
-              <span className="detail-label">Hora:</span>
-              <span className="detail-value">{reserva.time}</span>
-            </div>
-            {reserva.id && (
-              <div className="detail-row">
-                <span className="detail-label">ID de Reserva:</span>
-                <span className="detail-value">#{reserva.id}</span>
+        <div className="reservas-lista-amplia">
+          {userReservations.map((reserva) => (
+            <div key={reserva.id} className="reserva-item-amplia">
+              <div className="reserva-row">
+                <span className="reserva-label">Nombre:</span>
+                <span className="reserva-value nombre">{reserva.nombre}</span>
               </div>
-            )}
-            <div className="detail-row">
-              <span className="detail-label">Estado:</span>
-              <span className="detail-value">{reserva.estado}</span>
+
+              <div className="reserva-row">
+                <span className="reserva-label">Actividad:</span>
+                <span className={`reserva-value actividad ${actividadClass(reserva.actividad)}`}>
+                  {reserva.actividad?.charAt(0).toUpperCase() + reserva.actividad?.slice(1)}
+                </span>
+              </div>
+
+              <div className="reserva-row">
+                <span className="reserva-label">Fecha:</span>
+                <span className="reserva-value fecha">{fmtFecha(reserva.fecha)}</span>
+              </div>
+
+              <div className="reserva-row">
+                <span className="reserva-label">Hora:</span>
+                <span className="reserva-value hora">{reserva.time}</span>
+              </div>
+
+              <div className="reserva-row">
+                <span className="reserva-label">Estado:</span>
+                {/* Chip compacto */}
+                <span className={`estado-chip ${reserva.estado?.toLowerCase()}`}>
+                  {reserva.estado}
+                </span>
+              </div>
             </div>
-            <hr />
-          </div>
-        ))
+          ))}
+        </div>
       )}
     </div>
   );

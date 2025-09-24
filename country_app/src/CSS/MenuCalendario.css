@@ -1,10 +1,70 @@
 @import 'variables.css';
+/* ===== LOADING OVERLAY Y SPINNER ===== */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+}
+
+.loading-spinner {
+  background: #fff;
+  color: #333;
+  padding: 16px 24px;
+  border-radius: 50%;
+  font-size: 1rem;
+  font-weight: bold;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: pulse 1.2s infinite alternate;
+  min-width: 80px;
+  min-height: 80px;
+  max-width: 120px;
+  max-height: 120px;
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(107, 68, 35, 0.15); }
+  100% { box-shadow: 0 0 0 16px rgba(107, 68, 35, 0.04); }
+}
 
 /* ===== CONTENEDOR PRINCIPAL ===== */
 .calendar-container { 
+/* ===== HEADER TOP BAR (TITULO Y LOGOUT) ===== */
+.header-top-bar {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  margin-top: 8px;
+  gap: 12px;
+}
+.header-title-center {
+  flex: 1 1 auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.header-logout {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 180px;
+}
   font-family: var(--font-primary);
   font-weight: 400;
-  background: var(--terracotta--light-brown);
+  background: var(--terracotta);
   padding: var(--spacing-lg);
   color: var(--dark-brown);
   width: 100%;           /* ocupar todo el ancho */
@@ -533,24 +593,25 @@
 
 .success-modal {
   background: var(--warm-white);
-  border-radius: 20px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
-  max-width: 500px;
-  width: 90%;
-  max-height: 90vh;
-  overflow-y: auto;
+  border-radius: 16px;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.10);
+  max-width: 370px;
+  width: 96%;
+  max-height: 80vh;
+  overflow: auto;
   position: relative;
   animation: modalSlideIn 0.3s ease;
   border: 1px solid rgba(107, 68, 35, 0.08);
+  margin-bottom: 0;
 }
 
 .modal-header {
   background: linear-gradient(135deg, var(--primary-brown) 0%, var(--secondary-brown) 100%);
   color: var(--warm-white);
-  padding: 32px 32px 24px;
+  padding: 18px 18px 10px;
   text-align: center;
   position: relative;
-  border-radius: 20px 20px 0 0;
+  border-radius: 16px 16px 0 0;
 }
 
 .date-modal .modal-header {
@@ -575,8 +636,8 @@
 }
 
 .modal-header h2 {
-  font-size: 1.6rem;
-  letter-spacing: -0.3px;
+  font-size: 1.15rem;
+  letter-spacing: -0.2px;
   align-items: center;
 }
 
@@ -618,7 +679,7 @@
 }
 
 .modal-content, .date-modal .modal-content {
-  padding: 32px;
+  padding: 16px 12px 10px 12px;
   text-align: left;
 }
 .date-modal h4 {
@@ -629,13 +690,13 @@
   font-weight: 600;
 }
 
-.booking-details { margin-bottom: 32px; }
+.booking-details { margin-bottom: 16px; }
 
 .detail-row {
   display: flex;
   align-items: center;
-  padding: 16px 0;
-  border-bottom: 1px solid rgba(107, 68, 35, 0.08);
+  padding: 7px 0 5px 0;
+  border-bottom: 1px solid rgba(107, 68, 35, 0.06);
 }
 
 .detail-row:last-child { border-bottom: none; }
@@ -648,16 +709,16 @@
 
 .detail-label {
   font-family: var(--font-primary);
-  font-size: 16px;
+  font-size: 0.98rem;
   color: var(--charcoal);
   font-weight: 400;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
   text-align: center;
   opacity: 0.8;
 }
 
 .detail-value {
-  font-size: 1.05rem;
+  font-size: 0.99rem;
   color: var(--primary-brown);
   font-weight: 600;
   text-align: center;
@@ -665,23 +726,25 @@
 }
 
 .success-message {
-  background: rgba(107, 68, 35, 0.04);
-  padding: 24px;
-  border-radius: 16px;
-  border-left: 4px solid var(--primary-brown);
+  background: rgba(107, 68, 35, 0.03);
+  padding: 12px 8px;
+  border-radius: 10px;
+  border-left: 3px solid var(--primary-brown);
   text-align: center;
+  font-size: 0.93rem;
 }
 
 .success-message p {
   margin: 0 0 12px 0;
-  line-height: 1.6;
+  line-height: 1.5;
   color: var(--charcoal);
   opacity: 0.9;
+  font-size: 0.93rem;
 }
 
 .success-message p:last-child {
   margin-bottom: 0;
-  font-size: 1.05rem;
+  font-size: 0.97rem;
   color: var(--primary-brown);
   font-weight: 600;
 }
@@ -692,20 +755,20 @@
 }
 
 .modal-actions {
-  padding: 0 32px 32px;
+  padding: 0 0 12px 0;
   text-align: center;
 }
 
 .modal-btn {
-  padding: 14px 40px;
+  padding: 8px 24px;
   border: none;
-  border-radius: 12px;
-  font-size: 1rem;
+  border-radius: 10px;
+  font-size: 0.97rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
   text-transform: uppercase;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.2px;
 }
 
 .modal-btn.primary:hover {
