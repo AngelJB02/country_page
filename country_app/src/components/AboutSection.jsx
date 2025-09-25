@@ -53,8 +53,8 @@ const AboutSection = () => {
                 <p>Años de experiencia</p>
               </div>
               <div className="stat">
-                <h4>150</h4>
-                <p>Capacidad máxima</p>
+                <h4>1500+</h4>
+                <p>Capacidad máxima en Jardin</p>
               </div>
             </div>
           </div>

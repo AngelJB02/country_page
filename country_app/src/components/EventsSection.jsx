@@ -1,10 +1,13 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom'; // Importa useNavigate
-import image5 from '../img/image_5.jpg';
+// import image5 from '../img/image_5.jpg';
 import image6 from '../img/image-6.jpg';
 import image8 from '../img/image_8.jpg';
 import image9 from '../img/image-9.jpg';
 import image10 from '../img/image_10.jpg';
+import boda1 from '../img/boda.jpeg';
+import cena from '../img/cena.jpeg';
+import cumple from '../img/refugio_cumple.jpeg';
 
 const EventsSection = () => {
   const navigate = useNavigate(); // Hook para redireccionar
@@ -14,8 +17,8 @@ const EventsSection = () => {
       id: 1,
       titulo: "Bodas al Aire Libre",
       descripcion: "Celebra el día más importante de tu vida en un entorno natural único, rodeado de la belleza del campo.",
-      imagen: image5,
-      caracteristicas: ["Capacidad para 200 personas", "Ceremonia al aire libre", "Catering incluido"]
+      imagen: boda1,
+      caracteristicas: ["Capacidad para 600 personas", "Ceremonia al aire libre", "Catering incluido"]
     },
     {
       id: 2,
@@ -28,14 +31,14 @@ const EventsSection = () => {
       id: 3,
       titulo: "Celebraciones Familiares",
       descripcion: "Cumpleaños, aniversarios, graduaciones y cualquier celebración especial que quieras hacer memorable.",
-      imagen: image8,
+      imagen: cumple,
       caracteristicas: ["Ambiente familiar", "Juegos para niños", "Flexibilidad de horarios"]
     },
     {
       id: 4,
       titulo: "Retiros y Talleres",
       descripcion: "Espacio perfecto para retiros espirituales, talleres creativos y actividades de crecimiento personal.",
-      imagen: image9,
+      imagen: cena,
       caracteristicas: ["Conexión con la naturaleza", "Ambientes tranquilos", "Espacios meditativos"]
     }, 
     {
