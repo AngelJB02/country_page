@@ -16,7 +16,9 @@ import image13 from "../img/image13.jpg";
 import class1Img from "../img/class1.jpg";
 import class2Img from "../img/class2.jpg";
 import class3Img from "../img/class3.jpg";
-import ClaseBasica from "../img/clases_basicas.jpeg";
+import nino from "../img/niños.jpeg";
+import avanzado from "../img/avanzado.jpeg";
+import basico from "../img/basico.jpeg";
 
 // Componentes
 import NavigationClases from "../components/NavigationClases";
@@ -45,7 +47,7 @@ const Equitacion = () => {
       id: 1,
       titulo: "Clases Básicas",
       descripcion: "Aprende los fundamentos de la equitación, desde la postura hasta el control del caballo.",
-      imagen: ClaseBasica,
+      imagen: basico,
       caracteristicas: ["Instrucción personalizada", "Caballos entrenados"],
     },
     {
@@ -59,7 +61,7 @@ const Equitacion = () => {
       id: 3,
       titulo: "Clases Avanzadas",
       descripcion: "Perfecciona tu habilidad con técnicas de salto y manejo avanzado del caballo.",
-      imagen: class3Img,
+      imagen: avanzado,
       caracteristicas: ["Salto de obstáculos", "Competencias simuladas"],
     },
   ];
