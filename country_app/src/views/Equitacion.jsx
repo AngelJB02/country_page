@@ -16,6 +16,7 @@ import image13 from "../img/image13.jpg";
 import class1Img from "../img/class1.jpg";
 import class2Img from "../img/class2.jpg";
 import class3Img from "../img/class3.jpg";
+import ClaseBasica from "../img/clases_basicas.jpeg";
 
 // Componentes
 import NavigationClases from "../components/NavigationClases";
@@ -44,7 +45,7 @@ const Equitacion = () => {
       id: 1,
       titulo: "Clases Básicas",
       descripcion: "Aprende los fundamentos de la equitación, desde la postura hasta el control del caballo.",
-      imagen: class1Img,
+      imagen: ClaseBasica,
       caracteristicas: ["Instrucción personalizada", "Caballos entrenados"],
     },
     {

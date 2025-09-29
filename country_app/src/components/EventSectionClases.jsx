@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import image11 from "../img/image11.jpg";
 import image12 from "../img/image12.jpg";
 import image13 from "../img/image13.jpg";
+import ClaseBasica from "../img/clases_basicas.jpeg";
 
 
 const EventsSection = () => {
@@ -16,7 +17,7 @@ const EventsSection = () => {
         id: 1,
         titulo: "Clases Básicas",
         descripcion: "Aprende los fundamentos de la equitación, desde la postura hasta el control del caballo.",
-        imagen: class1Img,
+        imagen: ClaseBasica,
         caracteristicas: ["Instrucción personalizada", "Caballos entrenados", "Duración 1 hora"],
       },
       {
