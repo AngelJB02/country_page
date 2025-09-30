@@ -28,6 +28,7 @@ const MembershipAdminDashboard = () => {
   const [loading, setLoading] = useState(true)
   const [currentUser, setCurrentUser] = useState(null)
   const [notification, setNotification] = useState({ show: false, message: "", type: "" })
+  const [creatingClient, setCreatingClient] = useState(false)
   const [paymentCounts, setPaymentCounts] = useState({})
   const [paymentStatus, setPaymentStatus] = useState({})
   const [newClient, setNewClient] = useState({
@@ -401,41 +402,38 @@ const MembershipAdminDashboard = () => {
   }
 
   const createNewClient = async () => {
+    if (creatingClient) return;
+    setCreatingClient(true);
     try {
       if (!newClient.nombre || !newClient.apellido || !newClient.email || !newClient.password) {
         showNotification("Por favor completa todos los datos del cliente", "error")
-        return
+        return;
       }
       if (!newClient.monto || !newClient.fecha_pago || !newClient.proxima_fecha) {
         showNotification("Por favor completa toda la información de pagos", "error")
-        return
+        return;
       }
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
       if (!emailRegex.test(newClient.email)) {
         showNotification("Por favor ingresa un email válido", "error")
-        return
+        return;
       }
-      
       if (newClient.password.length < 5) {
         showNotification("La contraseña debe tener al menos 5 caracteres", "error")
-        return
+        return;
       }
-
       // Validar que la fecha de próximo pago no sea anterior a la fecha de pago
       const fechaPago = new Date(newClient.fecha_pago)
       const proximaFecha = new Date(newClient.proxima_fecha)
-      
       if (proximaFecha < fechaPago) {
         showNotification("La fecha de próximo pago no puede ser anterior a la fecha de pago", "error")
-        return
+        return;
       }
-
       const response = await fetch("https://country-page.onrender.com/api/users/register-cliente", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newClient),
       })
-
       if (response.ok) {
         await response.json()
         refreshUsersList()
@@ -449,6 +447,8 @@ const MembershipAdminDashboard = () => {
       }
     } catch (error) {
       showNotification("Error de conexión. Inténtalo de nuevo.", "error")
+    } finally {
+      setCreatingClient(false);
     }
   }
 
@@ -1005,8 +1005,8 @@ const MembershipAdminDashboard = () => {
               </div>
 
               <div className="modal-actions">
-                <button className="btn btn-primary" onClick={createNewClient} type="button">
-                  <UserPlus size={16} /> Crear Cliente
+                <button className="btn btn-primary" onClick={createNewClient} type="button" disabled={creatingClient}>
+                  <UserPlus size={16} /> {creatingClient ? "Creando..." : "Crear Cliente"}
                 </button>
                 <button className="btn btn-secondary" onClick={closeAddClientModal} type="button">
                   Cancelar
