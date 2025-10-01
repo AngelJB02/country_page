@@ -40,21 +40,6 @@ app.post("/api/login", async (req, res) => {
   }
 
   try {
-    // Primero buscar el usuario solo por username para debugging
-    const [userCheck] = await db.query(
-      "SELECT * FROM usuarios WHERE username = ?",
-      [email]
-    );
-    
-    console.log("🔍 Login attempt:");
-    console.log("  Username:", email);
-    console.log("  Password recibida:", password);
-    console.log("  Usuario encontrado:", userCheck.length > 0 ? "SÍ" : "NO");
-    if (userCheck.length > 0) {
-      console.log("  Password en DB:", userCheck[0].password);
-      console.log("  Coinciden:", userCheck[0].password === password);
-    }
-
     const [rows] = await db.query(
       "SELECT * FROM usuarios WHERE username = ? AND password = ?",
       [email, password]
