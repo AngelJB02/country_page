@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: country-page
+    runtime: node
+    buildCommand: cd country_app && npm install
+    startCommand: cd country_app && node server/index.js
+    envVars:
+      - key: NODE_VERSION
+        value: 22.16.0
+      - key: DB_HOST
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_NAME
+        sync: false
