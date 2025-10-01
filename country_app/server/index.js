@@ -7,6 +7,7 @@ import instructorRoutes from '../routes/instructor.js';
 import reservasRoutes from '../routes/reservas.js'; 
 import horariosRoutes from '../routes/horarios.js'; 
 import usersRoutes from '../routes/users.js'; 
+import emailRoutes from '../routes/email.js'; 
 
 console.log("✅ Rutas importadas correctamente");
 console.log("📋 Reservas routes:", typeof reservasRoutes); 
@@ -40,7 +41,7 @@ app.post("/api/login", async (req, res) => {
 
   try {
     const [rows] = await db.query(
-      "SELECT * FROM usuarios WHERE nombre = ? AND password = ?",
+      "SELECT * FROM usuarios WHERE username = ? AND password = ?",
       [email, password]
     );
 
@@ -94,6 +95,7 @@ app.use("/api/reservas", (req, res, next) => {
 }, reservasRoutes);
 app.use("/api/horarios", horariosRoutes);
 app.use("/api/users", usersRoutes);
+app.use("/api/email", emailRoutes);
 
 // Capturar errores de rutas no encontradas
 app.use((req, res) => {

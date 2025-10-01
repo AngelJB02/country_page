@@ -6,7 +6,7 @@ import { getRedirectRoute } from "../utils/roleRedirect"; // importa tu helper
 
 const Login = () => {
   const [formData, setFormData] = useState({
-    email: "",
+    username: "",
     password: "",
     remember: false,
   });
@@ -71,7 +71,7 @@ const Login = () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: formData.email,
+          email: formData.username,
           password: formData.password,
         }),
       });
@@ -187,20 +187,20 @@ const Login = () => {
 
         <div className="login-form">
           <div className="form-group">
-            <label htmlFor="email">Nombre de usuario</label>
+            <label htmlFor="username">Nombre de usuario</label>
             <input
               type="text"
-              id="email"
-              name="email"
+              id="username"
+              name="username"
               placeholder="Usuario"
-              value={formData.email}
+              value={formData.username}
               onChange={handleInputChange}
               onBlur={handleBlur}
               onKeyPress={handleKeyPress}
               required
             />
-            {errors.email && (
-              <div className="error-message">{errors.email}</div>
+            {errors.username && (
+              <div className="error-message">{errors.username}</div>
             )}
           </div>
 

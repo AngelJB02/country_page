@@ -27,6 +27,16 @@ const MenuCalendario = () => {
   const [showDateModal, setShowDateModal] = useState(false);
   const [showReservationsModal, setShowReservationsModal] = useState(false);
 
+  // Estado para cambio de contraseña
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [passwordErrors, setPasswordErrors] = useState({});
+  const [passwordLoading, setPasswordLoading] = useState(false);
+
   // Estado para reservas y disponibilidad
   const [reservations, setReservations] = useState({});
   const [availability, setAvailability] = useState({});
@@ -88,11 +98,12 @@ const MenuCalendario = () => {
         if (showDateModal) closeDateModal();
         if (showSuccessModal) closeSuccessModal();
         if (showReservationsModal) closeReservationsModal();
+        if (showPasswordModal) closePasswordModal();
       }
     };
     document.addEventListener('keydown', handleEscKey);
     return () => document.removeEventListener('keydown', handleEscKey);
-  }, [showDateModal, showSuccessModal, showReservationsModal]);
+  }, [showDateModal, showSuccessModal, showReservationsModal, showPasswordModal]);
 
   // Función para obtener reservas del mes actual
   const fetchReservationsForMonth = async () => {
@@ -419,7 +430,7 @@ const MenuCalendario = () => {
 
     setLoading(true);
     try {
-      await axios.delete(`https://country-page.onrender.com/api/reservas/${reservaId}`);
+            await axios.delete(`https://country-page.onrender.com/api/reservas/${reservaId}`);
       
       toast.success('Reserva cancelada exitosamente');
       
@@ -589,6 +600,100 @@ const MenuCalendario = () => {
     setShowReservationsModal(false);
   };
 
+  // Funciones para cambio de contraseña
+  const openPasswordModal = () => {
+    setShowPasswordModal(true);
+    setPasswordData({
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    });
+    setPasswordErrors({});
+  };
+
+  const closePasswordModal = () => {
+    setShowPasswordModal(false);
+    setPasswordData({
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    });
+    setPasswordErrors({});
+    setPasswordLoading(false);
+  };
+
+  const handlePasswordChange = (e) => {
+    const { name, value } = e.target;
+    setPasswordData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    // Limpiar errores cuando el usuario empiece a escribir
+    if (passwordErrors[name]) {
+      setPasswordErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
+  };
+
+  const validatePasswordForm = () => {
+    const errors = {};
+    
+    if (!passwordData.currentPassword) {
+      errors.currentPassword = 'La contraseña actual es requerida';
+    }
+    
+    if (!passwordData.newPassword) {
+      errors.newPassword = 'La nueva contraseña es requerida';
+    } else if (passwordData.newPassword.length < 5) {
+      errors.newPassword = 'La nueva contraseña debe tener al menos 5 caracteres';
+    }
+    
+    if (!passwordData.confirmPassword) {
+      errors.confirmPassword = 'Debe confirmar la nueva contraseña';
+    } else if (passwordData.newPassword !== passwordData.confirmPassword) {
+      errors.confirmPassword = 'Las contraseñas no coinciden';
+    }
+    
+    return errors;
+  };
+
+  const handlePasswordSubmit = async () => {
+    const errors = validatePasswordForm();
+    setPasswordErrors(errors);
+    
+    if (Object.keys(errors).length > 0) {
+      return;
+    }
+    
+    setPasswordLoading(true);
+    
+    try {
+      const response = await axios.post('https://country-page.onrender.com/api/users/change-password', {
+        userId: currentUser.id,
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword
+      });
+      
+      toast.success('✅ Contraseña actualizada exitosamente');
+      closePasswordModal();
+      
+    } catch (error) {
+      console.error('Error al cambiar contraseña:', error);
+      const errorMessage = error.response?.data?.error || 'Error al cambiar la contraseña';
+      toast.error(`❌ ${errorMessage}`);
+      
+      // Si la contraseña actual es incorrecta, marcar ese error específicamente
+      if (error.response?.status === 401) {
+        setPasswordErrors({ currentPassword: 'La contraseña actual es incorrecta' });
+      }
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
   // Función para obtener horarios disponibles según el día de la semana dinámicamente
   const fetchHorariosDia = async (diaSemana) => {
     try {
@@ -619,13 +724,46 @@ const MenuCalendario = () => {
        {/* Título de la sección */}
       <TituloReserva />
 
-      {/* Botón de logout */}
-      <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 100 }}>
+      {/* Botones de usuario */}
+      <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 10, display: 'flex', gap: '10px', alignItems: 'center' }}>
         {currentUser && (
-          <LogoutButton 
-            userName={currentUser.nombre || 'Usuario'} 
-            showUserName={true}
-          />
+          <>
+            <button 
+              onClick={openPasswordModal}
+              style={{
+                background: 'var(--cream-overlay)',
+                border: '2px solid rgba(255,255,255,0.3)',
+                color: 'var(--primary-brown)',
+                padding: '0.6rem 1.2rem',
+                borderRadius: 'var(--radius-xl)',
+                boxShadow: 'var(--medium-shadow)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                cursor: 'pointer',
+                fontSize: '0.9rem',
+                fontWeight: '600',
+                transition: 'all 0.2s ease',
+                fontFamily: 'var(--font-primary)'
+              }}
+              title="Cambiar contraseña"
+              onMouseEnter={(e) => {
+                e.target.style.background = 'rgba(255,255,255,0.6)';
+                e.target.style.transform = 'translateY(-2px)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = 'var(--cream-overlay)';
+                e.target.style.transform = 'translateY(0)';
+              }}
+            >
+        
+              <span>Cambiar contraseña</span>
+            </button>
+            <LogoutButton 
+              userName={currentUser.nombre || 'Usuario'} 
+              showUserName={true}
+            />
+          </>
         )}
       </div>
 
@@ -957,6 +1095,124 @@ const MenuCalendario = () => {
               <div className="modal-actions">
                 <button className="modal-btn primary" onClick={closeSuccessModal}>
                   Aceptar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de cambio de contraseña */}
+      {showPasswordModal && (
+        <div className="modal-overlay" onClick={closePasswordModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <button className="close-btn" onClick={closePasswordModal} aria-label="Cerrar modal">×</button>
+            <h2>Cambiar contraseña</h2>
+            
+            <div style={{ padding: '20px' }}>
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                  Contraseña actual:
+                </label>
+                <input
+                  type="password"
+                  name="currentPassword"
+                  value={passwordData.currentPassword}
+                  onChange={handlePasswordChange}
+                  placeholder="Ingresa tu contraseña actual"
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    border: passwordErrors.currentPassword ? '2px solid #ff4444' : '1px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '16px'
+                  }}
+                />
+                {passwordErrors.currentPassword && (
+                  <div style={{ color: '#ff4444', fontSize: '14px', marginTop: '5px' }}>
+                    {passwordErrors.currentPassword}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                  Nueva contraseña:
+                </label>
+                <input
+                  type="password"
+                  name="newPassword"
+                  value={passwordData.newPassword}
+                  onChange={handlePasswordChange}
+                  placeholder="Mínimo 5 caracteres"
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    border: passwordErrors.newPassword ? '2px solid #ff4444' : '1px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '16px'
+                  }}
+                />
+                {passwordErrors.newPassword && (
+                  <div style={{ color: '#ff4444', fontSize: '14px', marginTop: '5px' }}>
+                    {passwordErrors.newPassword}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                  Confirmar nueva contraseña:
+                </label>
+                <input
+                  type="password"
+                  name="confirmPassword"
+                  value={passwordData.confirmPassword}
+                  onChange={handlePasswordChange}
+                  placeholder="Repite la nueva contraseña"
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    border: passwordErrors.confirmPassword ? '2px solid #ff4444' : '1px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '16px'
+                  }}
+                />
+                {passwordErrors.confirmPassword && (
+                  <div style={{ color: '#ff4444', fontSize: '14px', marginTop: '5px' }}>
+                    {passwordErrors.confirmPassword}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={closePasswordModal}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: '#6c757d',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }}
+                  disabled={passwordLoading}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handlePasswordSubmit}
+                  disabled={passwordLoading}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: passwordLoading ? '#cccccc' : '#4CAF50',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: passwordLoading ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {passwordLoading ? 'Cambiando...' : 'Cambiar contraseña'}
                 </button>
               </div>
             </div>
