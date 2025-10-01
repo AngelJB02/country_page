@@ -531,6 +531,14 @@ const MembershipAdminDashboard = () => {
         }
       }
       
+      // Validación de contraseña para usuarios sin email
+      if (withoutEmail) {
+        if (!previewCredentials.password || previewCredentials.password.length < 5) {
+          showNotification("La contraseña debe tener al menos 5 caracteres", "error")
+          return;
+        }
+      }
+      
       if (newClient.monto === "" || newClient.monto === null || newClient.monto === undefined || !newClient.fecha_pago || !newClient.proxima_fecha) {
         showNotification("Por favor completa toda la información de pagos", "error")
         return;
@@ -1219,7 +1227,13 @@ const MembershipAdminDashboard = () => {
                         disabled={userCreatedSuccessfully}
                         style={{
                           width: '100%',
-                          border: `2px solid ${userCreatedSuccessfully ? '#28a745' : '#8b6f4e'}`, 
+                          border: `2px solid ${
+                            userCreatedSuccessfully 
+                              ? '#28a745' 
+                              : previewCredentials.password.length > 0 && previewCredentials.password.length < 5
+                                ? '#dc3545'
+                                : '#8b6f4e'
+                          }`, 
                           borderRadius: '4px', 
                           padding: '8px', 
                           fontFamily: 'monospace', 
@@ -1227,8 +1241,18 @@ const MembershipAdminDashboard = () => {
                           backgroundColor: userCreatedSuccessfully ? '#f8fff9' : '#fafafa',
                           cursor: userCreatedSuccessfully ? 'default' : 'text'
                         }}
-                        placeholder={userCreatedSuccessfully ? "Contraseña final" : "Edita si deseas..."}
+                        placeholder={userCreatedSuccessfully ? "Contraseña final" : "Mínimo 5 caracteres"}
                       />
+                      {!userCreatedSuccessfully && previewCredentials.password.length > 0 && previewCredentials.password.length < 5 && (
+                        <div style={{ fontSize: '11px', color: '#dc3545', marginTop: '4px', fontWeight: '500' }}>
+                          ⚠️ Contraseña muy corta ({previewCredentials.password.length}/5 caracteres)
+                        </div>
+                      )}
+                      {!userCreatedSuccessfully && previewCredentials.password.length >= 5 && (
+                        <div style={{ fontSize: '11px', color: '#28a745', marginTop: '4px', fontWeight: '500' }}>
+                          ✓ Contraseña válida ({previewCredentials.password.length} caracteres)
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
