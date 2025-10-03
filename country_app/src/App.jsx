@@ -7,6 +7,7 @@ import Login from "./components/Login";
 import RegistroUsuarios from "./components/RegistroUsuarios";
 import InstructorClases from "./components/InstructorClases";  
 import Contabilidad from "./components/Contabilidad";
+import Admin from "./components/Administrador";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
@@ -35,6 +36,11 @@ function App() {
         <Route path="/contabilidad" element={
           <ProtectedRoute>
             <Contabilidad />
+          </ProtectedRoute>
+        } />
+        <Route path="/admin" element={
+          <ProtectedRoute>
+            <Admin />
           </ProtectedRoute>
         } />
       </Routes>
