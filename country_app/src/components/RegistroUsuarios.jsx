@@ -570,7 +570,7 @@ const TablaUsuarios = ({ usuarios, onActualizarCorreo, onActualizarPassword, loa
   
   const actualizarPasswordSilent = async (id, password) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/users/update-password/${id}`, {
+      const response = await fetch(`https://country-page.onrender.com/api/users/update-password/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password })
@@ -585,7 +585,7 @@ const TablaUsuarios = ({ usuarios, onActualizarCorreo, onActualizarPassword, loa
   
   const actualizarCorreoSilent = async (id, email) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/users/update-email/${id}`, {
+      const response = await fetch(`https://country-page.onrender.com/api/users/update-email/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
