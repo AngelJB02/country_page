@@ -9,6 +9,7 @@ const useUsuarios = () => {
 
   const API_URL = 'https://country-page.onrender.com/api/users';
 
+
   useEffect(() => {
     obtenerUsuarios();
   }, []);
@@ -81,7 +82,7 @@ const useUsuarios = () => {
     };
 
 
-  return { usuarios, loading, error, crearUsuario, actualizarCorreo, actualizarPassword };
+  return { usuarios, loading, error, crearUsuario, actualizarCorreo, actualizarPassword, cargarUsuarios: obtenerUsuarios };
 };
 
 export default useUsuarios;

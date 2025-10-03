@@ -97,7 +97,7 @@ const FormularioUsuario = ({ onCrearUsuario, loading }) => {
     const isWithoutEmail = formData.rol !== 'cliente' || withoutEmail;
     if (isWithoutEmail && previewCredentials.password && previewCredentials.password.length < 5) {
       nuevosErrores.password = 'La contraseña debe tener al menos 5 caracteres';
-      toast.error('❌ La contraseña debe tener al menos 5 caracteres', {
+      toast.error('La contraseña debe tener al menos 5 caracteres', {
         position: "top-right",
         autoClose: 3000
       });
@@ -126,7 +126,7 @@ const FormularioUsuario = ({ onCrearUsuario, loading }) => {
       // Si es sin email y hay credenciales, mostrarlas
       if (isWithoutEmail && resultado.credentials) {
         setPreviewCredentials(resultado.credentials);
-        toast.success(`Usuario creado: ${resultado.credentials.username}. ¡Copia las credenciales!`, {
+        toast.success(`Usuario creado: ${resultado.credentials.username}. Copia las credenciales antes de continuar.`, {
           position: "top-right",
           autoClose: 4000
         });
@@ -147,7 +147,7 @@ const FormularioUsuario = ({ onCrearUsuario, loading }) => {
       }
     } else {
       // Mostrar error
-      toast.error(`❌ ${resultado.message || 'Error al crear usuario'}`, {
+      toast.error(resultado.message || 'Error al crear usuario', {
         position: "top-right",
         autoClose: 4000
       });
@@ -447,7 +447,7 @@ const FormularioUsuario = ({ onCrearUsuario, loading }) => {
 // ============================
 // Tabla de usuarios con edición de correo
 // ============================
-const TablaUsuarios = ({ usuarios, onActualizarCorreo, onActualizarPassword, loading }) => {
+const TablaUsuarios = ({ usuarios, onActualizarCorreo, onActualizarPassword, loading, onRecargar }) => {
   const [edits, setEdits] = useState({});
   const [visiblePasswords, setVisiblePasswords] = useState({});
   const [editingPasswords, setEditingPasswords] = useState({});
@@ -462,11 +462,64 @@ const TablaUsuarios = ({ usuarios, onActualizarCorreo, onActualizarPassword, loa
   };
 
   const handleGuardar = async (id) => {
-    if (!edits[id] || edits[id].trim() === '') {
-      alert('El correo no puede estar vacío');
+    const usuario = usuarios.find(u => u.id === id);
+    
+    const passwordInEdit = editingPasswords[id];
+    const emailChanged = edits[id] && edits[id] !== usuario?.email;
+    
+    // Validar email si cambió
+    if (emailChanged && (!edits[id] || edits[id].trim() === '')) {
+      toast.error('El correo no puede estar vacío', {
+        position: "top-right",
+        autoClose: 3000
+      });
       return;
     }
-    await onActualizarCorreo(id, edits[id]);
+    
+    let passwordSuccess = false;
+    let emailSuccess = false;
+    
+    // Guardar contraseña si está en modo edición
+    if (passwordInEdit) {
+      passwordSuccess = await savePassword(id, true); // true = no mostrar toast
+      if (!passwordSuccess) return; // Si falla la contraseña, no continuar
+    }
+    
+    // Guardar email si hay cambios
+    if (emailChanged) {
+      emailSuccess = await actualizarCorreoSilent(id, edits[id]);
+      if (!emailSuccess) return;
+    }
+    
+    // Mostrar una sola notificación según lo que se actualizó
+    if (passwordSuccess && emailSuccess) {
+      toast.success('Correo y contraseña actualizados correctamente', {
+        position: "top-right",
+        autoClose: 3000
+      });
+    } else if (passwordSuccess) {
+      toast.success('Contraseña actualizada correctamente', {
+        position: "top-right",
+        autoClose: 3000
+      });
+    } else if (emailSuccess) {
+      toast.success('Correo actualizado correctamente', {
+        position: "top-right",
+        autoClose: 3000
+      });
+    }
+    
+    // Limpiar los estados de edición
+    setEdits(prev => {
+      const newEdits = { ...prev };
+      delete newEdits[id];
+      return newEdits;
+    });
+    
+    // Recargar datos del usuario
+    if (onRecargar) {
+      await onRecargar();
+    }
   };
 
   const togglePasswordVisibility = (id) => {
@@ -484,28 +537,65 @@ const TablaUsuarios = ({ usuarios, onActualizarCorreo, onActualizarPassword, loa
     setPasswordEdits(prev => ({ ...prev, [id]: '' }));
   };
 
-  const savePassword = async (id) => {
+  const savePassword = async (id, silent = false) => {
     const newPassword = passwordEdits[id];
     
     if (!newPassword || newPassword.trim() === '') {
-      toast.error('❌ La contraseña no puede estar vacía', {
-        position: "top-right",
-        autoClose: 3000
-      });
-      return;
+      if (!silent) {
+        toast.error('La contraseña no puede estar vacía', {
+          position: "top-right",
+          autoClose: 3000
+        });
+      }
+      return false;
     }
     
     if (newPassword.length < 5) {
-      toast.error('❌ La contraseña debe tener al menos 5 caracteres', {
-        position: "top-right",
-        autoClose: 3000
-      });
-      return;
+      if (!silent) {
+        toast.error('La contraseña debe tener al menos 5 caracteres', {
+          position: "top-right",
+          autoClose: 3000
+        });
+      }
+      return false;
     }
     
-    await onActualizarPassword(id, newPassword);
-    setEditingPasswords(prev => ({ ...prev, [id]: false }));
-    setPasswordEdits(prev => ({ ...prev, [id]: '' }));
+    const resultado = await actualizarPasswordSilent(id, newPassword);
+    if (resultado) {
+      setEditingPasswords(prev => ({ ...prev, [id]: false }));
+      setPasswordEdits(prev => ({ ...prev, [id]: '' }));
+    }
+    return resultado;
+  };
+  
+  const actualizarPasswordSilent = async (id, password) => {
+    try {
+      const response = await fetch(`http://localhost:3001/api/users/update-password/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password })
+      });
+      const data = await response.json();
+      return response.ok;
+    } catch (error) {
+      console.error('Error al actualizar contraseña:', error);
+      return false;
+    }
+  };
+  
+  const actualizarCorreoSilent = async (id, email) => {
+    try {
+      const response = await fetch(`http://localhost:3001/api/users/update-email/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      const data = await response.json();
+      return response.ok;
+    } catch (error) {
+      console.error('Error al actualizar correo:', error);
+      return false;
+    }
   };
 
   const copyToClipboard = (text, label) => {
@@ -609,23 +699,6 @@ const TablaUsuarios = ({ usuarios, onActualizarCorreo, onActualizarPassword, loa
                             />
                             <div style={{ display: 'flex', gap: '4px' }}>
                               <button
-                                onClick={() => savePassword(usuario.id)}
-                                disabled={!passwordEdits[usuario.id] || passwordEdits[usuario.id].length < 5}
-                                style={{
-                                  padding: '4px 8px',
-                                  backgroundColor: passwordEdits[usuario.id]?.length >= 5 ? '#28a745' : '#6c757d',
-                                  color: 'white',
-                                  border: 'none',
-                                  borderRadius: '4px',
-                                  cursor: passwordEdits[usuario.id]?.length >= 5 ? 'pointer' : 'not-allowed',
-                                  display: 'flex',
-                                  alignItems: 'center'
-                                }}
-                                title="Guardar contraseña"
-                              >
-                                <Check size={12} />
-                              </button>
-                              <button
                                 onClick={() => cancelEditingPassword(usuario.id)}
                                 style={{
                                   padding: '4px 8px',
@@ -635,11 +708,13 @@ const TablaUsuarios = ({ usuarios, onActualizarCorreo, onActualizarPassword, loa
                                   borderRadius: '4px',
                                   cursor: 'pointer',
                                   display: 'flex',
-                                  alignItems: 'center'
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  fontSize: '11px'
                                 }}
                                 title="Cancelar edición"
                               >
-                                <X size={12} />
+                                <X size={12} /> Cancelar
                               </button>
                             </div>
                           </>
@@ -715,9 +790,28 @@ const TablaUsuarios = ({ usuarios, onActualizarCorreo, onActualizarPassword, loa
                   <td>{usuario.rol}</td>
                   <td>{new Date(usuario.fecha_registro).toLocaleDateString('es-ES',{ year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' })}</td>
                   <td>
-                    <button className="action-btn btn-success" onClick={() => handleGuardar(usuario.id)} disabled={loading}>
-                      <Save size={16} style={{marginRight:'0.3rem'}}/> Guardar
-                    </button>
+                    {(() => {
+                      // Determinar si hay cambios
+                      const emailChanged = edits[usuario.id] && edits[usuario.id] !== usuario.email;
+                      const passwordChanged = editingPasswords[usuario.id] && passwordEdits[usuario.id] && passwordEdits[usuario.id].length >= 5;
+                      const hasChanges = emailChanged || passwordChanged;
+                      const isPasswordInvalid = editingPasswords[usuario.id] && (!passwordEdits[usuario.id] || passwordEdits[usuario.id].length < 5);
+                      
+                      return (
+                        <button 
+                          className="action-btn btn-success" 
+                          onClick={() => handleGuardar(usuario.id)} 
+                          disabled={loading || !hasChanges || isPasswordInvalid}
+                          style={{
+                            opacity: (loading || !hasChanges || isPasswordInvalid) ? 0.5 : 1,
+                            cursor: (loading || !hasChanges || isPasswordInvalid) ? 'not-allowed' : 'pointer'
+                          }}
+                        >
+                          <Save size={16} style={{marginRight:'0.3rem'}}/> 
+                          Guardar
+                        </button>
+                      );
+                    })()}
                   </td>
                 </tr>
               ))}
@@ -733,7 +827,7 @@ const TablaUsuarios = ({ usuarios, onActualizarCorreo, onActualizarPassword, loa
 // Componente principal
 // ============================
 const GestionUsuarios = () => {
-  const { usuarios, loading, error, crearUsuario, actualizarCorreo, actualizarPassword } = useUsuarios();
+  const { usuarios, loading, error, crearUsuario, actualizarCorreo, actualizarPassword, cargarUsuarios } = useUsuarios();
   const [mensaje, setMensaje] = useState({ texto:'', tipo:'' });
 
   useRoleGuard(['creadorcuentas']);
@@ -748,7 +842,17 @@ const GestionUsuarios = () => {
 
   const handleActualizarCorreo = async (id, email) => {
     const resultado = await actualizarCorreo(id, email);
-    mostrarMensaje(resultado.message, resultado.success?'success':'error');
+    if (resultado.success) {
+      toast.success(resultado.message, {
+        position: "top-right",
+        autoClose: 3000
+      });
+    } else {
+      toast.error(resultado.message, {
+        position: "top-right",
+        autoClose: 3000
+      });
+    }
   };
 
   const handleActualizarPassword = async (id, password) => {
@@ -797,7 +901,7 @@ const GestionUsuarios = () => {
 
       <div className="user-management-content">
         <FormularioUsuario onCrearUsuario={handleCrearUsuario} loading={loading}/>
-        <TablaUsuarios usuarios={usuarios} onActualizarCorreo={handleActualizarCorreo} onActualizarPassword={handleActualizarPassword} loading={loading}/>
+        <TablaUsuarios usuarios={usuarios} onActualizarCorreo={handleActualizarCorreo} onActualizarPassword={handleActualizarPassword} loading={loading} onRecargar={cargarUsuarios}/>
       </div>
     </div>
   );
