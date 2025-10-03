@@ -7,7 +7,7 @@ const useUsuarios = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const API_URL = 'https://country-page.onrender.com/api/users';
+  const API_URL = 'http://localhost:3001/api/users';
 
   useEffect(() => {
     obtenerUsuarios();
@@ -65,8 +65,23 @@ const useUsuarios = () => {
       }
     };
 
+    const actualizarPassword = async (id, nuevaPassword) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const { data } = await axios.patch(`${API_URL}/update-password/${id}`, { password: nuevaPassword });
+        await obtenerUsuarios();
+        return { success: true, message: data.message || 'Contraseña actualizada correctamente' };
+      } catch (err) {
+        console.error(err);
+        return { success: false, message: err.response?.data?.error || 'Error al actualizar contraseña' };
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  return { usuarios, loading, error, crearUsuario, actualizarCorreo };
+
+  return { usuarios, loading, error, crearUsuario, actualizarCorreo, actualizarPassword };
 };
 
 export default useUsuarios;

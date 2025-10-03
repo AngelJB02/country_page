@@ -335,6 +335,34 @@ router.patch('/update-email/:id', async (req, res) => {
   }
 });
 
+// Actualizar contraseña del usuario
+router.patch('/update-password/:id', async (req, res) => {
+  const { id } = req.params;
+  const { password } = req.body;
+  
+  if (!password) {
+    return res.status(400).json({ error: 'La contraseña es requerida' });
+  }
+  
+  if (password.length < 5) {
+    return res.status(400).json({ error: 'La contraseña debe tener al menos 5 caracteres' });
+  }
+
+  try {
+    const [result] = await db.query(
+      "UPDATE usuarios SET password=? WHERE id=?",
+      [password, id]
+    );
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+    res.json({ message: 'Contraseña actualizada correctamente' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al actualizar contraseña' });
+  }
+});
+
 // Actualizar estado del usuario
 router.patch('/update-status/:id', async (req, res) => {
   const { id } = req.params;

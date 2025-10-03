@@ -1,7 +1,7 @@
 // src/components/GestionUsuarios.jsx
 import React, { useState, useEffect } from 'react';
 import '../CSS/RegistroUsuarios.css';
-import { User, UserPlus, AlertCircle, CheckCircle, Loader, Save } from 'lucide-react';
+import { User, UserPlus, AlertCircle, CheckCircle, Loader, Save, Eye, EyeOff, Copy, Edit, X, Check } from 'lucide-react';
 import LogoutButton from './LogoutBoton';
 import useUsuarios from '../hooks/useUsuarios';
 import useRoleGuard from '../hooks/useRoleGuard';
@@ -64,7 +64,7 @@ const FormularioUsuario = ({ onCrearUsuario, loading }) => {
   // Obtener credenciales reales del servidor
   const getRealCredentials = async (nombre, apellido, customPassword = null) => {
     try {
-      const response = await fetch("https://country-page.onrender.com/api/users/preview-credentials", {
+      const response = await fetch("http://localhost:3001/api/users/preview-credentials", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ nombre, apellido, customPassword })
@@ -126,12 +126,12 @@ const FormularioUsuario = ({ onCrearUsuario, loading }) => {
       // Si es sin email y hay credenciales, mostrarlas
       if (isWithoutEmail && resultado.credentials) {
         setPreviewCredentials(resultado.credentials);
-        toast.success(`✅ Usuario creado: ${resultado.credentials.username}. ¡Copia las credenciales!`, {
+        toast.success(`Usuario creado: ${resultado.credentials.username}. ¡Copia las credenciales!`, {
           position: "top-right",
           autoClose: 4000
         });
       } else {
-        toast.success(`✅ Usuario creado exitosamente. Credenciales enviadas por email.`, {
+        toast.success(`Usuario creado exitosamente. Credenciales enviadas por email.`, {
           position: "top-right",
           autoClose: 3000
         });
@@ -297,7 +297,7 @@ const FormularioUsuario = ({ onCrearUsuario, loading }) => {
                   const realCreds = await getRealCredentials(formData.nombre, formData.apellido, previewCredentials.password);
                   const credentialsText = `Username: ${realCreds?.username || previewCredentials.username}\nContraseña: ${realCreds?.password || previewCredentials.password}`;
                   navigator.clipboard.writeText(credentialsText);
-                  setCopyMessage("✅ Credenciales copiadas");
+                  setCopyMessage("Credenciales copiadas");
                   setTimeout(() => setCopyMessage(""), 2000);
                 }}
                 style={{
@@ -447,11 +447,18 @@ const FormularioUsuario = ({ onCrearUsuario, loading }) => {
 // ============================
 // Tabla de usuarios con edición de correo
 // ============================
-const TablaUsuarios = ({ usuarios, onActualizarCorreo, loading }) => {
+const TablaUsuarios = ({ usuarios, onActualizarCorreo, onActualizarPassword, loading }) => {
   const [edits, setEdits] = useState({});
+  const [visiblePasswords, setVisiblePasswords] = useState({});
+  const [editingPasswords, setEditingPasswords] = useState({});
+  const [passwordEdits, setPasswordEdits] = useState({});
 
   const handleChange = (id, value) => {
     setEdits(prev => ({ ...prev, [id]: value }));
+  };
+
+  const handlePasswordChange = (id, value) => {
+    setPasswordEdits(prev => ({ ...prev, [id]: value }));
   };
 
   const handleGuardar = async (id) => {
@@ -460,6 +467,53 @@ const TablaUsuarios = ({ usuarios, onActualizarCorreo, loading }) => {
       return;
     }
     await onActualizarCorreo(id, edits[id]);
+  };
+
+  const togglePasswordVisibility = (id) => {
+    setVisiblePasswords(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const startEditingPassword = (id, currentPassword) => {
+    setEditingPasswords(prev => ({ ...prev, [id]: true }));
+    setPasswordEdits(prev => ({ ...prev, [id]: currentPassword }));
+    setVisiblePasswords(prev => ({ ...prev, [id]: true }));
+  };
+
+  const cancelEditingPassword = (id) => {
+    setEditingPasswords(prev => ({ ...prev, [id]: false }));
+    setPasswordEdits(prev => ({ ...prev, [id]: '' }));
+  };
+
+  const savePassword = async (id) => {
+    const newPassword = passwordEdits[id];
+    
+    if (!newPassword || newPassword.trim() === '') {
+      toast.error('❌ La contraseña no puede estar vacía', {
+        position: "top-right",
+        autoClose: 3000
+      });
+      return;
+    }
+    
+    if (newPassword.length < 5) {
+      toast.error('❌ La contraseña debe tener al menos 5 caracteres', {
+        position: "top-right",
+        autoClose: 3000
+      });
+      return;
+    }
+    
+    await onActualizarPassword(id, newPassword);
+    setEditingPasswords(prev => ({ ...prev, [id]: false }));
+    setPasswordEdits(prev => ({ ...prev, [id]: '' }));
+  };
+
+  const copyToClipboard = (text, label) => {
+    navigator.clipboard.writeText(text);
+    toast.success(`${label} copiado al portapapeles`, {
+      position: "top-right",
+      autoClose: 2000
+    });
   };
 
   return (
@@ -479,6 +533,7 @@ const TablaUsuarios = ({ usuarios, onActualizarCorreo, loading }) => {
                 <th>ID</th>
                 <th>Nombre Completo</th>
                 <th>Email</th>
+                <th>Credenciales</th>
                 <th>Rol</th>
                 <th>Fecha Registro</th>
                 <th>Acción</th>
@@ -497,6 +552,165 @@ const TablaUsuarios = ({ usuarios, onActualizarCorreo, loading }) => {
                       className="form-input"
                       disabled={loading}
                     />
+                  </td>
+                  <td>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '200px' }}>
+                      {/* Username */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#f8f9fa', padding: '6px 10px', borderRadius: '6px', border: '1px solid #dee2e6' }}>
+                        <span style={{ fontSize: '12px', fontWeight: '600', color: '#6c757d', minWidth: '60px' }}>Usuario:</span>
+                        <code style={{ flex: 1, fontSize: '13px', color: '#495057', fontFamily: 'monospace' }}>
+                          {usuario.username || 'N/A'}
+                        </code>
+                        {usuario.username && (
+                          <button
+                            onClick={() => copyToClipboard(usuario.username, 'Usuario')}
+                            style={{
+                              padding: '4px 8px',
+                              backgroundColor: '#007bff',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              fontSize: '11px'
+                            }}
+                            title="Copiar usuario"
+                          >
+                            <Copy size={12} />
+                          </button>
+                        )}
+                      </div>
+                      
+                      {/* Password */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#fff3cd', padding: '6px 10px', borderRadius: '6px', border: '1px solid #ffc107' }}>
+                        <span style={{ fontSize: '12px', fontWeight: '600', color: '#856404', minWidth: '60px' }}>Clave:</span>
+                        
+                        {editingPasswords[usuario.id] ? (
+                          // Modo edición
+                          <>
+                            <input
+                              type="text"
+                              value={passwordEdits[usuario.id] || ''}
+                              onChange={(e) => handlePasswordChange(usuario.id, e.target.value)}
+                              style={{ 
+                                flex: 1,
+                                fontFamily: 'monospace', 
+                                fontSize: '13px', 
+                                padding: '4px 8px', 
+                                backgroundColor: '#fff', 
+                                border: `2px solid ${passwordEdits[usuario.id]?.length < 5 ? '#dc3545' : '#28a745'}`,
+                                borderRadius: '4px',
+                                outline: 'none'
+                              }}
+                              placeholder="Nueva contraseña (min. 5)"
+                              minLength={5}
+                            />
+                            <div style={{ display: 'flex', gap: '4px' }}>
+                              <button
+                                onClick={() => savePassword(usuario.id)}
+                                disabled={!passwordEdits[usuario.id] || passwordEdits[usuario.id].length < 5}
+                                style={{
+                                  padding: '4px 8px',
+                                  backgroundColor: passwordEdits[usuario.id]?.length >= 5 ? '#28a745' : '#6c757d',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  cursor: passwordEdits[usuario.id]?.length >= 5 ? 'pointer' : 'not-allowed',
+                                  display: 'flex',
+                                  alignItems: 'center'
+                                }}
+                                title="Guardar contraseña"
+                              >
+                                <Check size={12} />
+                              </button>
+                              <button
+                                onClick={() => cancelEditingPassword(usuario.id)}
+                                style={{
+                                  padding: '4px 8px',
+                                  backgroundColor: '#dc3545',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center'
+                                }}
+                                title="Cancelar edición"
+                              >
+                                <X size={12} />
+                              </button>
+                            </div>
+                          </>
+                        ) : (
+                          // Modo visualización
+                          <>
+                            <code style={{ flex: 1, fontSize: '13px', color: '#856404', fontFamily: 'monospace' }}>
+                              {visiblePasswords[usuario.id] ? (usuario.password || 'N/A') : '••••••••'}
+                            </code>
+                            <div style={{ display: 'flex', gap: '4px' }}>
+                              {usuario.password && (
+                                <>
+                                  <button
+                                    onClick={() => togglePasswordVisibility(usuario.id)}
+                                    style={{
+                                      padding: '4px 8px',
+                                      backgroundColor: '#ffc107',
+                                      color: '#856404',
+                                      border: 'none',
+                                      borderRadius: '4px',
+                                      cursor: 'pointer',
+                                      display: 'flex',
+                                      alignItems: 'center'
+                                    }}
+                                    title={visiblePasswords[usuario.id] ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                                  >
+                                    {visiblePasswords[usuario.id] ? <EyeOff size={12} /> : <Eye size={12} />}
+                                  </button>
+                                  <button
+                                    onClick={() => copyToClipboard(usuario.password, 'Contraseña')}
+                                    style={{
+                                      padding: '4px 8px',
+                                      backgroundColor: '#ffc107',
+                                      color: '#856404',
+                                      border: 'none',
+                                      borderRadius: '4px',
+                                      cursor: 'pointer',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '4px',
+                                      fontSize: '11px'
+                                    }}
+                                    title="Copiar contraseña"
+                                  >
+                                    <Copy size={12} />
+                                  </button>
+                                  <button
+                                    onClick={() => startEditingPassword(usuario.id, usuario.password)}
+                                    style={{
+                                      padding: '4px 8px',
+                                      backgroundColor: '#17a2b8',
+                                      color: 'white',
+                                      border: 'none',
+                                      borderRadius: '4px',
+                                      cursor: 'pointer',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '4px',
+                                      fontSize: '11px'
+                                    }}
+                                    title="Editar contraseña"
+                                  >
+                                    <Edit size={12} />
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   </td>
                   <td>{usuario.rol}</td>
                   <td>{new Date(usuario.fecha_registro).toLocaleDateString('es-ES',{ year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' })}</td>
@@ -519,7 +733,7 @@ const TablaUsuarios = ({ usuarios, onActualizarCorreo, loading }) => {
 // Componente principal
 // ============================
 const GestionUsuarios = () => {
-  const { usuarios, loading, error, crearUsuario, actualizarCorreo } = useUsuarios();
+  const { usuarios, loading, error, crearUsuario, actualizarCorreo, actualizarPassword } = useUsuarios();
   const [mensaje, setMensaje] = useState({ texto:'', tipo:'' });
 
   useRoleGuard(['creadorcuentas']);
@@ -535,6 +749,21 @@ const GestionUsuarios = () => {
   const handleActualizarCorreo = async (id, email) => {
     const resultado = await actualizarCorreo(id, email);
     mostrarMensaje(resultado.message, resultado.success?'success':'error');
+  };
+
+  const handleActualizarPassword = async (id, password) => {
+    const resultado = await actualizarPassword(id, password);
+    if (resultado.success) {
+      toast.success(resultado.message, {
+        position: "top-right",
+        autoClose: 3000
+      });
+    } else {
+      toast.error(resultado.message, {
+        position: "top-right",
+        autoClose: 3000
+      });
+    }
   };
 
   const handleLogout = () => { localStorage.removeItem('token'); sessionStorage.clear(); window.location.href='/login'; };
@@ -568,7 +797,7 @@ const GestionUsuarios = () => {
 
       <div className="user-management-content">
         <FormularioUsuario onCrearUsuario={handleCrearUsuario} loading={loading}/>
-        <TablaUsuarios usuarios={usuarios} onActualizarCorreo={handleActualizarCorreo} loading={loading}/>
+        <TablaUsuarios usuarios={usuarios} onActualizarCorreo={handleActualizarCorreo} onActualizarPassword={handleActualizarPassword} loading={loading}/>
       </div>
     </div>
   );
