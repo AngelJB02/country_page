@@ -7,7 +7,8 @@ const useUsuarios = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const API_URL = 'https://country-page.onrender.com/api/users'; // Cambiar según tu backend
+  const API_URL = 'https://country-page.onrender.com/api/users';
+
 
   useEffect(() => {
     obtenerUsuarios();
@@ -31,9 +32,17 @@ const useUsuarios = () => {
     setLoading(true);
     setError(null);
     try {
+      // Siempre usar /register para el formulario de RegistroUsuarios
+      // (register-cliente es solo para Contabilidad donde se manejan pagos)
       const { data } = await axios.post(`${API_URL}/register`, nuevoUsuario);
       await obtenerUsuarios();
-      return { success: true, message: data.message };
+      
+      // Retornar credenciales si las hay (para usuarios sin email)
+      return { 
+        success: true, 
+        message: data.message,
+        credentials: data.credentials || null
+      };
     } catch (err) {
       console.error(err);
       return { success: false, message: err.response?.data?.error || 'Error al registrar usuario' };
@@ -57,8 +66,23 @@ const useUsuarios = () => {
       }
     };
 
+    const actualizarPassword = async (id, nuevaPassword) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const { data } = await axios.patch(`${API_URL}/update-password/${id}`, { password: nuevaPassword });
+        await obtenerUsuarios();
+        return { success: true, message: data.message || 'Contraseña actualizada correctamente' };
+      } catch (err) {
+        console.error(err);
+        return { success: false, message: err.response?.data?.error || 'Error al actualizar contraseña' };
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  return { usuarios, loading, error, crearUsuario, actualizarCorreo };
+
+  return { usuarios, loading, error, crearUsuario, actualizarCorreo, actualizarPassword, cargarUsuarios: obtenerUsuarios };
 };
 
 export default useUsuarios;

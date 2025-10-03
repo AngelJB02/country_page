@@ -1,5 +1,7 @@
 import express from 'express';
 import db from '../server/db.js';
+import { generateCredentials } from './utils/credentialsGenerator.js';
+import axios from 'axios';
 
 const router = express.Router();
 
@@ -87,33 +89,122 @@ router.get('/users-with-payments', async (req, res) => {
 
 // Registrar usuario
 router.post('/register', async (req, res) => {
-  const { nombre, apellido, email, password, rol } = req.body;
-  if (!nombre || !apellido || !email || !password)
-    return res.status(400).json({ error: 'Faltan datos' });
+  const { nombre, apellido, email, rol, withoutEmail, customPassword } = req.body;
+  
+  // Validar campos requeridos básicos
+  if (!nombre || !apellido || !rol) {
+    return res.status(400).json({ error: 'Faltan datos: nombre, apellido y rol son requeridos' });
+  }
+  
+  // Validar email solo si no es usuario sin email
+  if (!withoutEmail && !email) {
+    return res.status(400).json({ error: 'Email es requerido para usuarios con correo electrónico' });
+  }
 
   try {
-    const [result] = await db.query(
-      "INSERT INTO usuarios(nombre, apellido, email, password, rol, estado, fecha_registro) VALUES(?,?,?,?,?,'activo',NOW())",
-      [nombre, apellido, email, password, rol]
-    );
-    res.json({ message: 'Usuario registrado correctamente', id: result.insertId });
+    // 1. Generar credenciales automáticamente (usar contraseña personalizada si se proporciona)
+    const { username, password } = await generateCredentials(nombre, apellido, customPassword);
+    
+    // 2. Crear el usuario en la base de datos
+    let result;
+    if (withoutEmail) {
+      // Para usuarios sin email, usar un placeholder único
+      const placeholderEmail = `sin-email-${username}@local.placeholder`;
+      [result] = await db.query(
+        "INSERT INTO usuarios(nombre, apellido, email, password, rol, estado, fecha_registro, username) VALUES(?,?,?,?,?,'activo',NOW(),?)",
+        [nombre, apellido, placeholderEmail, password, rol, username]
+      );
+    } else {
+      // Para usuarios con email normal
+      [result] = await db.query(
+        "INSERT INTO usuarios(nombre, apellido, email, password, rol, estado, fecha_registro, username) VALUES(?,?,?,?,?,'activo',NOW(),?)",
+        [nombre, apellido, email, password, rol, username]
+      );
+    }
+    
+    // 3. Enviar credenciales por email solo si NO es usuario sin email
+    if (!withoutEmail) {
+      try {
+        await axios.post('https://country-page.onrender.com/api/email/send-credentials', {
+          nombre,
+          apellido,
+          email,
+          username,
+          password,
+          rol
+        });
+        console.log(`Credenciales enviadas por email a: ${email}`);
+      } catch (emailError) {
+        console.error('Error enviando email:', emailError.message);
+        // No fallar la creación del usuario si falla el email
+      }
+    }
+    
+    // 4. Respuesta diferente según si es con o sin email
+    if (withoutEmail) {
+      res.json({ 
+        message: 'Usuario registrado correctamente. Las credenciales están listas para distribución manual.',
+        id: result.insertId,
+        credentials: {
+          username,
+          password
+        }
+      });
+    } else {
+      res.json({ 
+        message: 'Usuario registrado correctamente y credenciales enviadas por email', 
+        id: result.insertId,
+        username,
+        email_sent: true
+      });
+    }
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al registrar usuario' });
   }
 });
 
+// Endpoint para obtener previsualización de credenciales (sin crear usuario)
+router.post('/preview-credentials', async (req, res) => {
+  const { nombre, apellido, customPassword } = req.body;
+  
+  // Validar campos requeridos
+  if (!nombre || !apellido) {
+    return res.status(400).json({ error: 'Nombre y apellido son requeridos' });
+  }
+  
+  try {
+    // Generar credenciales (esto ya verifica duplicados en la BD)
+    const { username, password } = await generateCredentials(nombre, apellido, customPassword);
+    
+    res.json({ 
+      credentials: {
+        username,
+        password
+      }
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al generar credenciales' });
+  }
+});
+
 // Registrar cliente con información de pagos
 router.post('/register-cliente', async (req, res) => {
-  const { nombre, apellido, email, password, monto, fecha_pago, proxima_fecha, metodo_pago } = req.body;
+  const { nombre, apellido, email, monto, fecha_pago, proxima_fecha, metodo_pago, withoutEmail, customPassword } = req.body;
   
   // Validar campos requeridos del usuario
-  if (!nombre || !apellido || !email || !password) {
-    return res.status(400).json({ error: 'Faltan datos del usuario: nombre, apellido, email, password son requeridos' });
+  if (!nombre || !apellido) {
+    return res.status(400).json({ error: 'Faltan datos del usuario: nombre y apellido son requeridos' });
+  }
+  
+  // Validar email solo si no es usuario sin email
+  if (!withoutEmail && !email) {
+    return res.status(400).json({ error: 'Email es requerido para usuarios con correo electrónico' });
   }
   
   // Validar campos requeridos de pago
-  if (!monto || !fecha_pago || !proxima_fecha) {
+  if ((monto === null || monto === undefined || monto === "") || !fecha_pago || !proxima_fecha) {
     return res.status(400).json({ error: 'Faltan datos de pago: monto, fecha_pago, proxima_fecha son requeridos' });
   }
 
@@ -123,31 +214,70 @@ router.post('/register-cliente', async (req, res) => {
   try {
     await connection.beginTransaction();
     
-    // 1. Crear el usuario con rol 'cliente'
-    const [userResult] = await connection.query(
-      "INSERT INTO usuarios(nombre, apellido, email, password, rol, estado, fecha_registro) VALUES(?,?,?,?,'cliente','activo',NOW())",
-      [nombre, apellido, email, password]
-    );
+    // 1. Generar credenciales automáticamente (usar contraseña personalizada si se proporciona)
+    const { username, password } = await generateCredentials(nombre, apellido, customPassword);
+    
+    // 2. Crear el usuario con rol 'cliente'
+    let userResult;
+    if (withoutEmail) {
+      // Para usuarios sin email, usar un placeholder único
+      const placeholderEmail = `sin-email-${username}@local.placeholder`;
+      [userResult] = await connection.query(
+        "INSERT INTO usuarios(nombre, apellido, email, password, rol, estado, fecha_registro, username) VALUES(?,?,?,?,'cliente','activo',NOW(),?)",
+        [nombre, apellido, placeholderEmail, password, username]
+      );
+    } else {
+      // Para usuarios con email normal
+      [userResult] = await connection.query(
+        "INSERT INTO usuarios(nombre, apellido, email, password, rol, estado, fecha_registro, username) VALUES(?,?,?,?,'cliente','activo',NOW(),?)",
+        [nombre, apellido, email, password, username]
+      );
+    }
     
     const userId = userResult.insertId;
     
-    // 2. Formatear fechas para MySQL
+    // 3. Formatear fechas para MySQL
     const fechaPagoFormatted = formatDateForMySQL(fecha_pago);
     const proximaFechaFormatted = formatDateForMySQL(proxima_fecha);
     const metodoPago = metodo_pago || 'efectivo';
     
-    // 3. Crear el registro de pago
+    // 4. Crear el registro de pago
     await connection.query(
       'INSERT INTO pagos (id_usuario, monto, fecha_pago, proxima_fecha, metodo_pago) VALUES (?, ?, ?, ?, ?)',
       [userId, monto, fechaPagoFormatted, proximaFechaFormatted, metodoPago]
     );
     
-    // 4. Confirmar transacción
+    // 5. Confirmar transacción
     await connection.commit();
     
+    // 6. Enviar credenciales por email solo si NO es usuario sin email
+    let emailSent = false;
+    if (!withoutEmail && email) {
+      try {
+        await axios.post('https://country-page.onrender.com/api/email/send-credentials', {
+          nombre,
+          apellido,
+          email,
+          username,
+          password,
+          rol: 'cliente'
+        });
+        console.log(`Credenciales enviadas por email a: ${email}`);
+        emailSent = true;
+      } catch (emailError) {
+        console.error('Error enviando email:', emailError.message);
+        // No fallar la creación del usuario si falla el email
+      }
+    }
+    
     res.json({ 
-      message: 'Cliente registrado correctamente con información de pagos', 
+      message: withoutEmail 
+        ? 'Cliente registrado correctamente. Credenciales listas para distribución manual.'
+        : 'Cliente registrado correctamente con información de pagos y credenciales enviadas por email', 
       id: userId,
+      username,
+      email_sent: emailSent,
+      credentials: withoutEmail ? { username, password } : undefined, // Devolver credenciales para usuarios sin email
       usuario: {
         id: userId,
         nombre,
@@ -202,6 +332,34 @@ router.patch('/update-email/:id', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al actualizar correo' });
+  }
+});
+
+// Actualizar contraseña del usuario
+router.patch('/update-password/:id', async (req, res) => {
+  const { id } = req.params;
+  const { password } = req.body;
+  
+  if (!password) {
+    return res.status(400).json({ error: 'La contraseña es requerida' });
+  }
+  
+  if (password.length < 5) {
+    return res.status(400).json({ error: 'La contraseña debe tener al menos 5 caracteres' });
+  }
+
+  try {
+    const [result] = await db.query(
+      "UPDATE usuarios SET password=? WHERE id=?",
+      [password, id]
+    );
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+    res.json({ message: 'Contraseña actualizada correctamente' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al actualizar contraseña' });
   }
 });
 
@@ -623,6 +781,54 @@ router.put('/payment/:id', async (req, res) => {
     }
     
     res.status(500).json({ error: 'Error al actualizar pago' });
+  }
+});
+
+// Cambiar contraseña de usuario
+router.post('/change-password', async (req, res) => {
+  const { userId, currentPassword, newPassword } = req.body;
+
+  // Validar datos requeridos
+  if (!userId || !currentPassword || !newPassword) {
+    return res.status(400).json({ error: "Faltan datos requeridos" });
+  }
+
+  // Validar longitud de nueva contraseña
+  if (newPassword.length < 5) {
+    return res.status(400).json({ error: "La nueva contraseña debe tener al menos 5 caracteres" });
+  }
+
+  try {
+    // Verificar contraseña actual
+    const [userRows] = await db.query(
+      "SELECT id, password FROM usuarios WHERE id = ?",
+      [userId]
+    );
+
+    if (userRows.length === 0) {
+      return res.status(404).json({ error: "Usuario no encontrado" });
+    }
+
+    const user = userRows[0];
+    
+    // Verificar que la contraseña actual sea correcta
+    if (user.password !== currentPassword) {
+      return res.status(401).json({ error: "La contraseña actual es incorrecta" });
+    }
+
+    // Actualizar contraseña
+    await db.query(
+      "UPDATE usuarios SET password = ? WHERE id = ?",
+      [newPassword, userId]
+    );
+
+    res.json({ 
+      mensaje: "Contraseña actualizada exitosamente" 
+    });
+
+  } catch (err) {
+    console.error("❌ Error al cambiar contraseña:", err);
+    return res.status(500).json({ error: "Error en el servidor" });
   }
 });
 

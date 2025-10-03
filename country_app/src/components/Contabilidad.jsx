@@ -31,11 +31,15 @@ const MembershipAdminDashboard = () => {
   const [creatingClient, setCreatingClient] = useState(false)
   const [paymentCounts, setPaymentCounts] = useState({})
   const [paymentStatus, setPaymentStatus] = useState({})
+  const [withoutEmail, setWithoutEmail] = useState(false)
+  const [previewCredentials, setPreviewCredentials] = useState({ username: "", password: "" })
+  const [credentialsModalOpen, setCredentialsModalOpen] = useState(false)
+  const [copyMessage, setCopyMessage] = useState("")
+  const [userCreatedSuccessfully, setUserCreatedSuccessfully] = useState(false)
   const [newClient, setNewClient] = useState({
     nombre: "",
     apellido: "",
     email: "",
-    password: "",
     monto: "",
     fecha_pago: "",
     proxima_fecha: "",
@@ -81,6 +85,81 @@ const MembershipAdminDashboard = () => {
     if (!dateString) return ""
     const date = new Date(dateString)
     return isNaN(date.getTime()) ? "" : date.toISOString().split("T")[0]
+  }
+
+  // Funciones para generar credenciales en frontend (solo para vista previa)
+  const generateSecurePassword = () => {
+    const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+    const numbers = '0123456789';
+    const allChars = uppercase + lowercase + numbers;
+    
+    let password = '';
+    // Asegurar al menos 1 mayúscula, 1 minúscula y 1 número
+    password += uppercase[Math.floor(Math.random() * uppercase.length)];
+    password += lowercase[Math.floor(Math.random() * lowercase.length)];
+    password += numbers[Math.floor(Math.random() * numbers.length)];
+    
+    // Completar con caracteres aleatorios hasta llegar a 8
+    for (let i = 3; i < 8; i++) {
+      password += allChars[Math.floor(Math.random() * allChars.length)];
+    }
+    
+    // Mezclar los caracteres
+    return password.split('').sort(() => Math.random() - 0.5).join('');
+  };
+
+  const normalizeText = (text, maxLength = 10) => {
+    return text
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]/g, '')
+      .substring(0, maxLength);
+  };
+
+  const getFirstWord = (text) => {
+    const firstWord = text.trim().split(/\s+/)[0];
+    return normalizeText(firstWord, 8);
+  };
+
+  const generatePreviewUsername = (nombre, apellido) => {
+    if (!nombre.trim() || !apellido.trim()) return '';
+    
+    const primerNombre = getFirstWord(nombre);
+    const primerApellido = getFirstWord(apellido);
+    
+    let baseUsername = `${primerNombre}.${primerApellido}`;
+    
+    if (baseUsername.length < 4) {
+      baseUsername = primerNombre + primerApellido;
+    }
+    
+    if (baseUsername.length > 15) {
+      const apellidoTruncado = primerApellido.substring(0, 15 - primerNombre.length - 1);
+      baseUsername = `${primerNombre}.${apellidoTruncado}`;
+    }
+    
+    return baseUsername;
+  };
+
+  // Función para obtener las credenciales reales del servidor (con verificación de duplicados)
+  const getRealCredentials = async (nombre, apellido, customPassword = null) => {
+    try {
+      const response = await fetch("https://country-page.onrender.com/api/users/preview-credentials", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nombre, apellido, customPassword }),
+      })
+      
+      if (response.ok) {
+        const result = await response.json()
+        return result.credentials
+      }
+    } catch (error) {
+      console.error("Error obteniendo credenciales reales:", error)
+    }
+    return null
   }
 
   // Función para formatear números con separadores de miles
@@ -145,6 +224,31 @@ const MembershipAdminDashboard = () => {
     loadPaymentCounts()
     loadPaymentStatus()
   }, [])
+
+  // Generar credenciales de vista previa cuando cambian nombre/apellido
+  useEffect(() => {
+    if (withoutEmail && newClient.nombre && newClient.apellido) {
+      // Usar credenciales reales del servidor
+      const updateRealCredentials = async () => {
+        try {
+          const password = previewCredentials.password || generateSecurePassword();
+          const realCredentials = await getRealCredentials(newClient.nombre, newClient.apellido, password);
+          if (realCredentials) {
+            setPreviewCredentials(realCredentials);
+          }
+        } catch (error) {
+          console.error('Error al obtener credenciales reales:', error);
+          // Fallback a credenciales de vista previa
+          const username = generatePreviewUsername(newClient.nombre, newClient.apellido);
+          const password = previewCredentials.password || generateSecurePassword();
+          setPreviewCredentials({ username, password });
+        }
+      };
+      updateRealCredentials();
+    } else if (!withoutEmail) {
+      setPreviewCredentials({ username: "", password: "" });
+    }
+  }, [withoutEmail, newClient.nombre, newClient.apellido]);
 
   // Obtener usuario actual del localStorage
   useEffect(() => {
@@ -211,12 +315,14 @@ const MembershipAdminDashboard = () => {
       nombre: "",
       apellido: "",
       email: "",
-      password: "",
       monto: "",
       fecha_pago: "",
       proxima_fecha: "",
       metodo_pago: "efectivo",
     })
+    setWithoutEmail(false)
+    setPreviewCredentials({ username: "", password: "" })
+    setUserCreatedSuccessfully(false)
     searchRef.current?.blur() // Quitar foco del buscador
     setAddClientModalOpen(true)
     setTimeout(() => addFirstInputRef.current?.focus(), 0)
@@ -224,11 +330,13 @@ const MembershipAdminDashboard = () => {
 
   const closeAddClientModal = () => {
     setAddClientModalOpen(false)
+    setWithoutEmail(false)
+    setPreviewCredentials({ username: "", password: "" })
+    setUserCreatedSuccessfully(false)
     setNewClient({
       nombre: "",
       apellido: "",
       email: "",
-      password: "",
       monto: "",
       fecha_pago: "",
       proxima_fecha: "",
@@ -405,23 +513,37 @@ const MembershipAdminDashboard = () => {
     if (creatingClient) return;
     setCreatingClient(true);
     try {
-      if (!newClient.nombre || !newClient.apellido || !newClient.email || !newClient.password) {
-        showNotification("Por favor completa todos los datos del cliente", "error")
+      if (!newClient.nombre || !newClient.apellido) {
+        showNotification("Por favor completa el nombre y apellido del cliente", "error")
         return;
       }
-      if (!newClient.monto || !newClient.fecha_pago || !newClient.proxima_fecha) {
+      
+      // Validación específica para usuarios con email
+      if (!withoutEmail) {
+        if (!newClient.email) {
+          showNotification("Por favor completa el email del cliente", "error")
+          return;
+        }
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+        if (!emailRegex.test(newClient.email)) {
+          showNotification("Por favor ingresa un email válido", "error")
+          return;
+        }
+      }
+      
+      // Validación de contraseña para usuarios sin email
+      if (withoutEmail) {
+        if (!previewCredentials.password || previewCredentials.password.length < 5) {
+          showNotification("La contraseña debe tener al menos 5 caracteres", "error")
+          return;
+        }
+      }
+      
+      if (newClient.monto === "" || newClient.monto === null || newClient.monto === undefined || !newClient.fecha_pago || !newClient.proxima_fecha) {
         showNotification("Por favor completa toda la información de pagos", "error")
         return;
       }
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-      if (!emailRegex.test(newClient.email)) {
-        showNotification("Por favor ingresa un email válido", "error")
-        return;
-      }
-      if (newClient.password.length < 5) {
-        showNotification("La contraseña debe tener al menos 5 caracteres", "error")
-        return;
-      }
+      
       // Validar que la fecha de próximo pago no sea anterior a la fecha de pago
       const fechaPago = new Date(newClient.fecha_pago)
       const proximaFecha = new Date(newClient.proxima_fecha)
@@ -429,18 +551,54 @@ const MembershipAdminDashboard = () => {
         showNotification("La fecha de próximo pago no puede ser anterior a la fecha de pago", "error")
         return;
       }
+
+      // Preparar datos del cliente
+      const clientData = {
+        ...newClient,
+        withoutEmail: withoutEmail,
+        ...(withoutEmail && previewCredentials.password && {
+          customPassword: previewCredentials.password
+        })
+      }
+
       const response = await fetch("https://country-page.onrender.com/api/users/register-cliente", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newClient),
+        body: JSON.stringify(clientData),
       })
+      
       if (response.ok) {
-        await response.json()
+        const result = await response.json()
         refreshUsersList()
         loadPaymentCounts()
         loadPaymentStatus()
+        
+        // Si es usuario sin email, cerrar modal inmediatamente después de crear
+        if (withoutEmail && result.credentials) {
+          // Actualizar las credenciales con las reales del servidor (incluyendo numeración si existe)
+          setPreviewCredentials({
+            username: result.credentials.username,
+            password: result.credentials.password
+          })
+          setUserCreatedSuccessfully(true)
+          
+          // Mostrar notificación y cerrar modal inmediatamente
+          showNotification(
+            `✅ Usuario creado: ${result.credentials.username}`, 
+            "success"
+          )
+          
+          closeAddClientModal()
+          return; // No continuar con el flujo normal
+        }
+        
         closeAddClientModal()
-        showNotification("Cliente registrado correctamente", "success")
+        showNotification(
+          withoutEmail 
+            ? "Cliente registrado correctamente. Las credenciales están listas para distribución manual." 
+            : "Cliente registrado correctamente. Las credenciales se han enviado por email.", 
+          "success"
+        )
       } else {
         const error = await response.json()
         showNotification("Error al crear cliente: " + (error?.error ?? "Error desconocido"), "error")
@@ -866,6 +1024,9 @@ const MembershipAdminDashboard = () => {
 
               <div className="modal-section">
                 <h3>Información Personal</h3>
+                <div style={{background: 'rgba(139, 111, 78, 0.1)', border: '1px solid rgba(139, 111, 78, 0.3)', borderRadius: '8px', padding: '12px', margin: '10px 0 20px 0', fontSize: '14px', color: '#8b6f4e'}}>
+                  🔑 <strong>Credenciales automáticas:</strong> El username y contraseña se generarán automáticamente y se enviarán por email al cliente.
+                </div>
                 <div className="modal-field">
                   <label>Nombre *:</label>
                   <input
@@ -897,50 +1058,204 @@ const MembershipAdminDashboard = () => {
                     data-form-type="other"
                   />
                 </div>
-                <div className="modal-field">
-                  <label>Email *:</label>
+                <div className="modal-field" style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
+                  <label style={{color: withoutEmail ? '#999' : 'inherit'}}>
+                    Email {!withoutEmail && '*'}:
+                  </label>
                   <input
                     type="email"
-                    value={newClient.email}
-                    onChange={(e) => setNewClient({ ...newClient, email: e.target.value })}
-                    placeholder="ejemplo@email.com"
+                    value={withoutEmail ? '' : newClient.email}
+                    onChange={(e) => !withoutEmail && setNewClient({ ...newClient, email: e.target.value })}
+                    placeholder={withoutEmail ? "Email deshabilitado" : "ejemplo@email.com"}
                     autoComplete="off"
                     name="newclient-email"
                     inputMode="email"
                     data-lpignore="true"
                     data-form-type="other"
-                  />
-                </div>
-                <div className="modal-field">
-                  <label>Contraseña *:</label>
-                  <input
-                    type="password"
-                    value={newClient.password}
-                    onChange={(e) => setNewClient({ ...newClient, password: e.target.value })}
-                    placeholder="Contraseña segura"
-                    autoComplete="new-password"
-                    name="newclient-password"
-                    data-lpignore="true"
-                    data-form-type="other"
+                    disabled={withoutEmail}
                     style={{
-                      borderColor: newClient.password.length === 0 ? '#ddd' : 
-                                  newClient.password.length >= 5 ? '#9caf88' : '#c17b4a'
+                      border: '1px solid #ced4da',
+                      borderRadius: '4px',
+                      padding: '8px 12px',
+                      backgroundColor: withoutEmail ? '#f5f5f5' : 'white',
+                      color: withoutEmail ? '#999' : 'inherit',
+                      cursor: withoutEmail ? 'not-allowed' : 'text'
                     }}
                   />
-                  {newClient.password.length > 0 && (
-                    <div style={{
-                      fontSize: '0.85rem',
-                      marginTop: '4px',
-                      color: newClient.password.length >= 5 ? '#9caf88' : '#c17b4a',
-                      fontWeight: '500'
-                    }}>
-                      {newClient.password.length >= 5 ? 
-                        '✓ La contraseña cumple con el mínimo de 5 caracteres' : 
-                        `Faltan ${5 - newClient.password.length} caracteres (mínimo 5)`
-                      }
+                  <label style={{
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '8px', 
+                    cursor: 'pointer', 
+                    fontSize: '14px', 
+                    fontWeight: '500', 
+                    color: '#495057',
+                    marginTop: '4px'
+                  }} onClick={() => setWithoutEmail(!withoutEmail)}>
+                    <input
+                      type="checkbox"
+                      checked={withoutEmail}
+                      onChange={(e) => setWithoutEmail(e.target.checked)}
+                      style={{width: '16px', height: '16px'}}
+                    />
+                    Usuario sin correo electrónico
+                  </label>
+                  {withoutEmail && (
+                    <div style={{fontSize: '12px', color: '#666', marginTop: '4px'}}>
+                      Las credenciales se mostrarán para distribución manual
                     </div>
                   )}
                 </div>
+
+                {withoutEmail && previewCredentials.username && (
+                  <div style={{
+                    background: userCreatedSuccessfully ? '#d4edda' : '#fff3cd', 
+                    border: `1px solid ${userCreatedSuccessfully ? '#c3e6cb' : '#ffeaa7'}`, 
+                    borderRadius: '6px', 
+                    padding: '15px', 
+                    marginBottom: '15px'
+                  }}>
+                    <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px'}}>
+                      <h4 style={{margin: 0, color: userCreatedSuccessfully ? '#155724' : '#856404', fontSize: '14px'}}>
+                        {userCreatedSuccessfully ? '🎉 ¡Usuario creado exitosamente!' : '⚠️ Credenciales a crear:'}
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (userCreatedSuccessfully) {
+                            // Si ya se creó, usar las credenciales que ya tenemos
+                            const credentialsText = `Username: ${previewCredentials.username}\nContraseña: ${previewCredentials.password}`;
+                            navigator.clipboard.writeText(credentialsText);
+                            setCopyMessage("Texto copiado");
+                            setTimeout(() => setCopyMessage(""), 2000);
+                          } else {
+                            // Si no se ha creado, obtener credenciales reales del servidor
+                            setCopyMessage("Obteniendo credenciales reales...");
+                            const realCredentials = await getRealCredentials(
+                              newClient.nombre, 
+                              newClient.apellido, 
+                              previewCredentials.password
+                            );
+                            
+                            if (realCredentials) {
+                              // Actualizar la vista con las credenciales reales
+                              setPreviewCredentials(realCredentials);
+                              // Copiar las credenciales reales
+                              const credentialsText = `Username: ${realCredentials.username}\nContraseña: ${realCredentials.password}`;
+                              navigator.clipboard.writeText(credentialsText);
+                              setCopyMessage("✅ Credenciales reales copiadas");
+                              setTimeout(() => setCopyMessage(""), 3000);
+                            } else {
+                              setCopyMessage("❌ Error obteniendo credenciales");
+                              setTimeout(() => setCopyMessage(""), 2000);
+                            }
+                          }
+                        }}
+                        style={{
+                          padding: '6px 12px',
+                          backgroundColor: userCreatedSuccessfully ? '#28a745' : '#f0ad4e',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                        title="Copiar ambas credenciales"
+                      >
+                        📋 Copiar todo
+                      </button>
+                    </div>
+                    
+                    {copyMessage && (
+                      <div style={{
+                        background: '#d4edda',
+                        color: '#155724',
+                        border: '1px solid #c3e6cb',
+                        borderRadius: '4px',
+                        padding: '8px',
+                        marginBottom: '10px',
+                        fontSize: '12px',
+                        textAlign: 'center'
+                      }}>
+                        ✅ {copyMessage}
+                      </div>
+                    )}
+
+                    {!userCreatedSuccessfully && (
+                      <div style={{
+                        background: '#fcf8e3',
+                        color: '#8a6d3b',
+                        border: '1px solid #faebcc',
+                        borderRadius: '4px',
+                        padding: '10px',
+                        marginBottom: '12px',
+                        fontSize: '13px',
+                        fontWeight: '500'
+                      }}>
+                        💡 <strong>RECOMENDACIÓN:</strong> Copia estas credenciales ANTES de crear la cuenta. Una vez creada, el modal se cerrará automáticamente.
+                      </div>
+                    )}
+                    
+                    <div style={{marginBottom: '10px'}}>
+                      <label style={{fontSize: '12px', color: '#6c757d', fontWeight: 'bold'}}>Username:</label>
+                      <div style={{
+                        background: 'white', 
+                        border: '1px solid #ced4da', 
+                        borderRadius: '4px', 
+                        padding: '8px', 
+                        fontFamily: 'monospace', 
+                        fontSize: '14px'
+                      }}>
+                        {previewCredentials.username}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label style={{fontSize: '12px', color: '#6c757d', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px'}}>
+                        Contraseña:
+                        {!userCreatedSuccessfully && (
+                          <span style={{fontSize: '11px', color: '#8b6f4e', fontWeight: 'normal'}}>✏️ (editable)</span>
+                        )}
+                      </label>
+                      <input
+                        type="text"
+                        value={previewCredentials.password}
+                        onChange={(e) => !userCreatedSuccessfully && setPreviewCredentials({...previewCredentials, password: e.target.value})}
+                        disabled={userCreatedSuccessfully}
+                        style={{
+                          width: '100%',
+                          border: `2px solid ${
+                            userCreatedSuccessfully 
+                              ? '#28a745' 
+                              : previewCredentials.password.length > 0 && previewCredentials.password.length < 5
+                                ? '#dc3545'
+                                : '#8b6f4e'
+                          }`, 
+                          borderRadius: '4px', 
+                          padding: '8px', 
+                          fontFamily: 'monospace', 
+                          fontSize: '14px',
+                          backgroundColor: userCreatedSuccessfully ? '#f8fff9' : '#fafafa',
+                          cursor: userCreatedSuccessfully ? 'default' : 'text'
+                        }}
+                        placeholder={userCreatedSuccessfully ? "Contraseña final" : "Mínimo 5 caracteres"}
+                      />
+                      {!userCreatedSuccessfully && previewCredentials.password.length > 0 && previewCredentials.password.length < 5 && (
+                        <div style={{ fontSize: '11px', color: '#dc3545', marginTop: '4px', fontWeight: '500' }}>
+                          ⚠️ Contraseña muy corta ({previewCredentials.password.length}/5 caracteres)
+                        </div>
+                      )}
+                      {!userCreatedSuccessfully && previewCredentials.password.length >= 5 && (
+                        <div style={{ fontSize: '11px', color: '#28a745', marginTop: '4px', fontWeight: '500' }}>
+                          ✓ Contraseña válida ({previewCredentials.password.length} caracteres)
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="modal-section">
@@ -949,7 +1264,7 @@ const MembershipAdminDashboard = () => {
                   <label>Monto Mensualidad *:</label>
                   <input
                     type="number"
-                    value={newClient.monto === 0 ? "" : newClient.monto}
+                    value={newClient.monto === "" ? "" : newClient.monto}
                     onChange={(e) => {
                       const val = e.target.value;
                       setNewClient({
