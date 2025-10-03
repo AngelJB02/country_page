@@ -64,7 +64,7 @@ const FormularioUsuario = ({ onCrearUsuario, loading }) => {
   // Obtener credenciales reales del servidor
   const getRealCredentials = async (nombre, apellido, customPassword = null) => {
     try {
-      const response = await fetch("http://localhost:3001/api/users/preview-credentials", {
+      const response = await fetch("https://country-page.onrender.com/api/users/preview-credentials", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ nombre, apellido, customPassword })
