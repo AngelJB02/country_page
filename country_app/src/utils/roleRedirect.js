@@ -1,6 +1,6 @@
 // src/utils/roleRedirects.js
 export const roleRedirects = {
-  admin: "/contabilidad",
+  admin: "/admin",
   instructor: "/instructor",
   contabilidad: "/contabilidad",
   viewer: "/dashboard-viewer",
