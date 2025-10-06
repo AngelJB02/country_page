@@ -1,13 +1,11 @@
 import { useState, useEffect, useRef } from "react"
-import { useNavigate } from "react-router-dom";
 import ReactDOM from "react-dom"
+import "../../CSS/Contabilidad.css"
 import LogoutButton from '../LogoutBoton'
 import { UserPlus, Eye, XCircle, CheckCircle, Loader, Search, History, AlertTriangle, Clock, AlertCircle, Edit } from "lucide-react"
-import useRoleGuard from '../hooks/useRoleGuard';
-import "./CSS/Contabilidad.css"
+import useRoleGuard from '../../hooks/useRoleGuard';
 
-const MembershipAdminDashboard = () => {
-  const navigate = useNavigate();
+const MembershipAdminDashboardLocal = () => {
   useRoleGuard(['admin', 'contabilidad']);
 
   const [members, setMembers] = useState([])
@@ -46,9 +44,7 @@ const MembershipAdminDashboard = () => {
     fecha_pago: "",
     proxima_fecha: "",
     metodo_pago: "efectivo",
-    rol: "cliente"
   })
-  const [isAdminUser, setIsAdminUser] = useState(false);
 
   // Refs para controlar foco y autofill
   const searchRef = useRef(null)
@@ -559,7 +555,6 @@ const MembershipAdminDashboard = () => {
       // Preparar datos del cliente
       const clientData = {
         ...newClient,
-        rol: isAdminUser ? "admin" : "cliente",
         withoutEmail: withoutEmail,
         ...(withoutEmail && previewCredentials.password && {
           customPassword: previewCredentials.password
@@ -580,19 +575,23 @@ const MembershipAdminDashboard = () => {
         
         // Si es usuario sin email, cerrar modal inmediatamente después de crear
         if (withoutEmail && result.credentials) {
+          // Actualizar las credenciales con las reales del servidor (incluyendo numeración si existe)
           setPreviewCredentials({
             username: result.credentials.username,
             password: result.credentials.password
           })
           setUserCreatedSuccessfully(true)
+          
+          // Mostrar notificación y cerrar modal inmediatamente
           showNotification(
             `✅ Usuario creado: ${result.credentials.username}`, 
             "success"
           )
+          
           closeAddClientModal()
-          if (isAdminUser) navigate("/admin");
-          return;
+          return; // No continuar con el flujo normal
         }
+        
         closeAddClientModal()
         showNotification(
           withoutEmail 
@@ -600,7 +599,6 @@ const MembershipAdminDashboard = () => {
             : "Cliente registrado correctamente. Las credenciales se han enviado por email.", 
           "success"
         )
-        if (isAdminUser) navigate("/admin");
       } else {
         const error = await response.json()
         showNotification("Error al crear cliente: " + (error?.error ?? "Error desconocido"), "error")
@@ -708,26 +706,6 @@ const MembershipAdminDashboard = () => {
 
   return (
     <div className="dashboard-container">
-      {/* HEADER */}
-      <div className="dashboard-header enhanced-header">
-        <div className="header-bg">
-          <div className="header-texts">
-            <h1 className="header-title">Panel de Administración</h1>
-            <p className="header-subtitle">Gestiona usuarios y membresías de tu plataforma</p>
-          </div>
-          <div className="header-actions">
-            {currentUser && (
-              <LogoutButton 
-                userName={currentUser.nombre || 'Admin'} 
-                showUserName={true}
-              />
-            )}
-            <button className="add-client-btn" onClick={openAddClientModal} type="button">
-              <UserPlus size={20} /> Nuevo Cliente
-            </button>
-          </div>
-        </div>
-      </div>
 
       {/* ESTADÍSTICAS */}
       <div className="stats-grid">
@@ -1022,21 +1000,7 @@ const MembershipAdminDashboard = () => {
         renderPortal(
           <div className="modal-overlay" onClick={closeAddClientModal}>
             <div className="modal-content add-client-modal" onClick={(e) => e.stopPropagation()}>
-              <h2>Agregar Nuevo Usuario</h2>
-              <div style={{marginBottom: '10px'}}>
-                <label style={{fontWeight: 'bold', fontSize: '15px'}}>
-                  <input
-                    type="checkbox"
-                    checked={isAdminUser}
-                    onChange={e => setIsAdminUser(e.target.checked)}
-                    style={{marginRight: '8px'}}
-                  />
-                  Crear como usuario administrador
-                </label>
-                <span style={{fontSize: '12px', color: '#8b6f4e', marginLeft: '8px'}}>
-                  (Accederá al panel de administración tras crear)
-                </span>
-              </div>
+              <h2>Agregar Nuevo Cliente</h2>
 
               <div className="modal-section">
                 <h3>Información Personal</h3>
@@ -1556,4 +1520,4 @@ const MembershipAdminDashboard = () => {
   )
 }
 
-export default MembershipAdminDashboard
+export default MembershipAdminDashboardLocal

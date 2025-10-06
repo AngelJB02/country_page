@@ -90,6 +90,7 @@
   background: linear-gradient(135deg, var(--warm-white) 0%, #faf8f3 100%);
   min-height: 100vh;
   padding: var(--spacing-lg) var(--spacing-md);
+  border-radius: 16px;
   animation: fadeIn 0.6s ease-out;
 }
 

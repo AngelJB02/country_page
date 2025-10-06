@@ -24,14 +24,12 @@ const ReservasAdmin = ({ reservations }) => {
 
   return (
     <div className="dashboard-container">
-      <div className="dashboard-header enhanced-header">
+      {/* <div className="dashboard-header enhanced-header">
         <div className="header-bg">
           <div className="header-texts">
-            <h1 className="header-title">Reservas - Panel de Administración</h1>
-            <p className="header-subtitle">Visualiza todas las reservas registradas en el sistema</p>
           </div>
         </div>
-      </div>
+      </div> */}
       <div style={{ marginBottom: '2rem' }}>
         <div className="stats-grid">
           <div className="stat-card">

@@ -1,41 +1,153 @@
-import React, { useState, useEffect } from 'react';
-import Contabilidad from "./Contabilidad";
-import ReservasAdmin from "./administrador/ReservasAdmin";
+import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
+ import Contabilidad from './administrador/ContabilidadLocal';
+import LogoutButton from './LogoutBoton';
+import ReservasAdmin from './administrador/ReservasAdmin';
+import { Search, Calendar, Clock, User, Loader, DollarSign, TrendingUp, TrendingDown, Download, Filter, CalendarCheck, FileText } from 'lucide-react';
+import '../CSS/AdminPanel.css';
+const AdminPanel = () => {
+  const [activeTab, setActiveTab] = useState('reservas'); // 'reservas' o 'contabilidad'
+  // reservations stored as an object keyed by date (yyyy-mm-dd) to match administrador/ReservasAdmin
+  const [reservations, setReservations] = useState({});
 
-const Administrador = () => {
-	const [reservations, setReservations] = useState({});
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [activityFilter, setActivityFilter] = useState('');
+  const [transactionTypeFilter, setTransactionTypeFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [notification, setNotification] = useState(null);
+  const searchRef = useRef(null);
 
-	useEffect(() => {
-		axios.get('https://country-page.onrender.com/api/reservas')
-			.then(response => {
-				const reservasPorFecha = {};
-				response.data.forEach(reserva => {
-					let fechaKey = reserva.fecha;
-					if (typeof fechaKey === 'string' && fechaKey.includes('T')) {
-						fechaKey = fechaKey.split('T')[0];
-					} else if (typeof fechaKey === 'string' && fechaKey.length >= 10) {
-						fechaKey = fechaKey.substring(0, 10);
-					}
-					if (!reservasPorFecha[fechaKey]) reservasPorFecha[fechaKey] = [];
-					reservasPorFecha[fechaKey].push({
-						...reserva,
-						time: reserva.horario,
-						actividad: reserva.clase_tipo || reserva.actividad
-					});
-				});
-				setReservations(reservasPorFecha);
-			})
-			.catch(() => setReservations({}));
-	}, []);
+  const activities = ['yoga', 'pilates', 'spinning', 'crossfit', 'zumba'];
+  const categories = ['Mensualidades', 'Clases individuales', 'Equipamiento', 'Servicios', 'Mantenimiento', 'Otros'];
 
-	return (
-		<div>
-			<Contabilidad />
-			<hr />
-			<ReservasAdmin reservations={reservations} />
-		</div>
-	);
+  // Fetch reservations once on mount and store them keyed by date (like the Administrador example you provided)
+  useEffect(() => {
+    let mounted = true
+    axios.get('https://country-page.onrender.com/api/reservas')
+      .then(response => {
+        const reservasPorFecha = {};
+        response.data.forEach(reserva => {
+          let fechaKey = reserva.fecha;
+          if (typeof fechaKey === 'string' && fechaKey.includes('T')) {
+            fechaKey = fechaKey.split('T')[0];
+          } else if (typeof fechaKey === 'string' && fechaKey.length >= 10) {
+            fechaKey = fechaKey.substring(0, 10);
+          }
+          if (!reservasPorFecha[fechaKey]) reservasPorFecha[fechaKey] = [];
+          reservasPorFecha[fechaKey].push({
+            ...reserva,
+            time: reserva.horario,
+            actividad: reserva.clase_tipo || reserva.actividad
+          });
+        });
+        if (mounted) setReservations(reservasPorFecha);
+      })
+      .catch(() => {
+        if (mounted) setReservations({});
+      });
+    return () => { mounted = false }
+  }, []);
+
+  const showNotification = (message, type = 'success') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 3000);
+  };
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('es-ES', { 
+      day: '2-digit', 
+      month: 'short', 
+      year: 'numeric' 
+    });
+  };
+
+  const formatCurrency = (amount) => {
+    return amount.toLocaleString('es-MX');
+  };
+
+  const getActivityClass = (actividad) => {
+    const classes = {
+      yoga: 'activity-yoga',
+      pilates: 'activity-pilates',
+      spinning: 'activity-spinning',
+      crossfit: 'activity-crossfit',
+      zumba: 'activity-zumba'
+    };
+    return classes[actividad] || '';
+  };
+
+  const handleStatusChange = (id, newStatus) => {
+    setReservations(prev =>
+      prev.map(r => r.id === id ? { ...r, estado: newStatus } : r)
+    );
+    showNotification(`Estado actualizado a ${newStatus}`, 'success');
+  };
+  const handleLogout = () => {
+    console.log('Cerrando sesión...');
+    window.location.href = '/login';
+    window.location.reload();
+  };
+
+  return (
+    <div className="admin-container">
+      {/* Logout */}
+      <div className="admin-logout">
+        <LogoutButton onLogout={handleLogout} size="normal" showUserName={true} />
+      </div>
+    
+
+      {/* Notificación */}
+      {notification && (
+        <div className={`notification ${notification.type}`}>
+          {notification.message}
+        </div>
+      )}
+
+      {/* Header */}
+      <div className="dashboard-header">
+        <div className="header-content">
+          <div>
+            <h1 className="header-title">Panel de Administración</h1>
+            <p className="header-subtitle">Gestiona reservas y contabilidad de tu plataforma</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="tabs-container">
+        <button 
+          className={`tab-button ${activeTab === 'reservas' ? 'active' : ''}`}
+          onClick={() => setActiveTab('reservas')}
+        >
+          <CalendarCheck size={20} />
+          Reservas
+        </button>
+        <button 
+          className={`tab-button ${activeTab === 'contabilidad' ? 'active' : ''}`}
+          onClick={() => setActiveTab('contabilidad')}
+        >
+          <FileText size={20} />
+          Contabilidad
+        </button>
+      </div>
+
+      {/* CONTENIDO: render components that provide the actual data/views */}
+      {activeTab === 'reservas' && (
+        <div>
+          <ReservasAdmin reservations={reservations} />
+        </div>
+      )}
+
+      {activeTab === 'contabilidad' && (
+        <div>
+          <Contabilidad />
+        </div>
+      )}
+    </div>
+  );
 };
 
-export default Administrador;
+export default AdminPanel;
