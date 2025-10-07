@@ -13,7 +13,7 @@ import useRoleGuard from '../hooks/useRoleGuard';
 const MenuCalendario = () => {
   useRoleGuard(['cliente', 'administrador']);
 
-  const [currentDate, setCurrentDate] = useState(new Date(2025, 8, 1));
+  const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTime, setSelectedTime] = useState(null);
   const [bookingData, setBookingData] = useState({
@@ -76,7 +76,8 @@ const MenuCalendario = () => {
 
   // Cargar disponibilidad cuando se selecciona una fecha
   useEffect(() => {
-    if (selectedDate) {
+    // Sólo cargar horarios y disponibilidad cuando hay fecha y actividad seleccionada
+    if (selectedDate && bookingData.actividad) {
       // Array completo para mapear getDay()
       const diasSemana = ['domingo','lunes','martes','miercoles','jueves','viernes','sabado'];
       // Solo estos días existen en tu tabla
@@ -88,8 +89,11 @@ const MenuCalendario = () => {
       } else {
         setHorariosDia([]); // Lunes: no hay horarios
       }
+    } else if (selectedDate && !bookingData.actividad) {
+      // Si hay fecha pero no actividad, limpiar horarios para forzar selección previa
+      setHorariosDia([]);
     }
-  }, [selectedDate]);
+  }, [selectedDate, bookingData.actividad]);
 
   // Cerrar modal con tecla ESC
   useEffect(() => {
@@ -420,6 +424,11 @@ const MenuCalendario = () => {
       ...prev,
       [name]: value
     }));
+
+    // Si el usuario cambia la actividad, resetear el horario seleccionado
+    if (name === 'actividad') {
+      setSelectedTime(null);
+    }
   };
 
   // Función para cancelar una reserva
@@ -875,10 +884,24 @@ const MenuCalendario = () => {
                           })}
                         </select>
                       </div>
+                      {/* Mensaje moved inside 'Horarios Disponibles' below */}
                   <h4>Horarios Disponibles</h4>
                   <div className="time-period">
                     <div className="time-slots-grid">
-                      {horariosDia.length === 0 ? (
+                      {/* Si no hay actividad seleccionada pedir primero seleccionar actividad (ahora con mensaje destacado) */}
+                      {!bookingData.actividad ? (
+                        <div style={{
+                          marginBottom: '12px',
+                          padding: '10px',
+                          backgroundColor: '#fff3cd',
+                          border: '1px solid #ffeeba',
+                          borderRadius: '6px',
+                          color: '#856404',
+                          fontWeight: 500
+                        }}>
+                          Selecciona primero la actividad para cargar los horarios.
+                        </div>
+                      ) : horariosDia.length === 0 ? (
                         <p>No hay horarios disponibles para este día.</p>
                       ) : (
                         horariosDia.map(slot => {
