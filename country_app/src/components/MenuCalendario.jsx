@@ -871,7 +871,6 @@ const MenuCalendario = () => {
                           value={bookingData.actividad}
                           onChange={handleInputChange}
                           disabled={loading || !currentUser}
-                          autoFocus
                         >
                           <option value="">Selecciona una actividad</option>
                           {actividades.map(actividad => {
