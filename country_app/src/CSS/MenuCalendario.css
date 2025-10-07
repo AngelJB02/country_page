@@ -565,7 +565,7 @@
 .date-modal {
   background: var(--warm-white);
   border-radius: 24px;
-  padding: 2rem 1.8rem;
+  padding: 0;
   max-width: 600px;
   min-width: 340px;
   min-height: 400px;
@@ -574,21 +574,18 @@
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
   position: relative;
   animation: modalSlideIn 0.3s ease;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--primary-brown) var(--cream);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   border: 1px solid rgba(107, 68, 35, 0.08);
 }
 
 .date-modal::-webkit-scrollbar {
-  width: 6px;
-  background: var(--cream);
-  border-radius: 3px;
+  display: none;
 }
 
-.date-modal::-webkit-scrollbar-thumb {
-  background: var(--primary-brown);
-  border-radius: 3px;
+.date-modal {
+  scrollbar-width: none;
 }
 
 .success-modal {
@@ -618,13 +615,13 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.2rem;
+  margin-bottom: 0;
   color: var(--warm-white);
   gap: 1rem;
   background: linear-gradient(135deg, var(--primary-brown) 0%, var(--secondary-brown) 100%);
   padding: 45px 46px;
   border-radius: 24px 24px 0 0;
-  margin: -2rem -1.8rem 1.2rem -1.8rem;
+  flex-shrink: 0;
 }
 
 .modal-header h2, .date-modal .modal-header h2 {
@@ -679,8 +676,23 @@
 }
 
 .modal-content, .date-modal .modal-content {
-  padding: 16px 12px 10px 12px;
+  padding: 1.5rem 1.8rem;
   text-align: left;
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary-brown) var(--cream);
+}
+
+.date-modal .modal-content::-webkit-scrollbar {
+  width: 6px;
+  background: var(--cream);
+  border-radius: 3px;
+}
+
+.date-modal .modal-content::-webkit-scrollbar-thumb {
+  background: var(--primary-brown);
+  border-radius: 3px;
 }
 .date-modal h4 {
   color: var(--primary-brown);
@@ -1004,6 +1016,7 @@
 .time-slot.occupied {
   background: #f8f9fa;
   border-color: #dee2e6;
+  color: #999;
   cursor: not-allowed;
   opacity: 0.6;
 }
@@ -1021,4 +1034,65 @@
   color: #b94a48;
   margin-top: 4px;
   font-weight: 500;
+}
+
+/* Mensaje informativo para seleccionar actividad antes de mostrar horarios */
+.activity-hint {
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  background-color: var(--warning-bg, #fff3cd);
+  border: 1px solid var(--warning-border, #ffeeba);
+  border-radius: 8px;
+  color: var(--warning-text, #856404);
+  font-weight: 600;
+  width: 100%;
+  box-sizing: border-box;
+  max-width: none;
+  transition: opacity 180ms ease, transform 180ms ease;
+  opacity: 1;
+}
+
+@media (max-width: 520px) {
+  .activity-hint {
+    font-size: 0.95rem;
+    max-width: 100%;
+    padding: 10px;
+  }
+}
+
+/* clase para animación de entrada */
+.activity-hint--hidden {
+  opacity: 0;
+  transform: translateY(-4px);
+  pointer-events: none;
+}
+
+/* pequeño icono opcional dentro del hint */
+.activity-hint__icon {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  margin-right: 8px;
+  vertical-align: middle;
+  background: transparent;
+}
+
+/* Cuando el hint está dentro de la grid de horarios, ocupar todas las columnas */
+.time-slots-grid .activity-hint {
+  grid-column: 1 / -1;
+  align-self: start; /* evitar centrar verticalmente en cada celda */
+}
+
+/* Asegurar stretch completo y que el contenido esté centrado verticalmente */
+.time-slots-grid .activity-hint {
+  justify-self: stretch;
+  width: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.activity-hint { /* asegurar bloque flexible y padding consistente */
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }

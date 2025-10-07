@@ -871,6 +871,7 @@ const MenuCalendario = () => {
                           value={bookingData.actividad}
                           onChange={handleInputChange}
                           disabled={loading || !currentUser}
+                          autoFocus
                         >
                           <option value="">Selecciona una actividad</option>
                           {actividades.map(actividad => {
@@ -890,15 +891,8 @@ const MenuCalendario = () => {
                     <div className="time-slots-grid">
                       {/* Si no hay actividad seleccionada pedir primero seleccionar actividad (ahora con mensaje destacado) */}
                       {!bookingData.actividad ? (
-                        <div style={{
-                          marginBottom: '12px',
-                          padding: '10px',
-                          backgroundColor: '#fff3cd',
-                          border: '1px solid #ffeeba',
-                          borderRadius: '6px',
-                          color: '#856404',
-                          fontWeight: 500
-                        }}>
+                        <div className="activity-hint" role="status" aria-live="polite">
+                          <span className="activity-hint__icon" aria-hidden="true">⚠️</span>
                           Selecciona primero la actividad para cargar los horarios.
                         </div>
                       ) : horariosDia.length === 0 ? (
