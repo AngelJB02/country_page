@@ -710,7 +710,7 @@ const MembershipAdminDashboard = () => {
       <div className="dashboard-header enhanced-header">
         <div className="header-bg">
           <div className="header-texts">
-            <h1 className="header-title">Panel de Administración</h1>
+            <h1 className="header-title">Panel de Contabilidad</h1>
             <p className="header-subtitle">Gestiona usuarios y membresías de tu plataforma</p>
           </div>
           <div className="header-actions">
