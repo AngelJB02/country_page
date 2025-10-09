@@ -799,9 +799,9 @@ router.post('/change-password', async (req, res) => {
   }
 
   try {
-    // Verificar contraseña actual
+    // Verificar contraseña actual y obtener información completa del usuario
     const [userRows] = await db.query(
-      "SELECT id, password FROM usuarios WHERE id = ?",
+      "SELECT id, nombre, email, username, password FROM usuarios WHERE id = ?",
       [userId]
     );
 
@@ -822,9 +822,39 @@ router.post('/change-password', async (req, res) => {
       [newPassword, userId]
     );
 
-    res.json({ 
-      mensaje: "Contraseña actualizada exitosamente" 
-    });
+    // Enviar email con credenciales actualizadas si el usuario tiene email
+    if (user.email) {
+      try {
+        const emailResponse = await axios.post('https://country-page.onrender.com/api/email/send-updated-credentials', {
+          email: user.email,
+          nombre: user.nombre,
+          username: user.username,
+          newPassword: newPassword
+        });
+        
+        console.log("✅ Email de credenciales actualizadas enviado exitosamente");
+        
+        res.json({ 
+          mensaje: "Contraseña actualizada exitosamente",
+          emailSent: true,
+          emailInfo: "Se han enviado las credenciales actualizadas por correo electrónico"
+        });
+      } catch (emailError) {
+        console.error("⚠️ Error al enviar email:", emailError);
+        
+        res.json({ 
+          mensaje: "Contraseña actualizada exitosamente",
+          emailSent: false,
+          emailError: "No se pudo enviar el email con las credenciales actualizadas"
+        });
+      }
+    } else {
+      res.json({ 
+        mensaje: "Contraseña actualizada exitosamente",
+        emailSent: false,
+        emailInfo: "Usuario sin email registrado"
+      });
+    }
 
   } catch (err) {
     console.error("❌ Error al cambiar contraseña:", err);

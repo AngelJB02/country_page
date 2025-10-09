@@ -36,6 +36,11 @@ const MenuCalendario = () => {
   });
   const [passwordErrors, setPasswordErrors] = useState({});
   const [passwordLoading, setPasswordLoading] = useState(false);
+  
+  // Estados para mostrar/ocultar contraseñas
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Estado para reservas y disponibilidad
   const [reservations, setReservations] = useState({});
@@ -629,6 +634,10 @@ const MenuCalendario = () => {
     });
     setPasswordErrors({});
     setPasswordLoading(false);
+    // Resetear estados de visibilidad
+    setShowCurrentPassword(false);
+    setShowNewPassword(false);
+    setShowConfirmPassword(false);
   };
 
   const handlePasswordChange = (e) => {
@@ -686,13 +695,23 @@ const MenuCalendario = () => {
         newPassword: passwordData.newPassword
       });
       
-      toast.success('✅ Contraseña actualizada exitosamente');
+      // Mostrar un solo mensaje combinado
+      if (response.data.emailSent) {
+        toast.success('Contraseña actualizada exitosamente y credenciales enviadas por email');
+      } else if (response.data.emailInfo) {
+        toast.success(`Contraseña actualizada exitosamente. ${response.data.emailInfo}`);
+      } else if (response.data.emailError) {
+        toast.warning(`Contraseña actualizada exitosamente pero ${response.data.emailError.toLowerCase()}`);
+      } else {
+        toast.success('Contraseña actualizada exitosamente');
+      }
+      
       closePasswordModal();
       
     } catch (error) {
       console.error('Error al cambiar contraseña:', error);
       const errorMessage = error.response?.data?.error || 'Error al cambiar la contraseña';
-      toast.error(`❌ ${errorMessage}`);
+      toast.error(errorMessage);
       
       // Si la contraseña actual es incorrecta, marcar ese error específicamente
       if (error.response?.status === 401) {
@@ -1130,20 +1149,69 @@ const MenuCalendario = () => {
                 <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
                   Contraseña actual:
                 </label>
-                <input
-                  type="password"
-                  name="currentPassword"
-                  value={passwordData.currentPassword}
-                  onChange={handlePasswordChange}
-                  placeholder="Ingresa tu contraseña actual"
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    border: passwordErrors.currentPassword ? '2px solid #ff4444' : '1px solid #ddd',
-                    borderRadius: '4px',
-                    fontSize: '16px'
-                  }}
-                />
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={showCurrentPassword ? "text" : "password"}
+                    name="currentPassword"
+                    value={passwordData.currentPassword}
+                    onChange={handlePasswordChange}
+                    placeholder="Ingresa tu contraseña actual"
+                    style={{
+                      width: '100%',
+                      padding: window.innerWidth <= 768 ? '12px 52px 12px 12px' : '10px 48px 10px 10px',
+                      border: passwordErrors.currentPassword ? '2px solid #ff4444' : '1px solid #ddd',
+                      borderRadius: '4px',
+                      fontSize: window.innerWidth <= 768 ? '16px' : '16px',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                    style={{
+                      position: 'absolute',
+                      right: '8px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: showCurrentPassword ? '#e9ecef' : '#f8f9fa',
+                      border: '1px solid #dee2e6',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: window.innerWidth <= 768 ? '10px' : '12px',
+                      color: '#495057',
+                      fontWeight: '500',
+                      padding: window.innerWidth <= 768 ? '6px 8px' : '4px 6px',
+                      transition: 'all 0.2s ease',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                      minHeight: window.innerWidth <= 768 ? '36px' : '30px',
+                      minWidth: window.innerWidth <= 768 ? '40px' : '32px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                    tabIndex={-1}
+                    onMouseEnter={(e) => {
+                      e.target.style.background = '#dee2e6';
+                      e.target.style.boxShadow = '0 2px 4px rgba(0,0,0,0.15)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.background = showCurrentPassword ? '#e9ecef' : '#f8f9fa';
+                      e.target.style.boxShadow = '0 1px 2px rgba(0,0,0,0.1)';
+                    }}
+                  >
+                    {showCurrentPassword ? (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                        <line x1="1" y1="1" x2="23" y2="23"/>
+                      </svg>
+                    ) : (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    )}
+                  </button>
+                </div>
                 {passwordErrors.currentPassword && (
                   <div style={{ color: '#ff4444', fontSize: '14px', marginTop: '5px' }}>
                     {passwordErrors.currentPassword}
@@ -1155,20 +1223,69 @@ const MenuCalendario = () => {
                 <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
                   Nueva contraseña:
                 </label>
-                <input
-                  type="password"
-                  name="newPassword"
-                  value={passwordData.newPassword}
-                  onChange={handlePasswordChange}
-                  placeholder="Mínimo 5 caracteres"
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    border: passwordErrors.newPassword ? '2px solid #ff4444' : '1px solid #ddd',
-                    borderRadius: '4px',
-                    fontSize: '16px'
-                  }}
-                />
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={showNewPassword ? "text" : "password"}
+                    name="newPassword"
+                    value={passwordData.newPassword}
+                    onChange={handlePasswordChange}
+                    placeholder="Mínimo 5 caracteres"
+                    style={{
+                      width: '100%',
+                      padding: window.innerWidth <= 768 ? '12px 52px 12px 12px' : '10px 48px 10px 10px',
+                      border: passwordErrors.newPassword ? '2px solid #ff4444' : '1px solid #ddd',
+                      borderRadius: '4px',
+                      fontSize: window.innerWidth <= 768 ? '16px' : '16px',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    style={{
+                      position: 'absolute',
+                      right: '8px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: showNewPassword ? '#e9ecef' : '#f8f9fa',
+                      border: '1px solid #dee2e6',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: window.innerWidth <= 768 ? '10px' : '12px',
+                      color: '#495057',
+                      fontWeight: '500',
+                      padding: window.innerWidth <= 768 ? '6px 8px' : '4px 6px',
+                      transition: 'all 0.2s ease',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                      minHeight: window.innerWidth <= 768 ? '36px' : '30px',
+                      minWidth: window.innerWidth <= 768 ? '40px' : '32px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                    tabIndex={-1}
+                    onMouseEnter={(e) => {
+                      e.target.style.background = '#dee2e6';
+                      e.target.style.boxShadow = '0 2px 4px rgba(0,0,0,0.15)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.background = showNewPassword ? '#e9ecef' : '#f8f9fa';
+                      e.target.style.boxShadow = '0 1px 2px rgba(0,0,0,0.1)';
+                    }}
+                  >
+                    {showNewPassword ? (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                        <line x1="1" y1="1" x2="23" y2="23"/>
+                      </svg>
+                    ) : (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    )}
+                  </button>
+                </div>
                 {passwordErrors.newPassword && (
                   <div style={{ color: '#ff4444', fontSize: '14px', marginTop: '5px' }}>
                     {passwordErrors.newPassword}
@@ -1180,20 +1297,69 @@ const MenuCalendario = () => {
                 <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
                   Confirmar nueva contraseña:
                 </label>
-                <input
-                  type="password"
-                  name="confirmPassword"
-                  value={passwordData.confirmPassword}
-                  onChange={handlePasswordChange}
-                  placeholder="Repite la nueva contraseña"
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    border: passwordErrors.confirmPassword ? '2px solid #ff4444' : '1px solid #ddd',
-                    borderRadius: '4px',
-                    fontSize: '16px'
-                  }}
-                />
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    name="confirmPassword"
+                    value={passwordData.confirmPassword}
+                    onChange={handlePasswordChange}
+                    placeholder="Repite la nueva contraseña"
+                    style={{
+                      width: '100%',
+                      padding: window.innerWidth <= 768 ? '12px 52px 12px 12px' : '10px 48px 10px 10px',
+                      border: passwordErrors.confirmPassword ? '2px solid #ff4444' : '1px solid #ddd',
+                      borderRadius: '4px',
+                      fontSize: window.innerWidth <= 768 ? '16px' : '16px',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    style={{
+                      position: 'absolute',
+                      right: '8px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: showConfirmPassword ? '#e9ecef' : '#f8f9fa',
+                      border: '1px solid #dee2e6',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: window.innerWidth <= 768 ? '10px' : '12px',
+                      color: '#495057',
+                      fontWeight: '500',
+                      padding: window.innerWidth <= 768 ? '6px 8px' : '4px 6px',
+                      transition: 'all 0.2s ease',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                      minHeight: window.innerWidth <= 768 ? '36px' : '30px',
+                      minWidth: window.innerWidth <= 768 ? '40px' : '32px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                    tabIndex={-1}
+                    onMouseEnter={(e) => {
+                      e.target.style.background = '#dee2e6';
+                      e.target.style.boxShadow = '0 2px 4px rgba(0,0,0,0.15)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.background = showConfirmPassword ? '#e9ecef' : '#f8f9fa';
+                      e.target.style.boxShadow = '0 1px 2px rgba(0,0,0,0.1)';
+                    }}
+                  >
+                    {showConfirmPassword ? (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                        <line x1="1" y1="1" x2="23" y2="23"/>
+                      </svg>
+                    ) : (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    )}
+                  </button>
+                </div>
                 {passwordErrors.confirmPassword && (
                   <div style={{ color: '#ff4444', fontSize: '14px', marginTop: '5px' }}>
                     {passwordErrors.confirmPassword}
