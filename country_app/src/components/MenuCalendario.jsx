@@ -49,6 +49,7 @@ const MenuCalendario = () => {
 
   // Estado para usuario logueado
   const [currentUser, setCurrentUser] = useState(null);
+  const [userEmail, setUserEmail] = useState('');
 
   // Estado para horarios del día cargados dinámicamente
   const [horariosDia, setHorariosDia] = useState([]);
@@ -123,7 +124,7 @@ const MenuCalendario = () => {
       const startDate = `${year}-${month.toString().padStart(2, '0')}-01`;
       const endDate = new Date(year, month, 0).toISOString().split('T')[0];
 
-      const response = await axios.get('https://country-page.onrender.com/api/reservas', {
+      const response = await axios.get('http://localhost:3001/api/reservas', {
         params: { 
           fecha_inicio: startDate, 
           fecha_fin: endDate 
@@ -188,7 +189,7 @@ const MenuCalendario = () => {
   // Función para obtener disponibilidad de una fecha específica
   const fetchAvailability = async (dateString) => {
     try {
-      const response = await axios.get('https://country-page.onrender.com/api/reservas/availability', {
+      const response = await axios.get('http://localhost:3001/api/reservas/availability', {
         params: { fecha: dateString },
         timeout: 8000 // 8 segundos de timeout
       });
@@ -444,7 +445,7 @@ const MenuCalendario = () => {
 
     setLoading(true);
     try {
-            await axios.delete(`https://country-page.onrender.com/api/reservas/${reservaId}`);
+            await axios.delete(`http://localhost:3001/api/reservas/${reservaId}`);
       
       toast.success('Reserva cancelada exitosamente');
       
@@ -506,7 +507,7 @@ const MenuCalendario = () => {
         actividad: bookingData.actividad
       };
 
-      const response = await axios.post('https://country-page.onrender.com/api/reservas', reservaData);
+      const response = await axios.post('http://localhost:3001/api/reservas', reservaData);
 
       // Actualizar inmediatamente después de crear la reserva
       await Promise.all([
@@ -615,7 +616,7 @@ const MenuCalendario = () => {
   };
 
   // Funciones para cambio de contraseña
-  const openPasswordModal = () => {
+  const openPasswordModal = async () => {
     setShowPasswordModal(true);
     setPasswordData({
       currentPassword: '',
@@ -623,6 +624,17 @@ const MenuCalendario = () => {
       confirmPassword: ''
     });
     setPasswordErrors({});
+    
+    // Obtener el email del usuario desde el backend
+    if (currentUser && currentUser.id) {
+      try {
+        const response = await axios.get(`http://localhost:3001/api/users/${currentUser.id}`);
+        setUserEmail(response.data.email || '');
+      } catch (error) {
+        console.error('Error obteniendo email del usuario:', error);
+        setUserEmail('');
+      }
+    }
   };
 
   const closePasswordModal = () => {
@@ -634,6 +646,7 @@ const MenuCalendario = () => {
     });
     setPasswordErrors({});
     setPasswordLoading(false);
+    setUserEmail(''); // Limpiar email
     // Resetear estados de visibilidad
     setShowCurrentPassword(false);
     setShowNewPassword(false);
@@ -689,7 +702,7 @@ const MenuCalendario = () => {
     setPasswordLoading(true);
     
     try {
-      const response = await axios.post('https://country-page.onrender.com/api/users/change-password', {
+      const response = await axios.post('http://localhost:3001/api/users/change-password', {
         userId: currentUser.id,
         currentPassword: passwordData.currentPassword,
         newPassword: passwordData.newPassword
@@ -725,7 +738,7 @@ const MenuCalendario = () => {
   // Función para obtener horarios disponibles según el día de la semana dinámicamente
   const fetchHorariosDia = async (diaSemana) => {
     try {
-      const response = await axios.get('https://country-page.onrender.com/api/horarios', {
+      const response = await axios.get('http://localhost:3001/api/horarios', {
         params: { dia_semana: diaSemana }
       });
       setHorariosDia(response.data);
@@ -1143,6 +1156,24 @@ const MenuCalendario = () => {
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <button className="close-btn" onClick={closePasswordModal} aria-label="Cerrar modal">×</button>
             <h2>Cambiar contraseña</h2>
+            
+            {/* Leyenda informativa sobre el email */}
+            {currentUser && (
+              <div style={{ 
+                backgroundColor: '#e3f2fd', 
+                border: '1px solid #2196f3', 
+                borderRadius: '6px', 
+                padding: '12px 16px', 
+                margin: '0 20px 20px 20px',
+                fontSize: '14px',
+                color: '#1565c0'
+              }}>
+                <strong>Información:</strong> Las credenciales actualizadas se enviarán automáticamente al siguiente correo:
+                <div style={{ marginTop: '8px', fontWeight: '500', fontSize: '15px' }}>
+                  {userEmail ? userEmail : 'Cargando correo...'}
+                </div>
+              </div>
+            )}
             
             <div style={{ padding: '20px' }}>
               <div style={{ marginBottom: '15px' }}>

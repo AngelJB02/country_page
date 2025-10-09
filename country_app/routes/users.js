@@ -784,6 +784,27 @@ router.put('/payment/:id', async (req, res) => {
   }
 });
 
+// Obtener información de un usuario específico
+router.get('/:id', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const [userRows] = await db.query(
+      "SELECT id, nombre, apellido, email, username, rol FROM usuarios WHERE id = ?",
+      [id]
+    );
+    
+    if (userRows.length === 0) {
+      return res.status(404).json({ error: "Usuario no encontrado" });
+    }
+    
+    res.json(userRows[0]);
+  } catch (err) {
+    console.error("Error al obtener usuario:", err);
+    return res.status(500).json({ error: "Error en el servidor" });
+  }
+});
+
 // Cambiar contraseña de usuario
 router.post('/change-password', async (req, res) => {
   const { userId, currentPassword, newPassword } = req.body;
