@@ -90,8 +90,8 @@ const MenuCalendario = () => {
       // Días válidos según el usuario
       let diasValidos;
       if (currentUser && currentUser.nombre && currentUser.nombre.toLowerCase() === 'demo') {
-        // Usuario Demo solo puede reservar viernes y sábado
-        diasValidos = ['viernes','sabado'];
+        // Usuario Demo solo puede reservar viernes y domingo
+        diasValidos = ['viernes','domingo'];
       } else {
         // Todos los demás usuarios: Solo estos días existen en tu tabla
         diasValidos = ['martes','miercoles','jueves','viernes','sabado','domingo'];
@@ -325,13 +325,13 @@ const MenuCalendario = () => {
     };
   };
 
-  // Verificar si es día laboral (Martes a Domingo, pero Demo solo viernes y sábado)
+  // Verificar si es día laboral (Martes a Domingo, pero Demo solo viernes y domingo)
   const isWorkingDay = (date) => {
     const dayOfWeek = date.getDay();
     
-    // Excepción para usuario Demo: solo puede reservar viernes (5) y sábado (6)
+    // Excepción para usuario Demo: solo puede reservar viernes (5) y domingo (0)
     if (currentUser && currentUser.nombre && currentUser.nombre.toLowerCase() === 'demo') {
-      return dayOfWeek === 5 || dayOfWeek === 6;
+      return dayOfWeek === 5 || dayOfWeek === 0;
     }
     
     // Para todos los demás usuarios: Martes a Domingo
@@ -500,8 +500,8 @@ const MenuCalendario = () => {
     // Verificar restricción especial para usuario Demo
     if (currentUser.nombre && currentUser.nombre.toLowerCase() === 'demo') {
       const dayOfWeek = selectedDate.getDay();
-      if (dayOfWeek !== 5 && dayOfWeek !== 6) { // No es viernes (5) ni sábado (6)
-        toast.error('Como usuario Demo, solo puedes reservar los viernes y sábados.');
+      if (dayOfWeek !== 5 && dayOfWeek !== 0) { // No es viernes (5) ni domingo (0)
+        toast.error('Como usuario Demo, solo puedes reservar los viernes y domingos.');
         return;
       }
     }
@@ -763,6 +763,34 @@ const MenuCalendario = () => {
   // Función para obtener horarios disponibles según el día de la semana dinámicamente
   const fetchHorariosDia = async (diaSemana) => {
     try {
+      // Verificar si es usuario Demo y aplicar horarios específicos
+      if (currentUser && currentUser.nombre && currentUser.nombre.toLowerCase() === 'demo') {
+        let horariosDemo = [];
+        
+        if (diaSemana === 'viernes') {
+          // Viernes: 3:30pm a 4:30pm (cada 30 min)
+          horariosDemo = [
+            { id: 'demo_v1', hora: '15:30:00', turno: 'tarde', dia_semana: 'viernes' },
+            { id: 'demo_v2', hora: '16:00:00', turno: 'tarde', dia_semana: 'viernes' },
+            { id: 'demo_v3', hora: '16:30:00', turno: 'tarde', dia_semana: 'viernes' }
+          ];
+        } else if (diaSemana === 'domingo') {
+          // Domingo: 8:00am a 10:30am (cada 30 min)
+          horariosDemo = [
+            { id: 'demo_d1', hora: '08:00:00', turno: 'mañana', dia_semana: 'domingo' },
+            { id: 'demo_d2', hora: '08:30:00', turno: 'mañana', dia_semana: 'domingo' },
+            { id: 'demo_d3', hora: '09:00:00', turno: 'mañana', dia_semana: 'domingo' },
+            { id: 'demo_d4', hora: '09:30:00', turno: 'mañana', dia_semana: 'domingo' },
+            { id: 'demo_d5', hora: '10:00:00', turno: 'mañana', dia_semana: 'domingo' },
+            { id: 'demo_d6', hora: '10:30:00', turno: 'mañana', dia_semana: 'domingo' }
+          ];
+        }
+        
+        setHorariosDia(horariosDemo);
+        return;
+      }
+      
+      // Para usuarios normales, obtener horarios del servidor
       const response = await axios.get('https://country-page.onrender.com/api/horarios', {
         params: { dia_semana: diaSemana }
       });
@@ -1065,8 +1093,8 @@ const MenuCalendario = () => {
                   <h4>No hay disponibilidad</h4>
                   {currentUser && currentUser.nombre && currentUser.nombre.toLowerCase() === 'demo' ? (
                     <>
-                      <p>Como usuario Demo, solo puedes reservar viernes y sábados.</p>
-                      <p>Horario Demo: <strong>Viernes y Sábado</strong></p>
+                      <p>Como usuario Demo, solo puedes reservar viernes y domingos.</p>
+                      <p>Horario Demo: <strong>Viernes y Domingo</strong></p>
                     </>
                   ) : (
                     <>
