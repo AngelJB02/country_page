@@ -86,20 +86,29 @@ const MenuCalendario = () => {
     if (selectedDate && bookingData.actividad) {
       // Array completo para mapear getDay()
       const diasSemana = ['domingo','lunes','martes','miercoles','jueves','viernes','sabado'];
-      // Solo estos días existen en tu tabla
-      const diasValidos = ['martes','miercoles','jueves','viernes','sabado','domingo'];
+      
+      // Días válidos según el usuario
+      let diasValidos;
+      if (currentUser && currentUser.nombre && currentUser.nombre.toLowerCase() === 'demo') {
+        // Usuario Demo solo puede reservar viernes y sábado
+        diasValidos = ['viernes','sabado'];
+      } else {
+        // Todos los demás usuarios: Solo estos días existen en tu tabla
+        diasValidos = ['martes','miercoles','jueves','viernes','sabado','domingo'];
+      }
+      
       const diaSemana = diasSemana[selectedDate.getDay()];
       if (diasValidos.includes(diaSemana)) {
         fetchHorariosDia(diaSemana);
         fetchAvailability(selectedDate.toISOString().split('T')[0]);
       } else {
-        setHorariosDia([]); // Lunes: no hay horarios
+        setHorariosDia([]); // No hay horarios para días no válidos
       }
     } else if (selectedDate && !bookingData.actividad) {
       // Si hay fecha pero no actividad, limpiar horarios para forzar selección previa
       setHorariosDia([]);
     }
-  }, [selectedDate, bookingData.actividad]);
+  }, [selectedDate, bookingData.actividad, currentUser]);
 
   // Cerrar modal con tecla ESC
   useEffect(() => {
@@ -316,9 +325,16 @@ const MenuCalendario = () => {
     };
   };
 
-  // Verificar si es día laboral (Martes a Domingo)
+  // Verificar si es día laboral (Martes a Domingo, pero Demo solo viernes y sábado)
   const isWorkingDay = (date) => {
     const dayOfWeek = date.getDay();
+    
+    // Excepción para usuario Demo: solo puede reservar viernes (5) y sábado (6)
+    if (currentUser && currentUser.nombre && currentUser.nombre.toLowerCase() === 'demo') {
+      return dayOfWeek === 5 || dayOfWeek === 6;
+    }
+    
+    // Para todos los demás usuarios: Martes a Domingo
     return dayOfWeek >= 2 || dayOfWeek === 0;
   };
 
@@ -479,6 +495,15 @@ const MenuCalendario = () => {
     if (spotAvailability.available <= 0) {
       toast.error('No hay lugares disponibles para este horario');
       return;
+    }
+
+    // Verificar restricción especial para usuario Demo
+    if (currentUser.nombre && currentUser.nombre.toLowerCase() === 'demo') {
+      const dayOfWeek = selectedDate.getDay();
+      if (dayOfWeek !== 5 && dayOfWeek !== 6) { // No es viernes (5) ni sábado (6)
+        toast.error('Como usuario Demo, solo puedes reservar los viernes y sábados.');
+        return;
+      }
     }
 
     // Verificar si el usuario ya tiene una reserva ese día
@@ -1038,8 +1063,17 @@ const MenuCalendario = () => {
               ) : (
                 <div className="no-availability">
                   <h4>No hay disponibilidad</h4>
-                  <p>Los lunes no hay horarios disponibles.</p>
-                  <p>Horario laboral: <strong>Martes a Domingo</strong></p>
+                  {currentUser && currentUser.nombre && currentUser.nombre.toLowerCase() === 'demo' ? (
+                    <>
+                      <p>Como usuario Demo, solo puedes reservar viernes y sábados.</p>
+                      <p>Horario Demo: <strong>Viernes y Sábado</strong></p>
+                    </>
+                  ) : (
+                    <>
+                      <p>Los lunes no hay horarios disponibles.</p>
+                      <p>Horario laboral: <strong>Martes a Domingo</strong></p>
+                    </>
+                  )}
                 </div>
               )}
             </div>
