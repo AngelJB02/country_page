@@ -1199,7 +1199,7 @@ const MenuCalendario = () => {
                 </div>
               </div>
               <div className="success-message">
-                <p>Tu cita ha sido reservada exitosamente. Te esperamos el <strong>{confirmedBooking.dayName}</strong> a las <strong>{confirmedBooking.hora}</strong>.</p>
+                <p>Tu cita ha sido reservada exitosamente. Te esperamos el <strong>{confirmedBooking.fecha}</strong> a las <strong>{confirmedBooking.hora}</strong>.</p>
                 <p>¡Nos vemos pronto!</p>
               </div>
               <div className="modal-actions">
