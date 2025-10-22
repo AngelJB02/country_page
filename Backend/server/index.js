@@ -1,12 +1,12 @@
 // server/index.js
 import express from "express";
 import cors from "cors";
-import db from "./db.js"; // ruta relativa correcta, db.js al mismo nivel que server
+import db from "./db.js"; // ruta relativa correcta, db.js al m ismo nivel que server
 
 import instructorRoutes from '../routes/instructor.js'; 
 import reservasRoutes from '../routes/reservas.js'; 
 import horariosRoutes from '../routes/horarios.js'; 
-import usersRoutes from '../routes/users.js'; 
+import usersRoutes from '../routes/users_new.js'; 
 import emailRoutes from '../routes/email.js'; 
 
 console.log("✅ Rutas importadas correctamente");

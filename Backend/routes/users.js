@@ -1,3 +1,5 @@
+/*
+
 import express from 'express';
 import db from '../server/db.js';
 import { generateCredentials } from './utils/credentialsGenerator.js';
@@ -884,3 +886,4 @@ router.post('/change-password', async (req, res) => {
 });
 
 export default router;
+*/
