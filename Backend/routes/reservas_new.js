@@ -416,6 +416,95 @@ router.put('/admin/:id/status', async (req, res) => {
   }
 });
 
+// Agregar observaciones a una reserva (administrador)
+router.put('/admin/:reservaId/observations', async (req, res) => {
+  const { reservaId } = req.params;
+  const { observaciones } = req.body;
+
+  if (!observaciones) {
+    return res.status(400).json({ 
+      error: 'Campo requerido: observaciones' 
+    });
+  }
+
+  try {
+    // Verificar que la reserva existe
+    const [reserva] = await db.query(`
+      SELECT observaciones as obs_actuales FROM reservas 
+      WHERE id = ?
+    `, [reservaId]);
+
+    if (reserva.length === 0) {
+      return res.status(404).json({ 
+        error: 'Reserva no encontrada' 
+      });
+    }
+
+    // Agregar nuevas observaciones a las existentes
+    const obsActuales = reserva[0].obs_actuales || '';
+    const nuevasObservaciones = obsActuales 
+      ? `${obsActuales}\n[Admin]: ${observaciones}`
+      : `[Admin]: ${observaciones}`;
+
+    await db.query(`
+      UPDATE reservas 
+      SET observaciones = ?
+      WHERE id = ?
+    `, [nuevasObservaciones, reservaId]);
+
+    res.json({ 
+      message: 'Observaciones agregadas correctamente'
+    });
+  } catch (err) {
+    console.error('Error agregando observaciones:', err);
+    res.status(500).json({ error: 'Error al agregar observaciones' });
+  }
+});
+
+// Registrar asistencia (administrador)
+router.put('/admin/:reservaId/attendance', async (req, res) => {
+  const { reservaId } = req.params;
+  const { asistio, observaciones } = req.body;
+
+  if (asistio === undefined) {
+    return res.status(400).json({ 
+      error: 'Campo requerido: asistio (true/false)' 
+    });
+  }
+
+  try {
+    // Verificar que la reserva existe
+    const [reserva] = await db.query(`
+      SELECT id FROM reservas WHERE id = ?
+    `, [reservaId]);
+
+    if (reserva.length === 0) {
+      return res.status(404).json({ 
+        error: 'Reserva no encontrada' 
+      });
+    }
+
+    // Actualizar estatus y observaciones
+    const nuevoEstatus = asistio ? 'completada' : 'cancelada';
+    const nuevasObservaciones = asistio ? 
+      `[Admin] Clase completada. ${observaciones || ''}` : 
+      `[Admin] No asistió. ${observaciones || ''}`;
+
+    await db.query(`
+      UPDATE reservas 
+      SET estatus = ?, observaciones = ?
+      WHERE id = ?
+    `, [nuevoEstatus, nuevasObservaciones.trim(), reservaId]);
+
+    res.json({ 
+      message: asistio ? 'Asistencia registrada correctamente' : 'Ausencia registrada correctamente' 
+    });
+  } catch (err) {
+    console.error('Error registrando asistencia:', err);
+    res.status(500).json({ error: 'Error al registrar asistencia' });
+  }
+});
+
 // =============================================================================
 // ENDPOINTS PARA CLIENTES
 // =============================================================================
@@ -742,6 +831,99 @@ router.delete('/:id/cancel/:clienteId', async (req, res) => {
 // ENDPOINTS PARA INSTRUCTORAS
 // =============================================================================
 
+// Crear reserva manual (instructora)
+router.post('/instructor/create', async (req, res) => {
+  const { 
+    cliente_id, 
+    caballo_id, 
+    instructora_id, 
+    clase_id, 
+    fecha, 
+    hora_inicio, 
+    hora_fin, 
+    observaciones 
+  } = req.body;
+
+  // Validaciones básicas
+  if (!cliente_id || !clase_id || !fecha || !hora_inicio || !hora_fin || !instructora_id) {
+    return res.status(400).json({ 
+      error: 'Faltan campos requeridos: cliente_id, clase_id, fecha, hora_inicio, hora_fin, instructora_id' 
+    });
+  }
+
+  try {
+    // Obtener información del cliente
+    const [cliente] = await db.query(`
+      SELECT tipo_cliente FROM usuarios WHERE id = ?
+    `, [cliente_id]);
+
+    if (cliente.length === 0) {
+      return res.status(404).json({ error: 'Cliente no encontrado' });
+    }
+
+    const tipoCliente = cliente[0].tipo_cliente;
+
+    // Verificar disponibilidad de la instructora
+    const disponibilidadInstructora = await verificarDisponibilidadInstructora(
+      instructora_id, fecha, hora_inicio, hora_fin
+    );
+    if (!disponibilidadInstructora.disponible) {
+      return res.status(400).json({ 
+        error: 'No estás disponible en ese horario', 
+        razon: disponibilidadInstructora.razon 
+      });
+    }
+
+    // Si se asigna caballo, verificar disponibilidad
+    if (caballo_id) {
+      const [clase] = await db.query('SELECT nombre FROM clases WHERE id = ?', [clase_id]);
+      const tipoClase = clase.length > 0 ? clase[0].nombre : null;
+      
+      const disponibilidadCaballo = await verificarDisponibilidadCaballo(
+        caballo_id, fecha, hora_inicio, hora_fin, tipoClase
+      );
+      if (!disponibilidadCaballo.disponible) {
+        return res.status(400).json({ 
+          error: 'Caballo no disponible', 
+          razon: disponibilidadCaballo.razon 
+        });
+      }
+    }
+
+    // Crear la reserva
+    const observacionesCompletas = observaciones 
+      ? `[Instructora]: ${observaciones}` 
+      : null;
+
+    const [result] = await db.query(`
+      INSERT INTO reservas (
+        cliente_id, caballo_id, instructora_id, clase_id, 
+        fecha, hora_inicio, hora_fin, estatus, tipo, observaciones
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pendiente', ?, ?)
+    `, [
+      cliente_id, 
+      caballo_id, 
+      instructora_id, 
+      clase_id,
+      formatDateForMySQL(fecha),
+      formatTimeForMySQL(hora_inicio),
+      formatTimeForMySQL(hora_fin),
+      tipoCliente === 'propietario' ? 'propietario' : 
+      tipoCliente === 'renta' ? 'renta' :
+      tipoCliente === 'media_renta' ? 'media_renta' : 'normal',
+      observacionesCompletas
+    ]);
+
+    res.json({
+      message: 'Reserva creada correctamente',
+      id: result.insertId
+    });
+  } catch (err) {
+    console.error('Error creando reserva:', err);
+    res.status(500).json({ error: 'Error al crear reserva' });
+  }
+});
+
 // Obtener clases asignadas a la instructora
 router.get('/instructor/my-classes/:instructoraId', async (req, res) => {
   const { instructoraId } = req.params;
@@ -886,6 +1068,99 @@ router.put('/instructor/:reservaId/attendance', async (req, res) => {
   } catch (err) {
     console.error('Error registrando asistencia:', err);
     res.status(500).json({ error: 'Error al registrar asistencia' });
+  }
+});
+
+// Cambiar estatus de reserva con observaciones (instructora)
+router.put('/instructor/:reservaId/status', async (req, res) => {
+  const { reservaId } = req.params;
+  const { estatus, observaciones, instructora_id } = req.body;
+
+  const estatusValidos = ['pendiente', 'confirmada', 'cancelada', 'completada'];
+  if (!estatusValidos.includes(estatus)) {
+    return res.status(400).json({ 
+      error: `Estatus inválido. Valores permitidos: ${estatusValidos.join(', ')}` 
+    });
+  }
+
+  if (!instructora_id) {
+    return res.status(400).json({ 
+      error: 'Campo requerido: instructora_id' 
+    });
+  }
+
+  try {
+    // Verificar que la reserva pertenece a la instructora
+    const [reserva] = await db.query(`
+      SELECT id FROM reservas 
+      WHERE id = ? AND instructora_id = ?
+    `, [reservaId, instructora_id]);
+
+    if (reserva.length === 0) {
+      return res.status(404).json({ 
+        error: 'Reserva no encontrada o no tienes permisos para modificarla' 
+      });
+    }
+
+    // Actualizar estatus y observaciones
+    const [result] = await db.query(`
+      UPDATE reservas 
+      SET estatus = ?, observaciones = COALESCE(?, observaciones)
+      WHERE id = ?
+    `, [estatus, observaciones, reservaId]);
+
+    res.json({ 
+      message: 'Estatus de reserva actualizado correctamente',
+      nuevo_estatus: estatus
+    });
+  } catch (err) {
+    console.error('Error actualizando estatus de reserva:', err);
+    res.status(500).json({ error: 'Error al actualizar estatus de reserva' });
+  }
+});
+
+// Agregar observaciones a una reserva (instructora)
+router.put('/instructor/:reservaId/observations', async (req, res) => {
+  const { reservaId } = req.params;
+  const { observaciones, instructora_id } = req.body;
+
+  if (!observaciones || !instructora_id) {
+    return res.status(400).json({ 
+      error: 'Faltan campos requeridos: observaciones, instructora_id' 
+    });
+  }
+
+  try {
+    // Verificar que la reserva pertenece a la instructora
+    const [reserva] = await db.query(`
+      SELECT observaciones as obs_actuales FROM reservas 
+      WHERE id = ? AND instructora_id = ?
+    `, [reservaId, instructora_id]);
+
+    if (reserva.length === 0) {
+      return res.status(404).json({ 
+        error: 'Reserva no encontrada o no tienes permisos para modificarla' 
+      });
+    }
+
+    // Agregar nuevas observaciones a las existentes
+    const obsActuales = reserva[0].obs_actuales || '';
+    const nuevasObservaciones = obsActuales 
+      ? `${obsActuales}\n[Instructora]: ${observaciones}`
+      : `[Instructora]: ${observaciones}`;
+
+    await db.query(`
+      UPDATE reservas 
+      SET observaciones = ?
+      WHERE id = ?
+    `, [nuevasObservaciones, reservaId]);
+
+    res.json({ 
+      message: 'Observaciones agregadas correctamente'
+    });
+  } catch (err) {
+    console.error('Error agregando observaciones:', err);
+    res.status(500).json({ error: 'Error al agregar observaciones' });
   }
 });
 
