@@ -66,6 +66,7 @@ router.get('/users-with-payments', async (req, res) => {
           FROM contabilidad c2 
           WHERE c2.cliente_id = u.id
         )
+      WHERE u.rol = 'cliente'
       ORDER BY c.fecha_pago DESC
     `;
 
@@ -195,8 +196,29 @@ router.post('/preview-credentials', async (req, res) => {
 });
 
 // Registrar cliente con información de contabilidad
+// Este endpoint registra un nuevo cliente en la tabla 'usuarios' con rol 'cliente'
+// y crea un registro inicial en la tabla 'contabilidad'.
+// Campos requeridos: nombre, apellido, monto, fecha_pago
+// Campos opcionales: email, concepto, withoutEmail, customPassword, edad, telefono, tipo_cliente, nivel, tipo_nivel, observaciones
+// Ejemplo de raw JSON:
+// {
+//   "nombre": "Carlos",
+//   "apellido": "López",
+//   "email": "carlos@example.com",
+//   "monto": 200.00,
+//   "fecha_pago": "2024-10-22",
+//   "concepto": "Pago inicial",
+//   "withoutEmail": false,
+//   "customPassword": "cliente123",
+//   "edad": 25,
+//   "telefono": "123456789",
+//   "tipo_cliente": "particular",
+//   "nivel": "principiante",
+//   "tipo_nivel": "equitacion",
+//   "observaciones": "Pago inicial del cliente"
+// }
 router.post('/register-cliente', async (req, res) => {
-  const { nombre, apellido, email, monto, fecha_pago, concepto, withoutEmail, customPassword } = req.body;
+  const { nombre, apellido, email, monto, fecha_pago, concepto, withoutEmail, customPassword, edad, telefono, tipo_cliente, nivel, tipo_nivel, observaciones } = req.body;
 
   // Validar campos requeridos del usuario
   if (!nombre || !apellido) {
@@ -238,14 +260,14 @@ router.post('/register-cliente', async (req, res) => {
     // Crear el usuario con rol 'cliente'
     const placeholderEmail = withoutEmail ? `sin-email-${credentials.username}@local.placeholder` : email;
     const [userResult] = await connection.query(
-      "INSERT INTO usuarios(nombre, apellido, correo, contrasena, rol, estatus, fecha_registro, username) VALUES(?,?,?,?,'cliente','activo',NOW(),?)",
-      [nombre, apellido, placeholderEmail, credentials.password, credentials.username]
+      "INSERT INTO usuarios(nombre, apellido, correo, contrasena, rol, estatus, fecha_registro, username, edad, telefono, tipo_cliente, nivel, tipo_nivel) VALUES(?,?,?,?,'cliente','activo',NOW(),?,?,?,?,?,?)",
+      [nombre, apellido, placeholderEmail, credentials.password, credentials.username, edad, telefono, tipo_cliente, nivel, tipo_nivel]
     );
 
     // Registrar información de pago
     await connection.query(
-      "INSERT INTO contabilidad(cliente_id, monto, fecha_pago, concepto, estatus_pago) VALUES(?,?,?,?,?)",
-      [userResult.insertId, monto, fecha_pago, 'Pago inicial', 'pagado']
+      "INSERT INTO contabilidad(cliente_id, monto, fecha_pago, concepto, estatus_pago, observaciones) VALUES(?,?,?,?,?,?)",
+      [userResult.insertId, monto, fecha_pago, 'Pago inicial', 'pagado', observaciones]
     );
 
     await connection.commit();
@@ -258,13 +280,19 @@ router.post('/register-cliente', async (req, res) => {
         apellido,
         email: placeholderEmail,
         username: credentials.username,
-        password: credentials.password
+        password: credentials.password,
+        edad,
+        telefono,
+        tipo_cliente,
+        nivel,
+        tipo_nivel
       },
       pago: {
         monto,
         fecha_pago,
         concepto: 'Pago inicial',
-        estatus_pago: 'pagado'
+        estatus_pago: 'pagado',
+        observaciones
       }
     });
   } catch (err) {
@@ -409,6 +437,7 @@ router.get('/with-payments', async (req, res) => {
           FROM contabilidad c2 
           WHERE c2.cliente_id = u.id
         )
+      WHERE u.rol = 'cliente'
       ORDER BY c.fecha_pago DESC
     `;
 
