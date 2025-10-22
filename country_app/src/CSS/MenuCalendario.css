@@ -140,7 +140,7 @@
 
 .day-headers {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(7, 1fr);
   background: #fafafa;
   border-bottom: 1px solid rgba(107, 68, 35, 0.06);
 }
@@ -163,7 +163,7 @@
 
 .days-grid {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(7, 1fr);
   grid-template-rows: repeat(6, 1fr);
   flex: 1;
   background: var(--warm-white);

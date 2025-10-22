@@ -13,7 +13,39 @@ import useRoleGuard from '../hooks/useRoleGuard';
 const MenuCalendario = () => {
   useRoleGuard(['cliente', 'administrador']);
 
-  const [currentDate, setCurrentDate] = useState(new Date());
+  // Función helper para crear fechas en zona horaria de México
+  const createMexicoDate = (year, month, day) => {
+    // Crear fecha en hora local de México usando Date.UTC y ajustando offset
+    const date = new Date(year, month, day);
+    // Asegurarse de que la hora sea mediodía para evitar cambios de día
+    date.setHours(12, 0, 0, 0);
+    return date;
+  };
+
+  // Función para obtener la fecha de hoy en México
+  const getTodayMexico = () => {
+    const now = new Date();
+    // Crear fecha a las 12:00 PM para evitar problemas
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0, 0);
+    return today;
+  };
+
+  // Función para formatear fecha como YYYY-MM-DD
+  const formatDateString = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // Función para comparar si dos fechas son el mismo día
+  const isSameDay = (date1, date2) => {
+    return date1.getDate() === date2.getDate() &&
+           date1.getMonth() === date2.getMonth() &&
+           date1.getFullYear() === date2.getFullYear();
+  };
+
+  const [currentDate, setCurrentDate] = useState(getTodayMexico());
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTime, setSelectedTime] = useState(null);
   const [bookingData, setBookingData] = useState({
@@ -61,6 +93,17 @@ const MenuCalendario = () => {
     'salto': 3
   };
 
+  // Nombres de meses y días
+  const monthNames = [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+  ];
+
+  const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+  const dayNamesFull = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+  const actividades = ['iniciacion', 'caminata', 'salto'];
+
   // Obtener usuario real del localStorage al montar el componente
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
@@ -82,30 +125,24 @@ const MenuCalendario = () => {
 
   // Cargar disponibilidad cuando se selecciona una fecha
   useEffect(() => {
-    // Sólo cargar horarios y disponibilidad cuando hay fecha y actividad seleccionada
     if (selectedDate && bookingData.actividad) {
-      // Array completo para mapear getDay()
       const diasSemana = ['domingo','lunes','martes','miercoles','jueves','viernes','sabado'];
       
-      // Días válidos según el usuario
       let diasValidos;
       if (currentUser && currentUser.nombre && currentUser.nombre.toLowerCase() === 'demo') {
-        // Usuario Demo solo puede reservar viernes y domingo
         diasValidos = ['viernes','domingo'];
       } else {
-        // Todos los demás usuarios: Solo estos días existen en tu tabla
-        diasValidos = ['martes','miercoles','jueves','viernes','sabado','domingo'];
+        diasValidos = ['domingo','lunes','martes','miercoles','jueves','viernes','sabado'];
       }
       
       const diaSemana = diasSemana[selectedDate.getDay()];
       if (diasValidos.includes(diaSemana)) {
         fetchHorariosDia(diaSemana);
-        fetchAvailability(selectedDate.toISOString().split('T')[0]);
+        fetchAvailability(formatDateString(selectedDate));
       } else {
-        setHorariosDia([]); // No hay horarios para días no válidos
+        setHorariosDia([]);
       }
     } else if (selectedDate && !bookingData.actividad) {
-      // Si hay fecha pero no actividad, limpiar horarios para forzar selección previa
       setHorariosDia([]);
     }
   }, [selectedDate, bookingData.actividad, currentUser]);
@@ -131,20 +168,19 @@ const MenuCalendario = () => {
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth() + 1;
       const startDate = `${year}-${month.toString().padStart(2, '0')}-01`;
-      const endDate = new Date(year, month, 0).toISOString().split('T')[0];
+      const lastDay = new Date(year, month, 0);
+      const endDate = formatDateString(lastDay);
 
       const response = await axios.get('https://country-page.onrender.com/api/reservas', {
         params: { 
           fecha_inicio: startDate, 
           fecha_fin: endDate 
         },
-        timeout: 10000 // 10 segundos de timeout
+        timeout: 10000
       });
 
-      // Organizar reservas por fecha
       const reservasPorFecha = {};
       response.data.forEach(reserva => {
-        // Si la fecha viene como '2025-09-18T00:00:00.000Z', solo tomar la parte de la fecha
         let fechaKey = reserva.fecha;
         if (typeof fechaKey === 'string' && fechaKey.includes('T')) {
           fechaKey = fechaKey.split('T')[0];
@@ -179,7 +215,6 @@ const MenuCalendario = () => {
         toast.error('La conexión tardó demasiado. Intenta de nuevo.');
       } else if (error.response?.status === 503) {
         toast.error('Problema temporal con el servidor. Reintentando en unos segundos...');
-        // Reintentar después de 3 segundos
         setTimeout(() => {
           fetchReservationsForMonth();
         }, 3000);
@@ -200,7 +235,7 @@ const MenuCalendario = () => {
     try {
       const response = await axios.get('https://country-page.onrender.com/api/reservas/availability', {
         params: { fecha: dateString },
-        timeout: 8000 // 8 segundos de timeout
+        timeout: 8000
       });
       
       setAvailability(prev => ({
@@ -212,7 +247,6 @@ const MenuCalendario = () => {
       console.error('Error cargando disponibilidad:', error);
       
       if (error.response?.status === 503) {
-        // Error temporal del servidor, usar fallback y reintentar
         const dayReservations = reservations[dateString] || [];
         const fallbackAvailability = calculateFallbackAvailability(dayReservations);
         
@@ -221,12 +255,10 @@ const MenuCalendario = () => {
           [dateString]: fallbackAvailability
         }));
         
-        // Reintentar después de 2 segundos
         setTimeout(() => {
           fetchAvailability(dateString);
         }, 2000);
       } else {
-        // Para otros errores, usar fallback
         const dayReservations = reservations[dateString] || [];
         const fallbackAvailability = calculateFallbackAvailability(dayReservations);
         
@@ -263,16 +295,6 @@ const MenuCalendario = () => {
     return availability;
   };
 
-  const monthNames = [
-    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-  ];
-
-  const dayNames = ['Dom', 'Mar', 'Mié', 'Jue', 'Vie', 'Sab'];
-  const dayNamesFull = ['Domingo', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sabado'];
-
-  const actividades = ['iniciacion', 'caminata', 'salto'];
-
   // Verificar si el usuario actual ya tiene una reserva en una fecha específica
   const userHasReservationOnDate = (userId, dateString) => {
     if (!userId) return false;
@@ -302,7 +324,6 @@ const MenuCalendario = () => {
     if (dateAvailability && dateAvailability[timeSlot]) {
       const spotData = dateAvailability[timeSlot];
       const dayReservations = reservations[dateString] || [];
-      // Solo reservas confirmadas y que no sean de salto
       const timeReservations = dayReservations.filter(res => 
         res.time === timeSlot && res.estado === 'confirmada' && res.actividad !== 'salto'
       );
@@ -313,7 +334,6 @@ const MenuCalendario = () => {
       };
     }
 
-    // Fallback: usar configuración por defecto de 6 horarios máximo
     const dayReservations = reservations[dateString] || [];
     const timeReservations = dayReservations.filter(res => 
       res.time === timeSlot && res.estado === 'confirmada'
@@ -325,17 +345,15 @@ const MenuCalendario = () => {
     };
   };
 
-  // Verificar si es día laboral (Martes a Domingo, pero Demo solo viernes y domingo)
+  // Verificar si es día laboral
   const isWorkingDay = (date) => {
     const dayOfWeek = date.getDay();
     
-    // Excepción para usuario Demo: solo puede reservar viernes (5) y domingo (0)
     if (currentUser && currentUser.nombre && currentUser.nombre.toLowerCase() === 'demo') {
       return dayOfWeek === 5 || dayOfWeek === 0;
     }
     
-    // Para todos los demás usuarios: Martes a Domingo
-    return dayOfWeek >= 2 || dayOfWeek === 0;
+    return true;
   };
 
   // Función para obtener el estado visual de un día
@@ -362,7 +380,7 @@ const MenuCalendario = () => {
       }
     } else {
       totalOccupied = activeReservations.length;
-      totalCapacity = 36; // 6 horarios x 6 cupos cada uno
+      totalCapacity = 36;
     }
     
     if (totalCapacity === 0) return 'empty';
@@ -375,43 +393,82 @@ const MenuCalendario = () => {
     return 'empty';
   };
 
-  // Generar días del calendario
+  // Generar días del calendario - VERSIÓN CORREGIDA FINAL
   const generateCalendarDays = () => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const startDate = new Date(firstDay);
-    startDate.setDate(startDate.getDate() - 1);
-    startDate.setDate(startDate.getDate() - (startDate.getDay() === 0 ? 0 : startDate.getDay()));
-  
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
+    
+    // Primer día del mes a las 12:00
+    const firstDayDate = new Date(year, month, 1, 12, 0, 0, 0);
+    const firstDayOfWeek = firstDayDate.getDay(); // 0=Domingo, 1=Lunes, etc.
+    
+    // Último día del mes
+    const lastDay = new Date(year, month + 1, 0).getDate();
+    
+    // Fecha de hoy
+    const nowDate = new Date();
+    const today = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate(), 12, 0, 0, 0);
+    
+    console.log('=== DEBUG CALENDARIO ===');
+    console.log('Mes actual:', monthNames[month], year);
+    console.log('Primer día:', firstDayDate.getDate(), dayNamesFull[firstDayOfWeek]);
+    console.log('Último día del mes:', lastDay);
+    console.log('Hoy:', today.getDate(), monthNames[today.getMonth()]);
+    console.log('========================');
+    
     const days = [];
-    let cellCount = 0;
-
-    for (let i = 0; i < 42 && cellCount < 36; i++) {
-      const cellDate = new Date(startDate);
-      cellDate.setDate(startDate.getDate() + i);
-
-      if (cellDate.getDay() === 1) {
-        continue;
-      }
-
-      const isOtherMonth = cellDate.getMonth() !== month;
-      const isToday = cellDate.toDateString() === today.toDateString();
-      const isUnavailable = isOtherMonth || cellDate < today || !isWorkingDay(cellDate);
-      const isSelected = selectedDate && cellDate.toDateString() === selectedDate.toDateString();
+    
+    // Días del mes anterior (para completar la primera semana)
+    const prevMonth = month === 0 ? 11 : month - 1;
+    const prevMonthYear = month === 0 ? year - 1 : year;
+    const prevMonthLastDay = new Date(prevMonthYear, prevMonth + 1, 0).getDate();
+    
+    // Agregar días del mes anterior
+    for (let i = firstDayOfWeek - 1; i >= 0; i--) {
+      const day = prevMonthLastDay - i;
+      const cellDate = new Date(prevMonthYear, prevMonth, day, 12, 0, 0, 0);
       
-      const dateString = cellDate.toISOString().split('T')[0];
+      const isPast = cellDate < today;
+      
+      days.push({
+        date: cellDate,
+        day: day,
+        isOtherMonth: true,
+        isToday: false,
+        isUnavailable: true,
+        isSelected: false,
+        appointmentCount: 0,
+        dateString: formatDateString(cellDate),
+        dayStatus: 'empty'
+      });
+    }
+    
+    // Agregar días del mes actual
+    for (let day = 1; day <= lastDay; day++) {
+      const cellDate = new Date(year, month, day, 12, 0, 0, 0);
+      
+      const isToday = cellDate.getFullYear() === today.getFullYear() &&
+                      cellDate.getMonth() === today.getMonth() &&
+                      cellDate.getDate() === today.getDate();
+      
+      const isWorkingDayForUser = isWorkingDay(cellDate);
+      const isPast = cellDate < today && !isToday;
+      const isUnavailable = isPast || !isWorkingDayForUser;
+      
+      const isSelected = selectedDate && 
+                        cellDate.getFullYear() === selectedDate.getFullYear() &&
+                        cellDate.getMonth() === selectedDate.getMonth() &&
+                        cellDate.getDate() === selectedDate.getDate();
+      
+      const dateString = formatDateString(cellDate);
       const dayReservations = reservations[dateString] || [];
       const appointmentCount = dayReservations.filter(res => res.estado !== 'cancelada').length;
       const dayStatus = getDayStatus(dateString);
 
       days.push({
         date: cellDate,
-        day: cellDate.getDate(),
-        isOtherMonth,
+        day: day,
+        isOtherMonth: false,
         isToday,
         isUnavailable,
         isSelected,
@@ -419,7 +476,27 @@ const MenuCalendario = () => {
         dateString,
         dayStatus
       });
-      cellCount++;
+    }
+    
+    // Agregar días del mes siguiente (para completar las 6 semanas = 42 días)
+    const remainingDays = 42 - days.length;
+    const nextMonth = month === 11 ? 0 : month + 1;
+    const nextMonthYear = month === 11 ? year + 1 : year;
+    
+    for (let day = 1; day <= remainingDays; day++) {
+      const cellDate = new Date(nextMonthYear, nextMonth, day, 12, 0, 0, 0);
+      
+      days.push({
+        date: cellDate,
+        day: day,
+        isOtherMonth: true,
+        isToday: false,
+        isUnavailable: true,
+        isSelected: false,
+        appointmentCount: 0,
+        dateString: formatDateString(cellDate),
+        dayStatus: 'empty'
+      });
     }
 
     return days;
@@ -428,8 +505,10 @@ const MenuCalendario = () => {
   // Seleccionar fecha (muestra modal)
   const selectDate = (day) => {
     if (day.isUnavailable || day.isOtherMonth) return;
-    setSelectedDate(day.date);
-    setSelectedTime(null); // Resetear horario seleccionado
+    
+    const normalizedDate = createMexicoDate(day.date.getFullYear(), day.date.getMonth(), day.date.getDate());
+    setSelectedDate(normalizedDate);
+    setSelectedTime(null);
     setBookingData({ nombre: '', edad: '', actividad: '' });
     setShowDateModal(true);
   };
@@ -447,7 +526,6 @@ const MenuCalendario = () => {
       [name]: value
     }));
 
-    // Si el usuario cambia la actividad, resetear el horario seleccionado
     if (name === 'actividad') {
       setSelectedTime(null);
     }
@@ -461,13 +539,13 @@ const MenuCalendario = () => {
 
     setLoading(true);
     try {
-            await axios.delete(`https://country-page.onrender.com/api/reservas/${reservaId}`);
+      await axios.delete(`https://country-page.onrender.com/api/reservas/${reservaId}`);
       
       toast.success('Reserva cancelada exitosamente');
       
       await fetchReservationsForMonth();
       if (selectedDate) {
-        await fetchAvailability(selectedDate.toISOString().split('T')[0]);
+        await fetchAvailability(formatDateString(selectedDate));
       }
     } catch (error) {
       console.error('Error cancelando reserva:', error);
@@ -489,7 +567,8 @@ const MenuCalendario = () => {
       return;
     }
 
-    const dateString = selectedDate.toISOString().split('T')[0];
+    const normalizedDate = createMexicoDate(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+    const dateString = formatDateString(normalizedDate);
     const spotAvailability = getSpotAvailability(selectedTime, dateString);
     
     if (spotAvailability.available <= 0) {
@@ -497,22 +576,19 @@ const MenuCalendario = () => {
       return;
     }
 
-    // Verificar restricción especial para usuario Demo
     if (currentUser.nombre && currentUser.nombre.toLowerCase() === 'demo') {
-      const dayOfWeek = selectedDate.getDay();
-      if (dayOfWeek !== 5 && dayOfWeek !== 0) { // No es viernes (5) ni domingo (0)
+      const dayOfWeek = normalizedDate.getDay();
+      if (dayOfWeek !== 5 && dayOfWeek !== 0) {
         toast.error('Como usuario Demo, solo puedes reservar los viernes y domingos.');
         return;
       }
     }
 
-    // Verificar si el usuario ya tiene una reserva ese día
     if (userHasReservationOnDate(currentUser.id, dateString)) {
       toast.error('Ya tienes una reserva para este día. Solo se permite una reserva por día por usuario.');
       return;
     }
 
-    // Verificar límite de saltos (5 por día)
     if (bookingData.actividad === 'salto' && getSaltoReservationsCount(dateString) >= 5) {
       toast.error('Ya se alcanzó el límite máximo de 5 reservas de salto para este día.');
       return;
@@ -534,19 +610,16 @@ const MenuCalendario = () => {
 
       const response = await axios.post('https://country-page.onrender.com/api/reservas', reservaData);
 
-      // Actualizar inmediatamente después de crear la reserva
       await Promise.all([
         fetchReservationsForMonth(),
         fetchAvailability(dateString)
       ]);
 
-      // Preparar datos para el modal de confirmación
-      const dayName = dayNamesFull[selectedDate.getDay()];
-      const formattedDate = selectedDate.toLocaleDateString('es-ES', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric'
-      });
+      const monthNamesLower = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+      const dayNamesLower = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+      
+      const formattedDate = `${normalizedDate.getDate()} de ${monthNamesLower[normalizedDate.getMonth()]} de ${normalizedDate.getFullYear()}`;
+      const dayName = dayNamesLower[normalizedDate.getDay()];
 
       const timeFormatted = selectedTime.includes('16') ? '4:00 PM' :
                           selectedTime.includes('17') ? '5:00 PM' :
@@ -567,7 +640,6 @@ const MenuCalendario = () => {
       setShowSuccessModal(true);
       toast.success('¡Reserva confirmada exitosamente!');
 
-      // Resetear selección y cerrar modal de fecha
       setShowDateModal(false);
       setSelectedDate(null);
       setSelectedTime(null);
@@ -590,12 +662,16 @@ const MenuCalendario = () => {
 
   // Navegación del calendario
   const previousMonth = () => {
-    setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+    const newDate = new Date(currentDate);
+    newDate.setMonth(newDate.getMonth() - 1);
+    setCurrentDate(newDate);
     resetSelection();
   };
 
   const nextMonth = () => {
-    setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+    const newDate = new Date(currentDate);
+    newDate.setMonth(newDate.getMonth() + 1);
+    setCurrentDate(newDate);
     resetSelection();
   };
 
@@ -606,16 +682,14 @@ const MenuCalendario = () => {
   };
 
   const calendarDays = generateCalendarDays();
-  const selectedDateString = selectedDate ? selectedDate.toISOString().split('T')[0] : '';
+  const selectedDateString = selectedDate ? formatDateString(selectedDate) : '';
   const dayReservations = selectedDate ? (reservations[selectedDateString] || []) : [];
   const isWorkingToday = selectedDate ? isWorkingDay(selectedDate) : false;
 
-  // Obtener disponibilidad para el horario seleccionado
   const currentSpotAvailability = selectedTime && selectedDate ? 
     getSpotAvailability(selectedTime, selectedDateString) : 
     { total: 0, available: 0 };
 
-  // Función para verificar si se puede hacer una reserva de salto
   const canMakeSaltoReservation = (dateString) => {
     return getSaltoReservationsCount(dateString) < 5;
   };
@@ -625,7 +699,6 @@ const MenuCalendario = () => {
     setConfirmedBooking(null);
   };
 
-  // Cerrar modal de fecha con reseteo completo
   const closeDateModal = () => {
     setShowDateModal(false);
     setSelectedTime(null);
@@ -650,7 +723,6 @@ const MenuCalendario = () => {
     });
     setPasswordErrors({});
     
-    // Obtener el email del usuario desde el backend
     if (currentUser && currentUser.id) {
       try {
         const response = await axios.get(`https://country-page.onrender.com/api/users/${currentUser.id}`);
@@ -671,8 +743,7 @@ const MenuCalendario = () => {
     });
     setPasswordErrors({});
     setPasswordLoading(false);
-    setUserEmail(''); // Limpiar email
-    // Resetear estados de visibilidad
+    setUserEmail('');
     setShowCurrentPassword(false);
     setShowNewPassword(false);
     setShowConfirmPassword(false);
@@ -685,7 +756,6 @@ const MenuCalendario = () => {
       [name]: value
     }));
     
-    // Limpiar errores cuando el usuario empiece a escribir
     if (passwordErrors[name]) {
       setPasswordErrors(prev => ({
         ...prev,
@@ -733,7 +803,6 @@ const MenuCalendario = () => {
         newPassword: passwordData.newPassword
       });
       
-      // Mostrar un solo mensaje combinado
       if (response.data.emailSent) {
         toast.success('Contraseña actualizada exitosamente y credenciales enviadas por email');
       } else if (response.data.emailInfo) {
@@ -751,7 +820,6 @@ const MenuCalendario = () => {
       const errorMessage = error.response?.data?.error || 'Error al cambiar la contraseña';
       toast.error(errorMessage);
       
-      // Si la contraseña actual es incorrecta, marcar ese error específicamente
       if (error.response?.status === 401) {
         setPasswordErrors({ currentPassword: 'La contraseña actual es incorrecta' });
       }
@@ -763,19 +831,16 @@ const MenuCalendario = () => {
   // Función para obtener horarios disponibles según el día de la semana dinámicamente
   const fetchHorariosDia = async (diaSemana) => {
     try {
-      // Verificar si es usuario Demo y aplicar horarios específicos
       if (currentUser && currentUser.nombre && currentUser.nombre.toLowerCase() === 'demo') {
         let horariosDemo = [];
         
         if (diaSemana === 'viernes') {
-          // Viernes: 3:30pm a 4:30pm (cada 30 min)
           horariosDemo = [
             { id: 'demo_v1', hora: '15:30:00', turno: 'tarde', dia_semana: 'viernes' },
             { id: 'demo_v2', hora: '16:00:00', turno: 'tarde', dia_semana: 'viernes' },
             { id: 'demo_v3', hora: '16:30:00', turno: 'tarde', dia_semana: 'viernes' }
           ];
         } else if (diaSemana === 'domingo') {
-          // Domingo: 8:00am a 10:30am (cada 30 min)
           horariosDemo = [
             { id: 'demo_d1', hora: '08:00:00', turno: 'mañana', dia_semana: 'domingo' },
             { id: 'demo_d2', hora: '08:30:00', turno: 'mañana', dia_semana: 'domingo' },
@@ -790,7 +855,6 @@ const MenuCalendario = () => {
         return;
       }
       
-      // Para usuarios normales, obtener horarios del servidor
       const response = await axios.get('https://country-page.onrender.com/api/horarios', {
         params: { dia_semana: diaSemana }
       });
@@ -805,10 +869,10 @@ const MenuCalendario = () => {
   // Función para obtener color del estado de reserva
   const getStatusColor = (estado) => {
     switch(estado) {
-      case 'confirmada': return '#28a745'; // Verde
-      case 'pendiente': return '#ffc107';   // Amarillo
-      case 'cancelada': return '#dc3545';   // Rojo
-      default: return '#6c757d';           // Gris
+      case 'confirmada': return '#28a745';
+      case 'pendiente': return '#ffc107';
+      case 'cancelada': return '#dc3545';
+      default: return '#6c757d';
     }
   };
   return (
@@ -876,9 +940,9 @@ const MenuCalendario = () => {
 
       {/* Indicador de carga */}
       {loading && (
-        <div class="loading-overlay" role="status" aria-busy="true">
-          <span class="sr-only">Cargando…</span>
-          <div class="spinner spinner-dual-ring md"></div>
+        <div className="loading-overlay" role="status" aria-busy="true">
+          <span className="sr-only">Cargando…</span>
+          <div className="spinner spinner-dual-ring md"></div>
         </div>
       )}
 
@@ -888,11 +952,7 @@ const MenuCalendario = () => {
           <div className="reservations-modal" onClick={e => e.stopPropagation()}>
             <button className="close-btn" onClick={closeReservationsModal} aria-label="Cerrar modal">×</button>
             <div className="modal-header">
-              <h2>Reservas del {selectedDate.toLocaleDateString('es-ES', {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric'
-              })}</h2>
+              <h2>Reservas del {`${dayNamesFull[selectedDate.getDay()]}, ${selectedDate.getDate()} de ${monthNames[selectedDate.getMonth()]} de ${selectedDate.getFullYear()}`}</h2>
             </div>
             <div className="modal-content">
               {dayReservations.filter(res => res.estado !== 'cancelada').length === 0 ? (
@@ -938,12 +998,7 @@ const MenuCalendario = () => {
           <div className="date-modal" onClick={e => e.stopPropagation()}>
             <button className="close-btn" onClick={closeDateModal} aria-label="Cerrar modal">×</button>
             <div className="modal-header">
-              <button className="close-btn" onClick={closeDateModal} aria-label="Cerrar modal">×</button>
-              <h2>Reserva para {dayNamesFull[selectedDate.getDay()]}, {selectedDate.toLocaleDateString('es-ES', {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric'
-              })}</h2>
+              <h2>Reserva para {`${dayNamesFull[selectedDate.getDay()]}, ${selectedDate.getDate()} de ${monthNames[selectedDate.getMonth()]} de ${selectedDate.getFullYear()}`}</h2>
             </div>
             <div className="modal-content">
               {isWorkingToday ? (
@@ -969,11 +1024,9 @@ const MenuCalendario = () => {
                           })}
                         </select>
                       </div>
-                      {/* Mensaje moved inside 'Horarios Disponibles' below */}
                   <h4>Horarios Disponibles</h4>
                   <div className="time-period">
                     <div className="time-slots-grid">
-                      {/* Si no hay actividad seleccionada pedir primero seleccionar actividad (ahora con mensaje destacado) */}
                       {!bookingData.actividad ? (
                         <div className="activity-hint" role="status" aria-live="polite">
                           <span className="activity-hint__icon" aria-hidden="true">⚠️</span>
@@ -993,7 +1046,6 @@ const MenuCalendario = () => {
                           const isSelected = selectedTime === horaStr;
                           
 
-                          // NUEVO: Verifica si el usuario ya tiene reserva en ese horario
                           const userHasReservation = dayReservations.some(res =>
                             res.usuario_id === currentUser?.id &&
                             res.time === horaStr &&
@@ -1022,7 +1074,6 @@ const MenuCalendario = () => {
                     </div>
                   </div>
 
-                  {/* Componente de disponibilidad de caballos */}
                   <DisponibilidadCaballos
                     totalSpots={11}
                     reservations={currentSpotAvailability.reservations ? currentSpotAvailability.reservations.filter(res => res.estado === 'confirmada') : []}
@@ -1030,7 +1081,6 @@ const MenuCalendario = () => {
                     selectedDate={selectedDate}
                   />
 
-                  {/* Formulario solo si se selecciona horario */}
                   {selectedTime && (
                     <div className="booking-form">
                       <h4>Información de la Reserva</h4>
@@ -1073,7 +1123,7 @@ const MenuCalendario = () => {
                         disabled={
                           loading ||
                           !currentUser ||
-                          !selectedTime || // Botón deshabilitado hasta seleccionar horario
+                          !selectedTime ||
                           !bookingData.nombre || 
                           !bookingData.edad || 
                           !bookingData.actividad || 
@@ -1098,8 +1148,8 @@ const MenuCalendario = () => {
                     </>
                   ) : (
                     <>
-                      <p>Los lunes no hay horarios disponibles.</p>
-                      <p>Horario laboral: <strong>Martes a Domingo</strong></p>
+                      <p>Este día no tiene disponibilidad.</p>
+                      <p>Horario laboral: <strong>Todos los días</strong></p>
                     </>
                   )}
                 </div>
@@ -1115,7 +1165,7 @@ const MenuCalendario = () => {
           <div className="month-navigation">
             <button className="nav-btn prev" onClick={previousMonth} aria-label="Mes anterior">‹</button>
             <h2 className="month-year">
-              {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+              {`${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`}
             </h2>
             <button className="nav-btn next" onClick={nextMonth} aria-label="Mes siguiente">›</button>
           </div>
@@ -1219,7 +1269,6 @@ const MenuCalendario = () => {
             <button className="close-btn" onClick={closePasswordModal} aria-label="Cerrar modal">×</button>
             <h2>Cambiar contraseña</h2>
             
-            {/* Leyenda informativa sobre el email */}
             {currentUser && (
               <div style={{ 
                 backgroundColor: '#e3f2fd', 
