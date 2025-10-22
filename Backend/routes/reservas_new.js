@@ -1,0 +1,1028 @@
+import express from 'express';
+import db from '../server/db.js';
+
+const router = express.Router();
+
+// =============================================================================
+// FUNCIONES HELPER
+// =============================================================================
+
+// Función para formatear fechas para MySQL
+const formatDateForMySQL = (dateString) => {
+  if (!dateString) return null;
+  
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    return dateString;
+  }
+  
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) {
+    throw new Error('Formato de fecha inválido');
+  }
+  
+  return date.toISOString().split('T')[0];
+};
+
+// Función para formatear tiempo para MySQL
+const formatTimeForMySQL = (timeString) => {
+  if (!timeString) return null;
+  
+  // Si ya está en formato HH:MM:SS, devolverlo tal como está
+  if (/^\d{2}:\d{2}:\d{2}$/.test(timeString)) {
+    return timeString;
+  }
+  
+  // Si está en formato HH:MM, agregar :00
+  if (/^\d{2}:\d{2}$/.test(timeString)) {
+    return timeString + ':00';
+  }
+  
+  throw new Error('Formato de hora inválido');
+};
+
+
+
+// Verificar disponibilidad de instructora
+const verificarDisponibilidadInstructora = async (instructoraId, fecha, horaInicio, horaFin) => {
+  try {
+    // Verificar si la instructora está en descanso
+    const [descansos] = await db.query(`
+      SELECT id FROM descansos
+      WHERE instructora_id = ?
+      AND ? BETWEEN fecha_inicio AND fecha_fin
+    `, [instructoraId, fecha]);
+
+    if (descansos.length > 0) {
+      return { disponible: false, razon: 'Instructora en descanso' };
+    }
+
+    // Verificar conflictos de horarios
+    const [conflictos] = await db.query(`
+      SELECT r.id FROM reservas r
+      JOIN instructoras i ON r.instructora_id = i.id
+      WHERE r.instructora_id = ?
+      AND r.fecha = ?
+      AND r.estatus IN ('pendiente', 'confirmada')
+      AND (
+        (r.hora_inicio <= ? AND r.hora_fin > ?) OR
+        (r.hora_inicio < ? AND r.hora_fin >= ?) OR
+        (r.hora_inicio >= ? AND r.hora_fin <= ?)
+      )
+    `, [instructoraId, fecha, horaInicio, horaInicio, horaFin, horaFin, horaInicio, horaFin]);
+
+    if (conflictos.length > 0) {
+      return { disponible: false, razon: 'Instructora ocupada en ese horario' };
+    }
+
+    return { disponible: true };
+  } catch (err) {
+    console.error('Error verificando disponibilidad de instructora:', err);
+    return { disponible: false, razon: 'Error del sistema' };
+  }
+};
+
+// Verificar disponibilidad de caballo
+const verificarDisponibilidadCaballo = async (caballoId, fecha, horaInicio, horaFin, tipoClase) => {
+  try {
+    // Verificar estatus del caballo
+    const [caballo] = await db.query(`
+      SELECT disponibilidad, estatus FROM caballos WHERE id = ?
+    `, [caballoId]);
+
+    if (caballo.length === 0) {
+      return { disponible: false, razon: 'Caballo no encontrado' };
+    }
+
+    if (caballo[0].disponibilidad === 'no_disponible') {
+      return { disponible: false, razon: 'Caballo no disponible' };
+    }
+
+    // Verificar conflictos de horarios
+    const [conflictos] = await db.query(`
+      SELECT r.id, r.hora_fin FROM reservas r
+      WHERE r.caballo_id = ?
+      AND r.fecha = ?
+      AND r.estatus IN ('pendiente', 'confirmada')
+      AND (
+        (r.hora_inicio <= ? AND r.hora_fin > ?) OR
+        (r.hora_inicio < ? AND r.hora_fin >= ?) OR
+        (r.hora_inicio >= ? AND r.hora_fin <= ?)
+      )
+    `, [caballoId, fecha, horaInicio, horaInicio, horaFin, horaFin, horaInicio, horaFin]);
+
+    if (conflictos.length > 0) {
+      return { disponible: false, razon: 'Caballo ocupado en ese horario' };
+    }
+
+    // Verificar descanso obligatorio para salto/avanzado (3 horas)
+    if (tipoClase === 'salto') {
+      const [ultimaReserva] = await db.query(`
+        SELECT r.hora_fin FROM reservas r
+        JOIN clases c ON r.clase_id = c.id
+        WHERE r.caballo_id = ?
+        AND r.fecha = ?
+        AND r.estatus = 'completada'
+        AND c.nombre = 'salto'
+        ORDER BY r.hora_fin DESC
+        LIMIT 1
+      `, [caballoId, fecha]);
+
+      if (ultimaReserva.length > 0) {
+        const horaFinUltima = ultimaReserva[0].hora_fin;
+        const tiempoDescanso = new Date(`2000-01-01 ${horaInicio}`) - new Date(`2000-01-01 ${horaFinUltima}`);
+        const horasDescanso = tiempoDescanso / (1000 * 60 * 60);
+
+        if (horasDescanso < 3) {
+          return { disponible: false, razon: 'Caballo necesita 3 horas de descanso después de salto' };
+        }
+      }
+    }
+
+    return { disponible: true };
+  } catch (err) {
+    console.error('Error verificando disponibilidad de caballo:', err);
+    return { disponible: false, razon: 'Error del sistema' };
+  }
+};
+
+// Verificar restricciones por tipo de cliente
+const verificarRestriccionesCliente = async (clienteId, fecha, tipoCliente) => {
+  try {
+    if (tipoCliente === 'media_renta') {
+      // Verificar límite de 3 reservas por semana
+      const inicioSemana = new Date(fecha);
+      inicioSemana.setDate(inicioSemana.getDate() - inicioSemana.getDay());
+      const finSemana = new Date(inicioSemana);
+      finSemana.setDate(finSemana.getDate() + 6);
+
+      const [reservasSemanales] = await db.query(`
+        SELECT COUNT(*) as total FROM reservas
+        WHERE cliente_id = ?
+        AND fecha BETWEEN ? AND ?
+        AND estatus IN ('pendiente', 'confirmada', 'completada')
+      `, [clienteId, formatDateForMySQL(inicioSemana), formatDateForMySQL(finSemana)]);
+
+      if (reservasSemanales[0].total >= 3) {
+        return { 
+          permitido: false, 
+          razon: 'Límite de 3 reservas por semana alcanzado (media renta)' 
+        };
+      }
+    }
+
+    // Verificar que no tenga más de una reserva activa
+    const [reservasActivas] = await db.query(`
+      SELECT COUNT(*) as total FROM reservas
+      WHERE cliente_id = ?
+      AND fecha >= CURDATE()
+      AND estatus IN ('pendiente', 'confirmada')
+    `, [clienteId]);
+
+    if (reservasActivas[0].total > 0) {
+      return { 
+        permitido: false, 
+        razon: 'Ya tienes una reserva activa. Solo se permite una reserva por cliente' 
+      };
+    }
+
+    return { permitido: true };
+  } catch (err) {
+    console.error('Error verificando restricciones de cliente:', err);
+    return { permitido: false, razon: 'Error del sistema' };
+  }
+};
+
+// =============================================================================
+// ENDPOINTS PARA ADMINISTRADOR
+// =============================================================================
+
+// Obtener todas las reservas (vista de administrador)
+router.get('/admin/all', async (req, res) => {
+  try {
+    const { fecha, semana } = req.query;
+    let whereClause = '1=1';
+    let params = [];
+
+    if (fecha) {
+      whereClause += ' AND r.fecha = ?';
+      params.push(formatDateForMySQL(fecha));
+    } else if (semana) {
+      // Calcular rango de la semana
+      const inicioSemana = new Date(semana);
+      inicioSemana.setDate(inicioSemana.getDate() - inicioSemana.getDay());
+      const finSemana = new Date(inicioSemana);
+      finSemana.setDate(finSemana.getDate() + 6);
+      
+      whereClause += ' AND r.fecha BETWEEN ? AND ?';
+      params.push(formatDateForMySQL(inicioSemana), formatDateForMySQL(finSemana));
+    } else {
+      // Por defecto mostrar el día actual
+      whereClause += ' AND r.fecha = CURDATE()';
+    }
+
+    const query = `
+      SELECT 
+        r.id,
+        r.fecha,
+        r.hora_inicio,
+        r.hora_fin,
+        r.estatus,
+        r.tipo,
+        r.observaciones,
+        u.nombre as cliente_nombre,
+        u.apellido as cliente_apellido,
+        u.tipo_cliente,
+        c.nombre as caballo_nombre,
+        i.nombre as instructora_nombre,
+        i.apellido as instructora_apellido,
+        cl.nombre as clase_nombre,
+        cl.duracion_min
+      FROM reservas r
+      JOIN usuarios u ON r.cliente_id = u.id
+      LEFT JOIN caballos c ON r.caballo_id = c.id
+      LEFT JOIN instructoras inst ON r.instructora_id = inst.id
+      LEFT JOIN usuarios i ON inst.usuario_id = i.id
+      LEFT JOIN clases cl ON r.clase_id = cl.id
+      WHERE ${whereClause}
+      ORDER BY r.fecha, r.hora_inicio
+    `;
+
+    const [rows] = await db.query(query, params);
+    res.json(rows);
+  } catch (err) {
+    console.error('Error obteniendo reservas:', err);
+    res.status(500).json({ error: 'Error al obtener reservas' });
+  }
+});
+
+// Dashboard de estadísticas para administrador
+router.get('/admin/dashboard', async (req, res) => {
+  try {
+    // Reservas del día
+    const [reservasHoy] = await db.query(`
+      SELECT COUNT(*) as total FROM reservas 
+      WHERE fecha = CURDATE()
+    `);
+
+    // Reservas por estatus
+    const [reservasPorEstatus] = await db.query(`
+      SELECT estatus, COUNT(*) as total 
+      FROM reservas 
+      WHERE fecha >= CURDATE()
+      GROUP BY estatus
+    `);
+
+    // Instructoras disponibles hoy
+    const [instructorasDisponibles] = await db.query(`
+      SELECT COUNT(*) as total
+      FROM instructoras i
+      WHERE i.disponibilidad = 'disponible'
+      AND i.id NOT IN (
+        SELECT DISTINCT d.instructora_id 
+        FROM descansos d 
+        WHERE CURDATE() BETWEEN d.fecha_inicio AND d.fecha_fin
+      )
+    `);
+
+    res.json({
+      reservas_hoy: reservasHoy[0].total,
+      reservas_por_estatus: reservasPorEstatus,
+      instructoras_disponibles: instructorasDisponibles[0].total
+    });
+  } catch (err) {
+    console.error('Error obteniendo dashboard:', err);
+    res.status(500).json({ error: 'Error al obtener estadísticas del dashboard' });
+  }
+});
+
+// Crear reserva manual (administrador)
+router.post('/admin/create', async (req, res) => {
+  const { 
+    cliente_id, 
+    caballo_id, 
+    instructora_id, 
+    clase_id, 
+    fecha, 
+    hora_inicio, 
+    hora_fin, 
+    observaciones 
+  } = req.body;
+
+  // Validaciones básicas
+  if (!cliente_id || !clase_id || !fecha || !hora_inicio || !hora_fin) {
+    return res.status(400).json({ 
+      error: 'Faltan campos requeridos: cliente_id, clase_id, fecha, hora_inicio, hora_fin' 
+    });
+  }
+
+  try {
+    // Obtener información del cliente
+    const [cliente] = await db.query(`
+      SELECT tipo_cliente FROM usuarios WHERE id = ?
+    `, [cliente_id]);
+
+    if (cliente.length === 0) {
+      return res.status(404).json({ error: 'Cliente no encontrado' });
+    }
+
+    const tipoCliente = cliente[0].tipo_cliente;
+
+    // Si se asigna instructora, verificar disponibilidad
+    if (instructora_id) {
+      const disponibilidadInstructora = await verificarDisponibilidadInstructora(
+        instructora_id, fecha, hora_inicio, hora_fin
+      );
+      if (!disponibilidadInstructora.disponible) {
+        return res.status(400).json({ 
+          error: 'Instructora no disponible', 
+          razon: disponibilidadInstructora.razon 
+        });
+      }
+    }
+
+    // Si se asigna caballo, verificar disponibilidad
+    if (caballo_id) {
+      const [clase] = await db.query('SELECT nombre FROM clases WHERE id = ?', [clase_id]);
+      const tipoClase = clase.length > 0 ? clase[0].nombre : null;
+      
+      const disponibilidadCaballo = await verificarDisponibilidadCaballo(
+        caballo_id, fecha, hora_inicio, hora_fin, tipoClase
+      );
+      if (!disponibilidadCaballo.disponible) {
+        return res.status(400).json({ 
+          error: 'Caballo no disponible', 
+          razon: disponibilidadCaballo.razon 
+        });
+      }
+    }
+
+    // Crear la reserva
+    const [result] = await db.query(`
+      INSERT INTO reservas (
+        cliente_id, caballo_id, instructora_id, clase_id, 
+        fecha, hora_inicio, hora_fin, estatus, tipo, observaciones
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pendiente', ?, ?)
+    `, [
+      cliente_id, 
+      caballo_id, 
+      instructora_id, 
+      clase_id,
+      formatDateForMySQL(fecha),
+      formatTimeForMySQL(hora_inicio),
+      formatTimeForMySQL(hora_fin),
+      tipoCliente === 'propietario' ? 'propietario' : 
+      tipoCliente === 'renta' ? 'renta' :
+      tipoCliente === 'media_renta' ? 'media_renta' : 'normal',
+      observaciones
+    ]);
+
+    res.json({
+      message: 'Reserva creada correctamente',
+      id: result.insertId
+    });
+  } catch (err) {
+    console.error('Error creando reserva:', err);
+    res.status(500).json({ error: 'Error al crear reserva' });
+  }
+});
+
+// Cambiar estatus de reserva (administrador)
+router.put('/admin/:id/status', async (req, res) => {
+  const { id } = req.params;
+  const { estatus, observaciones } = req.body;
+
+  const estatusValidos = ['pendiente', 'confirmada', 'cancelada', 'completada'];
+  if (!estatusValidos.includes(estatus)) {
+    return res.status(400).json({ 
+      error: `Estatus inválido. Valores permitidos: ${estatusValidos.join(', ')}` 
+    });
+  }
+
+  try {
+    const [result] = await db.query(`
+      UPDATE reservas 
+      SET estatus = ?, observaciones = COALESCE(?, observaciones)
+      WHERE id = ?
+    `, [estatus, observaciones, id]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Reserva no encontrada' });
+    }
+
+    res.json({ message: 'Estatus de reserva actualizado correctamente' });
+  } catch (err) {
+    console.error('Error actualizando estatus de reserva:', err);
+    res.status(500).json({ error: 'Error al actualizar estatus de reserva' });
+  }
+});
+
+// =============================================================================
+// ENDPOINTS PARA CLIENTES
+// =============================================================================
+
+// Obtener reservas del cliente autenticado
+router.get('/my-reservations/:clienteId', async (req, res) => {
+  const { clienteId } = req.params;
+
+  try {
+    const query = `
+      SELECT 
+        r.id,
+        r.fecha,
+        r.hora_inicio,
+        r.hora_fin,
+        r.estatus,
+        r.tipo,
+        r.observaciones,
+        c.nombre as caballo_nombre,
+        i.nombre as instructora_nombre,
+        i.apellido as instructora_apellido,
+        cl.nombre as clase_nombre
+      FROM reservas r
+      LEFT JOIN caballos c ON r.caballo_id = c.id
+      LEFT JOIN instructoras inst ON r.instructora_id = inst.id
+      LEFT JOIN usuarios i ON inst.usuario_id = i.id
+      LEFT JOIN clases cl ON r.clase_id = cl.id
+      WHERE r.cliente_id = ?
+      AND r.fecha >= CURDATE()
+      ORDER BY r.fecha, r.hora_inicio
+    `;
+
+    const [rows] = await db.query(query, [clienteId]);
+    res.json(rows);
+  } catch (err) {
+    console.error('Error obteniendo reservas del cliente:', err);
+    res.status(500).json({ error: 'Error al obtener tus reservas' });
+  }
+});
+
+// Obtener horarios disponibles para reservar
+router.get('/available-slots/:clienteId', async (req, res) => {
+  const { clienteId } = req.params;
+  const { fecha, clase_id } = req.query;
+
+  if (!fecha || !clase_id) {
+    return res.status(400).json({ 
+      error: 'Parámetros requeridos: fecha y clase_id' 
+    });
+  }
+
+  try {
+    // Obtener información del cliente
+    const [cliente] = await db.query(`
+      SELECT tipo_cliente FROM usuarios WHERE id = ?
+    `, [clienteId]);
+
+    if (cliente.length === 0) {
+      return res.status(404).json({ error: 'Cliente no encontrado' });
+    }
+
+    const tipoCliente = cliente[0].tipo_cliente;
+
+    // Verificar restricciones del cliente
+    const restricciones = await verificarRestriccionesCliente(clienteId, fecha, tipoCliente);
+    if (!restricciones.permitido) {
+      return res.status(403).json({ 
+        error: 'No puedes hacer más reservas', 
+        razon: restricciones.razon 
+      });
+    }
+
+    // Obtener información de la clase
+    const [clase] = await db.query(`
+      SELECT nombre, duracion_min, cupo_max, horario_matutino, horario_vespertino 
+      FROM clases WHERE id = ?
+    `, [clase_id]);
+
+    if (clase.length === 0) {
+      return res.status(404).json({ error: 'Clase no encontrada' });
+    }
+
+    const infoClase = clase[0];
+    const fechaObj = new Date(fecha);
+    const diaSemana = fechaObj.getDay(); // 0 = domingo, 6 = sábado
+
+    // Generar horarios según la clase y día de la semana
+    let horariosDisponibles = [];
+
+    // Lógica específica por tipo de clase
+    switch (infoClase.nombre) {
+      case 'iniciacion':
+        // Matutino: 7:30-10:30, Vespertino: 3:00-4:30 (no sábados/domingos tarde)
+        if (diaSemana >= 1 && diaSemana <= 5) { // Lunes a viernes
+          horariosDisponibles = [
+            '07:30:00', '08:00:00', '08:30:00', '09:00:00', '09:30:00', '10:00:00',
+            '15:00:00', '15:30:00', '16:00:00', '16:30:00'
+          ];
+        } else if (diaSemana === 6) { // Sábado
+          horariosDisponibles = ['07:30:00', '08:00:00', '08:30:00', '09:00:00', '09:30:00'];
+        } else { // Domingo
+          horariosDisponibles = ['07:30:00', '08:00:00', '08:30:00', '09:00:00', '09:30:00'];
+        }
+        break;
+
+      case 'intermedio':
+        // Horario 5pm + matutinos específicos
+        if (diaSemana >= 1 && diaSemana <= 5) { // Lunes a viernes
+          horariosDisponibles = ['08:00:00', '09:00:00', '10:00:00', '17:00:00'];
+        } else { // Sábados y domingos
+          horariosDisponibles = ['08:00:00', '09:00:00', '10:00:00'];
+        }
+        break;
+
+      case 'paseo':
+        // Lun-Vie: 8AM-12PM, Vespertino: 4-5PM
+        if (diaSemana >= 1 && diaSemana <= 5) {
+          horariosDisponibles = [
+            '08:00:00', '09:00:00', '10:00:00', '11:00:00', '12:00:00',
+            '16:00:00', '17:00:00'
+          ];
+        } else {
+          horariosDisponibles = ['08:00:00', '09:00:00', '10:00:00', '11:00:00', '12:00:00'];
+        }
+        break;
+
+      case 'salto':
+        // Solo horario 5pm + matutino 8-10AM
+        if (diaSemana >= 1 && diaSemana <= 5) {
+          horariosDisponibles = ['08:00:00', '09:00:00', '10:00:00', '17:00:00'];
+        } else {
+          horariosDisponibles = ['08:00:00', '09:00:00', '10:00:00'];
+        }
+        break;
+
+      default:
+        horariosDisponibles = ['08:00:00', '10:00:00', '15:00:00', '17:00:00'];
+    }
+
+    // Filtrar horarios ocupados
+    const horariosLibres = [];
+    for (const hora of horariosDisponibles) {
+      const horaFin = new Date(`2000-01-01 ${hora}`);
+      horaFin.setMinutes(horaFin.getMinutes() + infoClase.duracion_min);
+      const horaFinStr = horaFin.toTimeString().slice(0, 8);
+
+      // Verificar cupo disponible
+      const [reservasExistentes] = await db.query(`
+        SELECT COUNT(*) as ocupadas FROM reservas
+        WHERE fecha = ? AND clase_id = ?
+        AND hora_inicio = ? 
+        AND estatus IN ('pendiente', 'confirmada')
+      `, [formatDateForMySQL(fecha), clase_id, hora]);
+
+      if (reservasExistentes[0].ocupadas < infoClase.cupo_max) {
+        horariosLibres.push({
+          hora_inicio: hora,
+          hora_fin: horaFinStr,
+          espacios_disponibles: infoClase.cupo_max - reservasExistentes[0].ocupadas
+        });
+      }
+    }
+
+    res.json({
+      clase: infoClase.nombre,
+      fecha: fecha,
+      horarios_disponibles: horariosLibres
+    });
+  } catch (err) {
+    console.error('Error obteniendo horarios disponibles:', err);
+    res.status(500).json({ error: 'Error al obtener horarios disponibles' });
+  }
+});
+
+// Hacer nueva reserva (cliente)
+router.post('/book', async (req, res) => {
+  const { cliente_id, clase_id, fecha, hora_inicio } = req.body;
+
+  if (!cliente_id || !clase_id || !fecha || !hora_inicio) {
+    return res.status(400).json({ 
+      error: 'Faltan campos requeridos: cliente_id, clase_id, fecha, hora_inicio' 
+    });
+  }
+
+  try {
+    // Verificar que la reserva sea al menos 2 horas antes
+    const ahora = new Date();
+    const fechaHoraReserva = new Date(`${fecha} ${hora_inicio}`);
+    const diferenciaHoras = (fechaHoraReserva - ahora) / (1000 * 60 * 60);
+
+    if (diferenciaHoras < 2) {
+      return res.status(400).json({ 
+        error: 'Las reservas deben hacerse al menos 2 horas antes' 
+      });
+    }
+
+    // Obtener información del cliente
+    const [cliente] = await db.query(`
+      SELECT tipo_cliente FROM usuarios WHERE id = ?
+    `, [cliente_id]);
+
+    if (cliente.length === 0) {
+      return res.status(404).json({ error: 'Cliente no encontrado' });
+    }
+
+    const tipoCliente = cliente[0].tipo_cliente;
+
+    // Verificar restricciones del cliente
+    const restricciones = await verificarRestriccionesCliente(cliente_id, fecha, tipoCliente);
+    if (!restricciones.permitido) {
+      return res.status(403).json({ 
+        error: 'No puedes hacer más reservas', 
+        razon: restricciones.razon 
+      });
+    }
+
+    // Obtener información de la clase
+    const [clase] = await db.query(`
+      SELECT nombre, duracion_min, cupo_max FROM clases WHERE id = ?
+    `, [clase_id]);
+
+    if (clase.length === 0) {
+      return res.status(404).json({ error: 'Clase no encontrada' });
+    }
+
+    const infoClase = clase[0];
+
+    // Calcular hora de fin
+    const horaFinObj = new Date(`2000-01-01 ${hora_inicio}`);
+    horaFinObj.setMinutes(horaFinObj.getMinutes() + infoClase.duracion_min);
+    const hora_fin = horaFinObj.toTimeString().slice(0, 8);
+
+    // Verificar cupo disponible
+    const [reservasExistentes] = await db.query(`
+      SELECT COUNT(*) as ocupadas FROM reservas
+      WHERE fecha = ? AND clase_id = ?
+      AND hora_inicio = ? 
+      AND estatus IN ('pendiente', 'confirmada')
+    `, [formatDateForMySQL(fecha), clase_id, hora_inicio]);
+
+    if (reservasExistentes[0].ocupadas >= infoClase.cupo_max) {
+      return res.status(400).json({ 
+        error: 'No hay espacios disponibles en este horario' 
+      });
+    }
+
+    // Crear la reserva
+    const [result] = await db.query(`
+      INSERT INTO reservas (
+        cliente_id, clase_id, fecha, hora_inicio, hora_fin, 
+        estatus, tipo
+      ) VALUES (?, ?, ?, ?, ?, 'pendiente', ?)
+    `, [
+      cliente_id, 
+      clase_id,
+      formatDateForMySQL(fecha),
+      formatTimeForMySQL(hora_inicio),
+      formatTimeForMySQL(hora_fin),
+      tipoCliente === 'propietario' ? 'propietario' : 
+      tipoCliente === 'renta' ? 'renta' :
+      tipoCliente === 'media_renta' ? 'media_renta' : 'normal'
+    ]);
+
+    res.json({
+      message: 'Reserva creada correctamente',
+      id: result.insertId,
+      nota: 'La instructora asignará el caballo antes de la clase'
+    });
+  } catch (err) {
+    console.error('Error creando reserva:', err);
+    res.status(500).json({ error: 'Error al crear reserva' });
+  }
+});
+
+// Cancelar reserva (cliente)
+router.delete('/:id/cancel/:clienteId', async (req, res) => {
+  const { id, clienteId } = req.params;
+
+  try {
+    // Verificar que la reserva pertenece al cliente
+    const [reserva] = await db.query(`
+      SELECT fecha, hora_inicio, estatus FROM reservas 
+      WHERE id = ? AND cliente_id = ?
+    `, [id, clienteId]);
+
+    if (reserva.length === 0) {
+      return res.status(404).json({ error: 'Reserva no encontrada' });
+    }
+
+    const infoReserva = reserva[0];
+
+    // Verificar que la reserva se puede cancelar (2 horas antes)
+    const ahora = new Date();
+    const fechaHoraReserva = new Date(`${infoReserva.fecha} ${infoReserva.hora_inicio}`);
+    const diferenciaHoras = (fechaHoraReserva - ahora) / (1000 * 60 * 60);
+
+    if (diferenciaHoras < 2) {
+      return res.status(400).json({ 
+        error: 'Las reservas solo se pueden cancelar al menos 2 horas antes' 
+      });
+    }
+
+    if (infoReserva.estatus === 'cancelada') {
+      return res.status(400).json({ error: 'La reserva ya está cancelada' });
+    }
+
+    if (infoReserva.estatus === 'completada') {
+      return res.status(400).json({ error: 'No se puede cancelar una reserva completada' });
+    }
+
+    // Cancelar la reserva
+    await db.query(`
+      UPDATE reservas SET estatus = 'cancelada' WHERE id = ?
+    `, [id]);
+
+    res.json({ message: 'Reserva cancelada correctamente' });
+  } catch (err) {
+    console.error('Error cancelando reserva:', err);
+    res.status(500).json({ error: 'Error al cancelar reserva' });
+  }
+});
+
+// =============================================================================
+// ENDPOINTS PARA INSTRUCTORAS
+// =============================================================================
+
+// Obtener clases asignadas a la instructora
+router.get('/instructor/my-classes/:instructoraId', async (req, res) => {
+  const { instructoraId } = req.params;
+  const { fecha } = req.query;
+
+  try {
+    let whereClause = 'r.instructora_id = ?';
+    let params = [instructoraId];
+
+    if (fecha) {
+      whereClause += ' AND r.fecha = ?';
+      params.push(formatDateForMySQL(fecha));
+    } else {
+      whereClause += ' AND r.fecha >= CURDATE()';
+    }
+
+    const query = `
+      SELECT 
+        r.id,
+        r.fecha,
+        r.hora_inicio,
+        r.hora_fin,
+        r.estatus,
+        r.observaciones,
+        u.nombre as cliente_nombre,
+        u.apellido as cliente_apellido,
+        c.nombre as caballo_nombre,
+        cl.nombre as clase_nombre
+      FROM reservas r
+      JOIN usuarios u ON r.cliente_id = u.id
+      LEFT JOIN caballos c ON r.caballo_id = c.id
+      LEFT JOIN clases cl ON r.clase_id = cl.id
+      WHERE ${whereClause}
+      ORDER BY r.fecha, r.hora_inicio
+    `;
+
+    const [rows] = await db.query(query, params);
+    res.json(rows);
+  } catch (err) {
+    console.error('Error obteniendo clases de instructora:', err);
+    res.status(500).json({ error: 'Error al obtener tus clases' });
+  }
+});
+
+// Asignar caballo a reserva (SOLO instructora)
+router.put('/instructor/:reservaId/assign-horse', async (req, res) => {
+  const { reservaId } = req.params;
+  const { caballo_id, instructora_id } = req.body;
+
+  if (!caballo_id || !instructora_id) {
+    return res.status(400).json({ 
+      error: 'Faltan campos requeridos: caballo_id, instructora_id' 
+    });
+  }
+
+  try {
+    // Verificar que la reserva existe y pertenece a la instructora
+    const [reserva] = await db.query(`
+      SELECT fecha, hora_inicio, hora_fin, clase_id FROM reservas 
+      WHERE id = ? AND instructora_id = ?
+    `, [reservaId, instructora_id]);
+
+    if (reserva.length === 0) {
+      return res.status(404).json({ 
+        error: 'Reserva no encontrada o no tienes permisos para modificarla' 
+      });
+    }
+
+    const infoReserva = reserva[0];
+
+    // Obtener tipo de clase para verificar descansos
+    const [clase] = await db.query('SELECT nombre FROM clases WHERE id = ?', [infoReserva.clase_id]);
+    const tipoClase = clase.length > 0 ? clase[0].nombre : null;
+
+    // Verificar disponibilidad del caballo
+    const disponibilidad = await verificarDisponibilidadCaballo(
+      caballo_id, 
+      infoReserva.fecha, 
+      infoReserva.hora_inicio, 
+      infoReserva.hora_fin, 
+      tipoClase
+    );
+
+    if (!disponibilidad.disponible) {
+      return res.status(400).json({ 
+        error: 'Caballo no disponible', 
+        razon: disponibilidad.razon 
+      });
+    }
+
+    // Asignar el caballo
+    await db.query(`
+      UPDATE reservas SET caballo_id = ? WHERE id = ?
+    `, [caballo_id, reservaId]);
+
+    res.json({ message: 'Caballo asignado correctamente a la reserva' });
+  } catch (err) {
+    console.error('Error asignando caballo:', err);
+    res.status(500).json({ error: 'Error al asignar caballo' });
+  }
+});
+
+// Marcar asistencia
+router.put('/instructor/:reservaId/attendance', async (req, res) => {
+  const { reservaId } = req.params;
+  const { asistio, observaciones, instructora_id } = req.body;
+
+  if (asistio === undefined || !instructora_id) {
+    return res.status(400).json({ 
+      error: 'Faltan campos requeridos: asistio (true/false), instructora_id' 
+    });
+  }
+
+  try {
+    // Verificar que la reserva pertenece a la instructora
+    const [reserva] = await db.query(`
+      SELECT id FROM reservas 
+      WHERE id = ? AND instructora_id = ?
+    `, [reservaId, instructora_id]);
+
+    if (reserva.length === 0) {
+      return res.status(404).json({ 
+        error: 'Reserva no encontrada o no tienes permisos para modificarla' 
+      });
+    }
+
+    // Actualizar estatus y observaciones
+    const nuevoEstatus = asistio ? 'completada' : 'cancelada';
+    const nuevasObservaciones = asistio ? 
+      `Clase completada. ${observaciones || ''}` : 
+      `No asistió. ${observaciones || ''}`;
+
+    await db.query(`
+      UPDATE reservas 
+      SET estatus = ?, observaciones = ?
+      WHERE id = ?
+    `, [nuevoEstatus, nuevasObservaciones.trim(), reservaId]);
+
+    res.json({ 
+      message: asistio ? 'Asistencia registrada correctamente' : 'Ausencia registrada correctamente' 
+    });
+  } catch (err) {
+    console.error('Error registrando asistencia:', err);
+    res.status(500).json({ error: 'Error al registrar asistencia' });
+  }
+});
+
+// Solicitar descanso (instructora)
+router.post('/instructor/request-break', async (req, res) => {
+  const { 
+    instructora_id, 
+    fecha_inicio, 
+    fecha_fin, 
+    motivo, 
+    tipo 
+  } = req.body;
+
+  if (!instructora_id || !fecha_inicio || !fecha_fin || !motivo) {
+    return res.status(400).json({ 
+      error: 'Faltan campos requeridos: instructora_id, fecha_inicio, fecha_fin, motivo' 
+    });
+  }
+
+  const tiposValidos = ['personal', 'enfermedad', 'vacaciones', 'otro'];
+  if (tipo && !tiposValidos.includes(tipo)) {
+    return res.status(400).json({ 
+      error: `Tipo inválido. Valores permitidos: ${tiposValidos.join(', ')}` 
+    });
+  }
+
+  try {
+    const [result] = await db.query(`
+      INSERT INTO descansos (
+        instructora_id, fecha_inicio, fecha_fin, motivo, tipo
+      ) VALUES (?, ?, ?, ?, ?)
+    `, [
+      instructora_id,
+      formatDateForMySQL(fecha_inicio),
+      formatDateForMySQL(fecha_fin),
+      motivo,
+      tipo || 'otro'
+    ]);
+
+    res.json({
+      message: 'Solicitud de descanso registrada correctamente',
+      id: result.insertId,
+      nota: 'Pendiente de aprobación por administrador'
+    });
+  } catch (err) {
+    console.error('Error registrando descanso:', err);
+    res.status(500).json({ error: 'Error al registrar solicitud de descanso' });
+  }
+});
+
+// =============================================================================
+// ENDPOINTS AUXILIARES
+// =============================================================================
+
+// Obtener clases disponibles
+router.get('/classes', async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT id, nombre, duracion_min, cupo_max, observaciones
+      FROM clases
+      ORDER BY prioridad DESC, nombre
+    `);
+    res.json(rows);
+  } catch (err) {
+    console.error('Error obteniendo clases:', err);
+    res.status(500).json({ error: 'Error al obtener clases' });
+  }
+});
+
+// Obtener caballos disponibles
+router.get('/horses/available', async (req, res) => {
+  try {
+    const { tipo_cliente } = req.query;
+    
+    let whereClause = "disponibilidad = 'disponible'";
+    
+    // Filtrar según tipo de cliente
+    if (tipo_cliente === 'propietario') {
+      // Los propietarios solo ven sus caballos en este endpoint específico
+      whereClause += " AND estatus = 'privado'";
+    } else {
+      whereClause += " AND estatus IN ('publico', 'renta', 'media_renta')";
+    }
+
+    const [rows] = await db.query(`
+      SELECT id, nombre, estatus, especialidad, descripcion
+      FROM caballos
+      WHERE ${whereClause}
+      ORDER BY nombre
+    `);
+    
+    res.json(rows);
+  } catch (err) {
+    console.error('Error obteniendo caballos:', err);
+    res.status(500).json({ error: 'Error al obtener caballos' });
+  }
+});
+
+// Obtener instructoras disponibles
+router.get('/instructors/available', async (req, res) => {
+  try {
+    const { fecha, especialidad } = req.query;
+    
+    let whereClause = "i.disponibilidad = 'disponible'";
+    let params = [];
+    
+    if (fecha) {
+      whereClause += ` AND i.id NOT IN (
+        SELECT d.instructora_id FROM descansos d 
+        WHERE ? BETWEEN d.fecha_inicio AND d.fecha_fin
+      )`;
+      params.push(formatDateForMySQL(fecha));
+    }
+    
+    if (especialidad) {
+      whereClause += " AND (i.especialidad = ? OR i.especialidad = 'mixto')";
+      params.push(especialidad);
+    }
+
+    const [rows] = await db.query(`
+      SELECT 
+        i.id,
+        u.nombre,
+        u.apellido,
+        i.especialidad,
+        i.num_contacto
+      FROM instructoras i
+      JOIN usuarios u ON i.usuario_id = u.id
+      WHERE ${whereClause}
+      ORDER BY u.nombre
+    `, params);
+    
+    res.json(rows);
+  } catch (err) {
+    console.error('Error obteniendo instructoras:', err);
+    res.status(500).json({ error: 'Error al obtener instructoras' });
+  }
+});
+
+export default router;

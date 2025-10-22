@@ -4,7 +4,7 @@ import cors from "cors";
 import db from "./db.js"; // ruta relativa correcta, db.js al m ismo nivel que server
 
 import instructorRoutes from '../routes/instructor.js'; 
-import reservasRoutes from '../routes/reservas.js'; 
+import reservasRoutes from '../routes/reservas_new.js'; 
 import horariosRoutes from '../routes/horarios.js'; 
 import usersRoutes from '../routes/users_new.js'; 
 import emailRoutes from '../routes/email.js'; 
