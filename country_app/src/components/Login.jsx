@@ -67,12 +67,12 @@ const Login = () => {
 
     setIsLoading(true);
     try {
-      const response = await fetch("https://country-page.onrender.com/api/login", {
+      const response = await fetch("http://localhost:3001/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: formData.username,
-          password: formData.password,
+          username: formData.username,
+          contrasena: formData.password,
         }),
       });
 
@@ -87,7 +87,7 @@ const Login = () => {
 
       // Manejo de estados
       if (response.ok && data.user) {
-        const estado = (data.user.estado || "").toLowerCase();
+        const estado = (data.user.estatus || "").toLowerCase();
         if (estado === "activo") {
           setShowSuccess(true);
           localStorage.setItem("user", JSON.stringify(data.user));

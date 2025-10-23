@@ -1,5 +1,5 @@
 // src/components/GestionUsuarios.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import '../CSS/RegistroUsuarios.css';
 import { User, UserPlus, AlertCircle, CheckCircle, Loader, Save, Eye, EyeOff, Copy, Edit, X, Check } from 'lucide-react';
 import LogoutButton from './LogoutBoton';
@@ -9,9 +9,206 @@ import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 // ============================
+// Componente para fila de usuario (optimizado)
+// ============================
+const UsuarioRow = React.memo(({ 
+  usuario, 
+  editValue, 
+  onEditChange, 
+  visiblePassword, 
+  onTogglePassword, 
+  editingPassword, 
+  passwordEditValue, 
+  onPasswordEditChange, 
+  onStartEditPassword, 
+  onCancelEditPassword, 
+  onCopyToClipboard, 
+  onGuardar, 
+  loading,
+  hasChanges,
+  isPasswordInvalid
+}) => {
+  return (
+    <tr key={usuario.id}>
+      <td>#{usuario.id}</td>
+      <td>{usuario.nombre} {usuario.apellido}</td>
+      <td>
+        <input
+          type="email"
+          value={editValue ?? usuario.email}
+          onChange={(e) => onEditChange(usuario.id, e.target.value)}
+          className="form-input"
+          disabled={loading}
+        />
+      </td>
+      <td>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '200px' }}>
+          {/* Username */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#f8f9fa', padding: '6px 10px', borderRadius: '6px', border: '1px solid #dee2e6' }}>
+            <span style={{ fontSize: '12px', fontWeight: '600', color: '#6c757d', minWidth: '60px' }}>Usuario:</span>
+            <code style={{ flex: 1, fontSize: '13px', color: '#495057', fontFamily: 'monospace' }}>
+              {usuario.username || 'N/A'}
+            </code>
+            {usuario.username && (
+              <button
+                onClick={() => onCopyToClipboard(usuario.username, 'Usuario')}
+                style={{
+                  padding: '4px 8px',
+                  backgroundColor: '#007bff',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '11px'
+                }}
+                title="Copiar usuario"
+              >
+                <Copy size={12} />
+              </button>
+            )}
+          </div>
+          
+          {/* Password */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#fff3cd', padding: '6px 10px', borderRadius: '6px', border: '1px solid #ffc107' }}>
+            <span style={{ fontSize: '12px', fontWeight: '600', color: '#856404', minWidth: '60px' }}>Clave:</span>
+            
+            {editingPassword ? (
+              // Modo edición
+              <>
+                <input
+                  type="text"
+                  value={passwordEditValue || ''}
+                  onChange={(e) => onPasswordEditChange(usuario.id, e.target.value)}
+                  style={{ 
+                    flex: 1,
+                    fontFamily: 'monospace', 
+                    fontSize: '13px', 
+                    padding: '4px 8px', 
+                    backgroundColor: '#fff', 
+                    border: `2px solid ${passwordEditValue?.length < 5 ? '#dc3545' : '#28a745'}`,
+                    borderRadius: '4px',
+                    outline: 'none'
+                  }}
+                  placeholder="Nueva contraseña (min. 5)"
+                  minLength={5}
+                />
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  <button
+                    onClick={() => onCancelEditPassword(usuario.id)}
+                    style={{
+                      padding: '4px 8px',
+                      backgroundColor: '#dc3545',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontSize: '11px'
+                    }}
+                    title="Cancelar edición"
+                  >
+                    <X size={12} /> Cancelar
+                  </button>
+                </div>
+              </>
+            ) : (
+              // Modo visualización
+              <>
+                <code style={{ flex: 1, fontSize: '13px', color: '#856404', fontFamily: 'monospace' }}>
+                  {visiblePassword ? (usuario.password || 'N/A') : '••••••••'}
+                </code>
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  {usuario.password && (
+                    <>
+                      <button
+                        onClick={() => onTogglePassword(usuario.id)}
+                        style={{
+                          padding: '4px 8px',
+                          backgroundColor: '#ffc107',
+                          color: '#856404',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center'
+                        }}
+                        title={visiblePassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                      >
+                        {visiblePassword ? <EyeOff size={12} /> : <Eye size={12} />}
+                      </button>
+                      <button
+                        onClick={() => onCopyToClipboard(usuario.password, 'Contraseña')}
+                        style={{
+                          padding: '4px 8px',
+                          backgroundColor: '#ffc107',
+                          color: '#856404',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          fontSize: '11px'
+                        }}
+                        title="Copiar contraseña"
+                      >
+                        <Copy size={12} />
+                      </button>
+                      <button
+                        onClick={() => onStartEditPassword(usuario.id, usuario.password)}
+                        style={{
+                          padding: '4px 8px',
+                          backgroundColor: '#17a2b8',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          fontSize: '11px'
+                        }}
+                        title="Editar contraseña"
+                      >
+                        <Edit size={12} />
+                      </button>
+                    </>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </td>
+      <td>{usuario.rol}</td>
+      <td>{new Date(usuario.fecha_registro).toLocaleDateString('es-ES',{ year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' })}</td>
+      <td>
+        <button 
+          className="action-btn btn-success" 
+          onClick={() => onGuardar(usuario.id)} 
+          disabled={loading || !hasChanges || isPasswordInvalid}
+          style={{
+            opacity: (loading || !hasChanges || isPasswordInvalid) ? 0.5 : 1,
+            cursor: (loading || !hasChanges || isPasswordInvalid) ? 'not-allowed' : 'pointer'
+          }}
+        >
+          <Save size={16} style={{marginRight:'0.3rem'}}/> 
+          Guardar
+        </button>
+      </td>
+    </tr>
+  );
+});
+
+// ============================
 // Formulario de registro
 // ============================
-const FormularioUsuario = ({ onCrearUsuario, loading }) => {
+const FormularioUsuario = React.memo(({ onCrearUsuario, loading }) => {
   const [formData, setFormData] = useState({
     nombre: '',
     apellido: '',
@@ -23,23 +220,23 @@ const FormularioUsuario = ({ onCrearUsuario, loading }) => {
   const [previewCredentials, setPreviewCredentials] = useState({ username: "", password: "" });
   const [copyMessage, setCopyMessage] = useState("");
 
-  const roles = [
+  const roles = useMemo(() => [
     { value: 'admin', label: 'Administrador' },
     { value: 'cliente', label: 'Cliente' },
     { value: 'instructor', label: 'Instructor' },
     { value: 'viewer', label: 'Visualizador' },
     { value: 'creadorcuentas', label: 'Creador de Cuentas' },
     { value: 'contabilidad', label: 'Contabilidad' }
-  ];
+  ], []);
 
-  const handleChange = (e) => {
+  const handleChange = useCallback((e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     if (errores[name]) setErrores(prev => ({ ...prev, [name]: '' }));
-  };
+  }, [errores]);
 
   // Función para generar contraseña segura
-  const generateSecurePassword = () => {
+  const generateSecurePassword = useCallback(() => {
     const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     const lowercase = 'abcdefghijklmnopqrstuvwxyz';
     const numbers = '0123456789';
@@ -52,18 +249,18 @@ const FormularioUsuario = ({ onCrearUsuario, loading }) => {
       password += allChars[Math.floor(Math.random() * allChars.length)];
     }
     return password.split('').sort(() => Math.random() - 0.5).join('');
-  };
+  }, []);
 
   // Función para generar username de vista previa
-  const generatePreviewUsername = (nombre, apellido) => {
+  const generatePreviewUsername = useCallback((nombre, apellido) => {
     if (!nombre || !apellido) return '';
     const cleanNombre = nombre.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(' ')[0];
     const cleanApellido = apellido.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(' ')[0];
     return `${cleanNombre}.${cleanApellido}`.substring(0, 15);
-  };
+  }, []);
 
   // Obtener credenciales reales del servidor
-  const getRealCredentials = async (nombre, apellido, customPassword = null) => {
+  const getRealCredentials = useCallback(async (nombre, apellido, customPassword = null) => {
     try {
       const response = await fetch("https://country-page.onrender.com/api/users/preview-credentials", {
         method: "POST",
@@ -78,9 +275,9 @@ const FormularioUsuario = ({ onCrearUsuario, loading }) => {
       console.error('Error al obtener credenciales reales:', error);
     }
     return null;
-  };
+  }, []);
 
-  const validarFormulario = () => {
+  const validarFormulario = useCallback(() => {
     const nuevosErrores = {};
     if (!formData.nombre.trim()) nuevosErrores.nombre = 'El nombre es requerido';
     if (!formData.apellido.trim()) nuevosErrores.apellido = 'El apellido es requerido';
@@ -106,9 +303,9 @@ const FormularioUsuario = ({ onCrearUsuario, loading }) => {
     
     setErrores(nuevosErrores);
     return Object.keys(nuevosErrores).length === 0;
-  };
+  }, [formData, withoutEmail, previewCredentials.password]);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
     if (!validarFormulario()) return;
     
@@ -153,7 +350,7 @@ const FormularioUsuario = ({ onCrearUsuario, loading }) => {
         autoClose: 4000
       });
     }
-  };
+  }, [formData, withoutEmail, previewCredentials.password, onCrearUsuario, validarFormulario]);
 
   // Generar credenciales de vista previa cuando cambian nombre/apellido
   useEffect(() => {
@@ -175,11 +372,14 @@ const FormularioUsuario = ({ onCrearUsuario, loading }) => {
           setPreviewCredentials({ username, password });
         }
       };
-      updateRealCredentials();
+      
+      // Debounce: esperar 500ms antes de hacer la petición
+      const timeoutId = setTimeout(updateRealCredentials, 500);
+      return () => clearTimeout(timeoutId);
     } else if (!shouldGenerateCredentials) {
       setPreviewCredentials({ username: "", password: "" });
     }
-  }, [withoutEmail, formData.nombre, formData.apellido, formData.rol]);
+  }, [withoutEmail, formData.nombre, formData.apellido, formData.rol, previewCredentials.password, generateSecurePassword, generatePreviewUsername, getRealCredentials]);
 
   // Cuando cambia el rol, ajustar automáticamente withoutEmail
   useEffect(() => {
@@ -443,26 +643,26 @@ const FormularioUsuario = ({ onCrearUsuario, loading }) => {
       </form>
     </div>
   );
-};
+});
 
 // ============================
 // Tabla de usuarios con edición de correo
 // ============================
-const TablaUsuarios = ({ usuarios, onActualizarCorreo, onActualizarPassword, loading, onRecargar }) => {
+const TablaUsuarios = React.memo(({ usuarios, loading, onRecargar }) => {
   const [edits, setEdits] = useState({});
   const [visiblePasswords, setVisiblePasswords] = useState({});
   const [editingPasswords, setEditingPasswords] = useState({});
   const [passwordEdits, setPasswordEdits] = useState({});
 
-  const handleChange = (id, value) => {
+  const handleChange = useCallback((id, value) => {
     setEdits(prev => ({ ...prev, [id]: value }));
-  };
+  }, []);
 
-  const handlePasswordChange = (id, value) => {
+  const handlePasswordChange = useCallback((id, value) => {
     setPasswordEdits(prev => ({ ...prev, [id]: value }));
-  };
+  }, []);
 
-  const handleGuardar = async (id) => {
+  const handleGuardar = useCallback(async (id) => {
     const usuario = usuarios.find(u => u.id === id);
     
     const passwordInEdit = editingPasswords[id];
@@ -521,24 +721,24 @@ const TablaUsuarios = ({ usuarios, onActualizarCorreo, onActualizarPassword, loa
     if (onRecargar) {
       await onRecargar();
     }
-  };
+  }, [usuarios, editingPasswords, edits, onRecargar, savePassword, actualizarCorreoSilent]);
 
-  const togglePasswordVisibility = (id) => {
+  const togglePasswordVisibility = useCallback((id) => {
     setVisiblePasswords(prev => ({ ...prev, [id]: !prev[id] }));
-  };
+  }, []);
 
-  const startEditingPassword = (id, currentPassword) => {
+  const startEditingPassword = useCallback((id, currentPassword) => {
     setEditingPasswords(prev => ({ ...prev, [id]: true }));
     setPasswordEdits(prev => ({ ...prev, [id]: currentPassword }));
     setVisiblePasswords(prev => ({ ...prev, [id]: true }));
-  };
+  }, []);
 
-  const cancelEditingPassword = (id) => {
+  const cancelEditingPassword = useCallback((id) => {
     setEditingPasswords(prev => ({ ...prev, [id]: false }));
     setPasswordEdits(prev => ({ ...prev, [id]: '' }));
-  };
+  }, []);
 
-  const savePassword = async (id, silent = false) => {
+  const savePassword = useCallback(async (id, silent = false) => {
     const newPassword = passwordEdits[id];
     
     if (!newPassword || newPassword.trim() === '') {
@@ -567,45 +767,59 @@ const TablaUsuarios = ({ usuarios, onActualizarCorreo, onActualizarPassword, loa
       setPasswordEdits(prev => ({ ...prev, [id]: '' }));
     }
     return resultado;
-  };
-  
-  const actualizarPasswordSilent = async (id, password) => {
+  }, [passwordEdits]);
+
+  const actualizarPasswordSilent = useCallback(async (id, password) => {
     try {
-      const response = await fetch(`https://country-page.onrender.com/api/users/update-password/${id}`, {
+      const response = await fetch(`http://localhost:3001/api/users/update-password/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password })
       });
-      const data = await response.json();
       return response.ok;
     } catch (error) {
       console.error('Error al actualizar contraseña:', error);
       return false;
     }
-  };
-  
-  const actualizarCorreoSilent = async (id, email) => {
+  }, []);
+
+  const actualizarCorreoSilent = useCallback(async (id, email) => {
     try {
-      const response = await fetch(`https://country-page.onrender.com/api/users/update-email/${id}`, {
+      const response = await fetch(`http://localhost:3001/api/users/update-email/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
       });
-      const data = await response.json();
       return response.ok;
     } catch (error) {
       console.error('Error al actualizar correo:', error);
       return false;
     }
-  };
+  }, []);
 
-  const copyToClipboard = (text, label) => {
+  const copyToClipboard = useCallback((text, label) => {
     navigator.clipboard.writeText(text);
     toast.success(`${label} copiado al portapapeles`, {
       position: "top-right",
       autoClose: 2000
     });
-  };
+  }, []);
+
+  // Memoizar cálculos para cada usuario
+  const usuariosConCambios = useMemo(() => {
+    return usuarios.map(usuario => {
+      const emailChanged = edits[usuario.id] && edits[usuario.id] !== usuario.email;
+      const passwordChanged = editingPasswords[usuario.id] && passwordEdits[usuario.id] && passwordEdits[usuario.id].length >= 5;
+      const hasChanges = emailChanged || passwordChanged;
+      const isPasswordInvalid = editingPasswords[usuario.id] && (!passwordEdits[usuario.id] || passwordEdits[usuario.id].length < 5);
+      
+      return {
+        ...usuario,
+        hasChanges,
+        isPasswordInvalid
+      };
+    });
+  }, [usuarios, edits, editingPasswords, passwordEdits]);
 
   return (
     <div className="user-table-section">
@@ -631,190 +845,25 @@ const TablaUsuarios = ({ usuarios, onActualizarCorreo, onActualizarPassword, loa
               </tr>
             </thead>
             <tbody>
-              {usuarios.map(usuario => (
-                <tr key={usuario.id}>
-                  <td>#{usuario.id}</td>
-                  <td>{usuario.nombre} {usuario.apellido}</td>
-                  <td>
-                    <input
-                      type="email"
-                      value={edits[usuario.id] ?? usuario.email}
-                      onChange={(e) => handleChange(usuario.id, e.target.value)}
-                      className="form-input"
-                      disabled={loading}
-                    />
-                  </td>
-                  <td>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '200px' }}>
-                      {/* Username */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#f8f9fa', padding: '6px 10px', borderRadius: '6px', border: '1px solid #dee2e6' }}>
-                        <span style={{ fontSize: '12px', fontWeight: '600', color: '#6c757d', minWidth: '60px' }}>Usuario:</span>
-                        <code style={{ flex: 1, fontSize: '13px', color: '#495057', fontFamily: 'monospace' }}>
-                          {usuario.username || 'N/A'}
-                        </code>
-                        {usuario.username && (
-                          <button
-                            onClick={() => copyToClipboard(usuario.username, 'Usuario')}
-                            style={{
-                              padding: '4px 8px',
-                              backgroundColor: '#007bff',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '4px',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              fontSize: '11px'
-                            }}
-                            title="Copiar usuario"
-                          >
-                            <Copy size={12} />
-                          </button>
-                        )}
-                      </div>
-                      
-                      {/* Password */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#fff3cd', padding: '6px 10px', borderRadius: '6px', border: '1px solid #ffc107' }}>
-                        <span style={{ fontSize: '12px', fontWeight: '600', color: '#856404', minWidth: '60px' }}>Clave:</span>
-                        
-                        {editingPasswords[usuario.id] ? (
-                          // Modo edición
-                          <>
-                            <input
-                              type="text"
-                              value={passwordEdits[usuario.id] || ''}
-                              onChange={(e) => handlePasswordChange(usuario.id, e.target.value)}
-                              style={{ 
-                                flex: 1,
-                                fontFamily: 'monospace', 
-                                fontSize: '13px', 
-                                padding: '4px 8px', 
-                                backgroundColor: '#fff', 
-                                border: `2px solid ${passwordEdits[usuario.id]?.length < 5 ? '#dc3545' : '#28a745'}`,
-                                borderRadius: '4px',
-                                outline: 'none'
-                              }}
-                              placeholder="Nueva contraseña (min. 5)"
-                              minLength={5}
-                            />
-                            <div style={{ display: 'flex', gap: '4px' }}>
-                              <button
-                                onClick={() => cancelEditingPassword(usuario.id)}
-                                style={{
-                                  padding: '4px 8px',
-                                  backgroundColor: '#dc3545',
-                                  color: 'white',
-                                  border: 'none',
-                                  borderRadius: '4px',
-                                  cursor: 'pointer',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '4px',
-                                  fontSize: '11px'
-                                }}
-                                title="Cancelar edición"
-                              >
-                                <X size={12} /> Cancelar
-                              </button>
-                            </div>
-                          </>
-                        ) : (
-                          // Modo visualización
-                          <>
-                            <code style={{ flex: 1, fontSize: '13px', color: '#856404', fontFamily: 'monospace' }}>
-                              {visiblePasswords[usuario.id] ? (usuario.password || 'N/A') : '••••••••'}
-                            </code>
-                            <div style={{ display: 'flex', gap: '4px' }}>
-                              {usuario.password && (
-                                <>
-                                  <button
-                                    onClick={() => togglePasswordVisibility(usuario.id)}
-                                    style={{
-                                      padding: '4px 8px',
-                                      backgroundColor: '#ffc107',
-                                      color: '#856404',
-                                      border: 'none',
-                                      borderRadius: '4px',
-                                      cursor: 'pointer',
-                                      display: 'flex',
-                                      alignItems: 'center'
-                                    }}
-                                    title={visiblePasswords[usuario.id] ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                                  >
-                                    {visiblePasswords[usuario.id] ? <EyeOff size={12} /> : <Eye size={12} />}
-                                  </button>
-                                  <button
-                                    onClick={() => copyToClipboard(usuario.password, 'Contraseña')}
-                                    style={{
-                                      padding: '4px 8px',
-                                      backgroundColor: '#ffc107',
-                                      color: '#856404',
-                                      border: 'none',
-                                      borderRadius: '4px',
-                                      cursor: 'pointer',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: '4px',
-                                      fontSize: '11px'
-                                    }}
-                                    title="Copiar contraseña"
-                                  >
-                                    <Copy size={12} />
-                                  </button>
-                                  <button
-                                    onClick={() => startEditingPassword(usuario.id, usuario.password)}
-                                    style={{
-                                      padding: '4px 8px',
-                                      backgroundColor: '#17a2b8',
-                                      color: 'white',
-                                      border: 'none',
-                                      borderRadius: '4px',
-                                      cursor: 'pointer',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: '4px',
-                                      fontSize: '11px'
-                                    }}
-                                    title="Editar contraseña"
-                                  >
-                                    <Edit size={12} />
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </td>
-                  <td>{usuario.rol}</td>
-                  <td>{new Date(usuario.fecha_registro).toLocaleDateString('es-ES',{ year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' })}</td>
-                  <td>
-                    {(() => {
-                      // Determinar si hay cambios
-                      const emailChanged = edits[usuario.id] && edits[usuario.id] !== usuario.email;
-                      const passwordChanged = editingPasswords[usuario.id] && passwordEdits[usuario.id] && passwordEdits[usuario.id].length >= 5;
-                      const hasChanges = emailChanged || passwordChanged;
-                      const isPasswordInvalid = editingPasswords[usuario.id] && (!passwordEdits[usuario.id] || passwordEdits[usuario.id].length < 5);
-                      
-                      return (
-                        <button 
-                          className="action-btn btn-success" 
-                          onClick={() => handleGuardar(usuario.id)} 
-                          disabled={loading || !hasChanges || isPasswordInvalid}
-                          style={{
-                            opacity: (loading || !hasChanges || isPasswordInvalid) ? 0.5 : 1,
-                            cursor: (loading || !hasChanges || isPasswordInvalid) ? 'not-allowed' : 'pointer'
-                          }}
-                        >
-                          <Save size={16} style={{marginRight:'0.3rem'}}/> 
-                          Guardar
-                        </button>
-                      );
-                    })()}
-                  </td>
-                </tr>
+              {usuariosConCambios.map(usuario => (
+                <UsuarioRow
+                  key={usuario.id}
+                  usuario={usuario}
+                  editValue={edits[usuario.id]}
+                  onEditChange={handleChange}
+                  visiblePassword={visiblePasswords[usuario.id]}
+                  onTogglePassword={togglePasswordVisibility}
+                  editingPassword={editingPasswords[usuario.id]}
+                  passwordEditValue={passwordEdits[usuario.id]}
+                  onPasswordEditChange={handlePasswordChange}
+                  onStartEditPassword={startEditingPassword}
+                  onCancelEditPassword={cancelEditingPassword}
+                  onCopyToClipboard={copyToClipboard}
+                  onGuardar={handleGuardar}
+                  loading={loading}
+                  hasChanges={usuario.hasChanges}
+                  isPasswordInvalid={usuario.isPasswordInvalid}
+                />
               ))}
             </tbody>
           </table>
@@ -822,56 +871,33 @@ const TablaUsuarios = ({ usuarios, onActualizarCorreo, onActualizarPassword, loa
       )}
     </div>
   );
-};
+});
 
 // ============================
 // Componente principal
 // ============================
-const GestionUsuarios = () => {
-  const { usuarios, loading, error, crearUsuario, actualizarCorreo, actualizarPassword, cargarUsuarios } = useUsuarios();
+const GestionUsuarios = React.memo(() => {
+  const { usuarios, loading, error, crearUsuario, cargarUsuarios } = useUsuarios();
   const [mensaje, setMensaje] = useState({ texto:'', tipo:'' });
 
   useRoleGuard(['creadorcuentas']);
 
-  const mostrarMensaje = (texto,tipo) => { setMensaje({texto,tipo}); setTimeout(()=>setMensaje({texto:'',tipo:''}),5000); };
+  const mostrarMensaje = useCallback((texto,tipo) => { 
+    setMensaje({texto,tipo}); 
+    setTimeout(()=>setMensaje({texto:'',tipo:''}),5000); 
+  }, []);
 
-  const handleCrearUsuario = async (nuevoUsuario) => {
+  const handleCrearUsuario = useCallback(async (nuevoUsuario) => {
     const resultado = await crearUsuario(nuevoUsuario);
     mostrarMensaje(resultado.message, resultado.success?'success':'error');
     return resultado;
-  };
+  }, [crearUsuario, mostrarMensaje]);
 
-  const handleActualizarCorreo = async (id, email) => {
-    const resultado = await actualizarCorreo(id, email);
-    if (resultado.success) {
-      toast.success(resultado.message, {
-        position: "top-right",
-        autoClose: 3000
-      });
-    } else {
-      toast.error(resultado.message, {
-        position: "top-right",
-        autoClose: 3000
-      });
-    }
-  };
-
-  const handleActualizarPassword = async (id, password) => {
-    const resultado = await actualizarPassword(id, password);
-    if (resultado.success) {
-      toast.success(resultado.message, {
-        position: "top-right",
-        autoClose: 3000
-      });
-    } else {
-      toast.error(resultado.message, {
-        position: "top-right",
-        autoClose: 3000
-      });
-    }
-  };
-
-  const handleLogout = () => { localStorage.removeItem('token'); sessionStorage.clear(); window.location.href='/login'; };
+  const handleLogout = useCallback(() => { 
+    localStorage.removeItem('token'); 
+    sessionStorage.clear(); 
+    window.location.href='/login'; 
+  }, []);
 
   return (
     <div className="user-management-container">
@@ -902,10 +928,10 @@ const GestionUsuarios = () => {
 
       <div className="user-management-content">
         <FormularioUsuario onCrearUsuario={handleCrearUsuario} loading={loading}/>
-        <TablaUsuarios usuarios={usuarios} onActualizarCorreo={handleActualizarCorreo} onActualizarPassword={handleActualizarPassword} loading={loading} onRecargar={cargarUsuarios}/>
+        <TablaUsuarios usuarios={usuarios} loading={loading} onRecargar={cargarUsuarios}/>
       </div>
     </div>
   );
-};
+});
 
 export default GestionUsuarios;

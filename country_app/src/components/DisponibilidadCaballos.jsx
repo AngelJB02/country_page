@@ -25,7 +25,7 @@ const DisponibilidadCaballos = ({ totalSpots = 11, reservations = [], selectedTi
       if (horarioParam && horarioParam.length === 5) {
         horarioParam = horarioParam + ':00';
       }
-      const response = await axios.get('https://country-page.onrender.com/api/reservas/horses-availability', {
+      const response = await axios.get('http://localhost:3001/api/reservas/horses-availability', {
         params: { 
           fecha: dateString,
           horario: horarioParam 

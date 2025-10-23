@@ -921,7 +921,7 @@ router.post('/change-password', async (req, res) => {
     // Enviar email con credenciales actualizadas si el usuario tiene correo registrado
     if (user.correo) {
       try {
-        await axios.post('https://country-page.onrender.com/api/email/send-updated-credentials', {
+        await axios.post('http://localhost:3001/api/email/send-updated-credentials', {
           email: user.correo,
           nombre: user.nombre,
           username: user.username,

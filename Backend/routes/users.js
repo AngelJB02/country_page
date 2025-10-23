@@ -127,7 +127,7 @@ router.post('/register', async (req, res) => {
     // 3. Enviar credenciales por email solo si NO es usuario sin email
     if (!withoutEmail) {
       try {
-        await axios.post('https://country-page.onrender.com/api/email/send-credentials', {
+        await axios.post('http://localhost:3001/api/email/send-credentials', {
           nombre,
           apellido,
           email,
@@ -256,7 +256,7 @@ router.post('/register-cliente', async (req, res) => {
     let emailSent = false;
     if (!withoutEmail && email) {
       try {
-        await axios.post('https://country-page.onrender.com/api/email/send-credentials', {
+        await axios.post('http://localhost:3001/api/email/send-credentials', {
           nombre,
           apellido,
           email,
@@ -848,7 +848,7 @@ router.post('/change-password', async (req, res) => {
     // Enviar email con credenciales actualizadas si el usuario tiene email
     if (user.email) {
       try {
-        const emailResponse = await axios.post('https://country-page.onrender.com/api/email/send-updated-credentials', {
+        const emailResponse = await axios.post('http://localhost:3001/api/email/send-updated-credentials', {
           email: user.email,
           nombre: user.nombre,
           username: user.username,

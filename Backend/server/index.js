@@ -1,86 +1,100 @@
 // server/index.js
 import express from "express";
 import cors from "cors";
-import db from "./db.js"; // ruta relativa correcta, db.js al m ismo nivel que server
+import db from "./db.js"; // db.js al mismo nivel que server
 
-import instructorRoutes from '../routes/instructor.js'; 
-import reservasRoutes from '../routes/reservas_new.js'; 
-import horariosRoutes from '../routes/horarios.js'; 
-import usersRoutes from '../routes/users_new.js'; 
-import emailRoutes from '../routes/email.js'; 
+// Importar rutas
+import instructorRoutes from "../routes/instructor.js";
+import reservasRoutes from "../routes/reservas_new.js";
+import horariosRoutes from "../routes/horarios.js";
+import usersRoutes from "../routes/users_new.js";
+import emailRoutes from "../routes/email.js";
 
 console.log("✅ Rutas importadas correctamente");
-console.log("📋 Reservas routes:", typeof reservasRoutes); 
 
 const app = express();
 const PORT = 3001;
 
+// ========================
 // Middlewares
-app.use(cors({
-  origin: ["http://localhost:5173", "http://localhost:5174", "https://elrefugiocountryclub.com", "https://country-page.onrender.com"],
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
-  credentials: true
-}));
-
+// ========================
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "http://localhost:5174",
+      "https://elrefugiocountryclub.com",
+      "http://localhost:3001",
+    ],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+    credentials: true,
+  })
+);
 app.use(express.json());
 
+// ========================
 // Ruta de prueba
+// ========================
 app.get("/", (req, res) => {
   res.send("Servidor backend corriendo 🚀");
 });
 
 // ========================
-// Login
+// Login actualizado
 // ========================
 app.post("/api/login", async (req, res) => {
-  const { email, password } = req.body;
+  const { username, contrasena } = req.body;
 
-  if (!email || !password) {
-    return res.status(400).json({ error: "Faltan datos" });
+  if (!username || !contrasena) {
+    return res.status(400).json({ error: "Faltan datos de acceso" });
   }
 
   try {
     const [rows] = await db.query(
-      "SELECT * FROM usuarios WHERE username = ? AND password = ?",
-      [email, password]
+      "SELECT * FROM usuarios WHERE username = ? AND contrasena = ?",
+      [username, contrasena]
     );
 
-    if (rows.length > 0) {
-      const user = rows[0];
-        // Verificar estado del usuario
-        switch ((user.estado || '').toLowerCase()) {
-          case 'activo':
-            return res.json({
-              mensaje: "✅ Login correcto",
-              user: { id: user.id, nombre: user.nombre, rol: user.rol || "user", estado: user.estado }
-            });
-          case 'inactivo':
-            return res.json({
-              mensaje: "⚠️ Tu cuenta está inactiva. Comunícate con el administrador.",
-              user: { id: user.id, nombre: user.nombre, rol: user.rol || "user", estado: user.estado }
-            });
-          case 'pendiente':
-            return res.status(403).json({
-              mensaje: "⏳ Tienes pagos pendientes y no puedes iniciar sesión.",
-              user: { id: user.id, nombre: user.nombre, rol: user.rol || "user", estado: user.estado }
-            });
-          case 'bloqueado':
-            return res.status(403).json({
-              mensaje: "🚫 Tu cuenta está bloqueada y no puedes iniciar sesión.",
-              user: { id: user.id, nombre: user.nombre, rol: user.rol || "user", estado: user.estado }
-            });
-          default:
-            return res.status(403).json({
-              mensaje: "❌ Estado de usuario no permitido.",
-              user: { id: user.id, nombre: user.nombre, rol: user.rol || "user", estado: user.estado }
-            });
-        }
-    } else {
+    if (rows.length === 0) {
       return res.status(401).json({ message: "❌ Usuario o contraseña incorrectos" });
+    }
+
+    const user = rows[0];
+    const estado = (user.estatus || "").toLowerCase();
+
+    switch (estado) {
+      case "activo":
+        return res.json({
+          mensaje: "✅ Login correcto",
+          user: {
+            id: user.id,
+            nombre: user.nombre,
+            rol: user.rol || "cliente",
+            estatus: user.estatus,
+          },
+        });
+
+      case "inactivo":
+        return res.json({
+          mensaje: "⚠️ Tu cuenta está inactiva. Comunícate con el administrador.",
+          user: { id: user.id, nombre: user.nombre, rol: user.rol, estatus: user.estatus },
+        });
+
+      case "bloqueado":
+        return res.status(403).json({
+          mensaje: "🚫 Tu cuenta está bloqueada y no puedes iniciar sesión.",
+          user: { id: user.id, nombre: user.nombre, rol: user.rol, estatus: user.estatus },
+        });
+
+      default:
+        return res.status(403).json({
+          mensaje: "❌ Estado de usuario no permitido.",
+          user: { id: user.id, nombre: user.nombre, rol: user.rol, estatus: user.estatus },
+        });
     }
   } catch (err) {
     console.error("❌ Error en login:", err);
-    return res.status(500).json({ error: "Error en el servidor" });
+    return res.status(500).json({ error: "Error interno del servidor" });
   }
 });
 
@@ -89,27 +103,32 @@ app.post("/api/login", async (req, res) => {
 // ========================
 console.log("🔧 Montando rutas...");
 app.use("/api/instructor", instructorRoutes);
-app.use("/api/reservas", (req, res, next) => {
-  console.log(`📍 Ruta reservas: ${req.method} ${req.originalUrl}`);
-  next();
-}, reservasRoutes);
+app.use(
+  "/api/reservas",
+  (req, res, next) => {
+    console.log(`📍 Ruta reservas: ${req.method} ${req.originalUrl}`);
+    next();
+  },
+  reservasRoutes
+);
 app.use("/api/horarios", horariosRoutes);
 app.use("/api/users", usersRoutes);
 app.use("/api/email", emailRoutes);
 
-// Capturar errores de rutas no encontradas
+// ========================
+// Manejo de errores
+// ========================
 app.use((req, res) => {
   res.status(404).json({ error: "Ruta no encontrada" });
 });
 
-// Capturar errores globales
 app.use((err, req, res, next) => {
   console.error("Error global:", err);
   res.status(500).json({ error: "Error en el servidor" });
 });
 
 // ========================
-// Levantar servidor
+// Iniciar servidor
 // ========================
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
