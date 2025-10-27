@@ -4,6 +4,32 @@ import axios from 'axios';
 
 const router = express.Router();
 
+// Función compartida para generar username único
+async function generateUniqueUsername(nombre, apellido) {
+  console.log('🔍 Generando username único para:', { nombre, apellido });
+  
+  let baseUsername = `${nombre.toLowerCase()}.${apellido.toLowerCase()}`.replace(/\s+/g, '');
+  baseUsername = baseUsername.slice(0, 20); // Limitar el username a un máximo de 20 caracteres
+  let username = baseUsername;
+  let counter = 1;
+
+  console.log('🔤 Base username:', baseUsername);
+
+  // Verificar si el username ya existe y generar uno único
+  while (true) {
+    console.log('🔍 Verificando si existe:', username);
+    const [existingUser] = await db.query('SELECT id FROM usuarios WHERE username = ?', [username]);
+    console.log('📊 Usuarios encontrados:', existingUser.length);
+    if (existingUser.length === 0) break;
+    username = `${baseUsername}${counter}`.slice(0, 20); // Asegurar que el username truncado siga siendo único
+    counter++;
+    console.log('🔄 Probando nuevo username:', username);
+  }
+
+  console.log('✅ Username final:', username);
+  return username;
+}
+
 // Función helper para formatear fechas para MySQL
 const formatDateForMySQL = (dateString) => {
   if (!dateString) return null;
@@ -97,58 +123,102 @@ router.post('/register', async (req, res) => {
   // Extraer campos del body de la petición
   // Campos requeridos: nombre, apellido, rol
   // Campos opcionales: correo, customPassword, edad, telefono, tipo_cliente, nivel, tipo_nivel
-  const { nombre, apellido, correo, rol, customPassword, edad, telefono, tipo_cliente, nivel, tipo_nivel } = req.body;
+  // Campos adicionales para instructoras: num_contacto, especialidad, disponibilidad
+  const {
+    nombre,
+    apellido,
+    correo,
+    rol,
+    customPassword,
+    edad,
+    telefono,
+    tipo_cliente,
+    nivel,
+    tipo_nivel,
+    num_contacto,
+    especialidad,
+    disponibilidad,
+  } = req.body;
 
   // Validar campos requeridos básicos
+  console.log('📩 POST /api/users/register recibido con body:', req.body);
   if (!nombre || !apellido || !rol) {
+    console.warn('⚠️ Datos faltantes en /register:', { nombre, apellido, rol });
     return res.status(400).json({ error: 'Faltan datos: nombre, apellido y rol son requeridos' });
   }
 
   try {
-    // 1. GENERACIÓN DE USERNAME DINÁMICO
-    // - Formato base: nombre.apellido (en minúsculas, sin espacios)
-    // - Limitado a 20 caracteres máximo
-    // - Si ya existe, añade contador incremental (angel.jimenez1, angel.jimenez2, etc.)
-    let baseUsername = `${nombre.toLowerCase()}.${apellido.toLowerCase()}`.replace(/\s+/g, '');
-    baseUsername = baseUsername.slice(0, 20); // Limitar el username a un máximo de 20 caracteres
-    let username = baseUsername;
-    let counter = 1;
-
-    // Verificar si el username ya existe y generar uno único
-    while (true) {
-      const [existingUser] = await db.query('SELECT id FROM usuarios WHERE username = ?', [username]);
-      if (existingUser.length === 0) break;
-      username = `${baseUsername}${counter}`.slice(0, 20); // Asegurar que el username truncado siga siendo único
-      counter++;
-    }
+    // 1. GENERACIÓN DE USERNAME DINÁMICO usando función compartida
+    const username = await generateUniqueUsername(nombre, apellido);
 
     // 2. GENERACIÓN DE CONTRASEÑA
     // - Si se proporciona customPassword, se usa esa
     // - Si no, se genera una contraseña aleatoria de 8 caracteres
     const password = customPassword || Math.random().toString(36).slice(-8);
 
-    // 3. INSERCIÓN EN BASE DE DATOS
-    // Inserta en tabla 'usuarios' con todos los campos disponibles
-    // Campos con valores por defecto: estatus='activo', fecha_registro=NOW()
-    const [result] = await db.query(
-      "INSERT INTO usuarios (nombre, apellido, correo, username, contrasena, rol, estatus, fecha_registro, edad, telefono, tipo_cliente, nivel, tipo_nivel) VALUES (?, ?, ?, ?, ?, ?, 'activo', NOW(), ?, ?, ?, ?, ?)",
-      [nombre, apellido, correo, username, password, rol, edad, telefono, tipo_cliente, nivel, tipo_nivel]
-    );
+    // 3. INSERCIÓN EN BASE DE DATOS CON TRANSACCIÓN
+    const connection = await db.getConnection();
+    let result, instructorRecord = null;
+    
+    try {
+      await connection.beginTransaction();
+      
+      // Inserta en tabla 'usuarios'
+      const [userResult] = await connection.query(
+        "INSERT INTO usuarios (nombre, apellido, correo, username, contrasena, rol, estatus, fecha_registro, edad, telefono, tipo_cliente, nivel, tipo_nivel) VALUES (?, ?, ?, ?, ?, ?, 'activo', NOW(), ?, ?, ?, ?, ?)",
+        [nombre, apellido, correo, username, password, rol, edad, telefono, tipo_cliente, nivel, tipo_nivel]
+      );
+      console.log('✅ Usuario creado en tabla usuarios, id:', userResult.insertId);
+      result = userResult;
 
-    // 4. RESPUESTA
-    // Devuelve información completa del usuario creado
+      // Si el rol es 'instructora', crear registro en tabla 'instructoras'
+      if ((rol || '').toLowerCase() === 'instructora') {
+        const contact = num_contacto || telefono || null;
+        const spec = especialidad || 'mixto';
+        const avail = disponibilidad || 'disponible';
+        console.log('🔧 Preparando INSERT en instructoras con valores:', { usuario_id: userResult.insertId, nombre, apellido, contact, spec, avail });
+
+        const [ins] = await connection.query(
+          `INSERT INTO instructoras (usuario_id, nombre, apellido, num_contacto, especialidad, disponibilidad, fecha_registro) VALUES (?, ?, ?, ?, ?, ?, NOW())`,
+          [userResult.insertId, nombre, apellido, contact, spec, avail]
+        );
+        console.log('✅ Inserción en instructoras completada, resultado:', ins);
+        
+        // Verificar inmediatamente que la fila existe
+        const [verifyRows] = await connection.query(
+          'SELECT * FROM instructoras WHERE usuario_id = ?',
+          [userResult.insertId]
+        );
+        console.log('🔍 Verificación inmediata - filas encontradas:', verifyRows.length);
+        console.log('📄 Datos de la fila insertada:', verifyRows[0]);
+        
+        instructorRecord = { id: ins.insertId, verified: verifyRows.length > 0 };
+      }
+      
+      await connection.commit();
+      console.log('✅ Transacción completada exitosamente');
+      
+    } catch (transErr) {
+      await connection.rollback();
+      console.error('❌ Error en transacción, rollback ejecutado:', transErr);
+      throw transErr;
+    } finally {
+      connection.release();
+    }
+
     res.json({
       message: 'Usuario registrado correctamente',
       id: result.insertId,
-      username,           // Username generado
-      password,           // Contraseña (generada o personalizada)
-      rol,                // Rol asignado
-      estatus: 'activo',  // Estatus por defecto
-      edad,               // Edad (si se proporcionó)
-      telefono,           // Teléfono (si se proporcionó)
-      tipo_cliente,       // Tipo de cliente (si se proporcionó)
-      nivel,              // Nivel (si se proporcionó)
-      tipo_nivel          // Tipo de nivel (si se proporcionó)
+      username, // Username generado
+      password, // Contraseña (generada o personalizada)
+      rol, // Rol asignado
+      estatus: 'activo', // Estatus por defecto
+      edad, // Edad (si se proporcionó)
+      telefono, // Teléfono (si se proporcionó)
+      tipo_cliente, // Tipo de cliente (si se proporcionó)
+      nivel, // Nivel (si se proporcionó)
+      tipo_nivel, // Tipo de nivel (si se proporcionó)
+      instructor: instructorRecord,
     });
   } catch (err) {
     console.error(err);
@@ -166,19 +236,8 @@ router.post('/preview-credentials', async (req, res) => {
   }
 
   try {
-    // Generar username dinámico
-    let baseUsername = `${nombre.toLowerCase()}.${apellido.toLowerCase()}`.replace(/\s+/g, '');
-    baseUsername = baseUsername.slice(0, 20); // Limitar el username a un máximo de 20 caracteres
-    let username = baseUsername;
-    let counter = 1;
-
-    // Verificar si el username ya existe y generar uno único
-    while (true) {
-      const [existingUser] = await db.query('SELECT id FROM usuarios WHERE username = ?', [username]);
-      if (existingUser.length === 0) break;
-      username = `${baseUsername}${counter}`.slice(0, 20); // Asegurar que el username truncado siga siendo único
-      counter++;
-    }
+    // Usar la función compartida para generar username único
+    const username = await generateUniqueUsername(nombre, apellido);
 
     // Generar contraseña (usar personalizada si se proporciona)
     const password = customPassword || Math.random().toString(36).slice(-8);
