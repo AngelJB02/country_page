@@ -341,6 +341,7 @@ const FormularioUsuario = React.memo(({ onCrearUsuario, loading }) => {
     username: "",
     password: "",
   });
+  const [previewEdited, setPreviewEdited] = useState(false);
   const [copyMessage, setCopyMessage] = useState("");
 
   const roles = useMemo(
@@ -488,6 +489,7 @@ const FormularioUsuario = React.memo(({ onCrearUsuario, loading }) => {
 
         if (finalCredentials) {
           setPreviewCredentials(finalCredentials);
+          setPreviewEdited(false);
         }
       }
 
@@ -506,7 +508,7 @@ const FormularioUsuario = React.memo(({ onCrearUsuario, loading }) => {
       };
 
       const resultado = await onCrearUsuario(dataToSend);
-      if (resultado.success) {
+  if (resultado.success) {
         if (formData.rol === "cliente" && withoutEmail) {
           toast.success(
             `🔒 Las credenciales NO se enviarán por correo. Debes copiarlas y entregarlas personalmente.`,
@@ -517,6 +519,7 @@ const FormularioUsuario = React.memo(({ onCrearUsuario, loading }) => {
           );
         } else if (formData.rol !== "cliente" && resultado.credentials) {
           setPreviewCredentials(resultado.credentials);
+          setPreviewEdited(false);
           toast.success(
             `🔒 Las credenciales NO se enviarán por correo. Debes copiarlas y entregarlas personalmente.`,
             {
@@ -551,6 +554,7 @@ const FormularioUsuario = React.memo(({ onCrearUsuario, loading }) => {
 
         if (!isWithoutEmail) {
           setPreviewCredentials({ username: "", password: "" });
+          setPreviewEdited(false);
         }
       } else {
         toast.error(resultado.message || "Error al crear usuario", {
@@ -572,7 +576,15 @@ const FormularioUsuario = React.memo(({ onCrearUsuario, loading }) => {
     const shouldGenerateCredentials =
       formData.rol !== "cliente" || withoutEmail;
 
-    if (shouldGenerateCredentials && formData.nombre && formData.apellido) {
+    // Solo generar credenciales automáticamente si el usuario NO ha editado
+    // manualmente la contraseña de preview (debounce) — prevenir que al
+    // borrar el campo se regenere inmediatamente.
+    if (
+      !previewEdited &&
+      shouldGenerateCredentials &&
+      formData.nombre &&
+      formData.apellido
+    ) {
       const updateRealCredentials = async () => {
         try {
           const password =
@@ -584,6 +596,7 @@ const FormularioUsuario = React.memo(({ onCrearUsuario, loading }) => {
           );
           if (realCredentials) {
             setPreviewCredentials(realCredentials);
+            setPreviewEdited(false);
           } else {
             // Fallback en caso de que no se obtengan credenciales reales
             const username = generatePreviewUsername(
@@ -591,6 +604,7 @@ const FormularioUsuario = React.memo(({ onCrearUsuario, loading }) => {
               formData.apellido
             );
             setPreviewCredentials({ username, password });
+            setPreviewEdited(false);
           }
         } catch (error) {
           console.error("Error al obtener credenciales reales:", error);
@@ -601,14 +615,17 @@ const FormularioUsuario = React.memo(({ onCrearUsuario, loading }) => {
           const password =
             previewCredentials.password || generateSecurePassword();
           setPreviewCredentials({ username, password });
+          setPreviewEdited(false);
         }
       };
 
-      // Reducir el tiempo de espera para actualizaciones más rápidas
-      const timeoutId = setTimeout(updateRealCredentials, 100);
+  // Aumentar el tiempo de espera para evitar actualizaciones en cada tecla
+  // (debounce más largo para que el preview no se actualice constantemente)
+      const timeoutId = setTimeout(updateRealCredentials, 500);
       return () => clearTimeout(timeoutId);
     } else if (!shouldGenerateCredentials) {
       setPreviewCredentials({ username: "", password: "" });
+      setPreviewEdited(false);
     }
   }, [
     withoutEmail,
@@ -859,6 +876,7 @@ const FormularioUsuario = React.memo(({ onCrearUsuario, loading }) => {
                         setWithoutEmail(e.target.checked);
                         if (!e.target.checked) {
                           setPreviewCredentials({ username: "", password: "" });
+                          setPreviewEdited(false);
                         }
                       }}
                       style={{ width: "16px", height: "16px", cursor: "pointer" }}
@@ -1007,6 +1025,8 @@ const FormularioUsuario = React.memo(({ onCrearUsuario, loading }) => {
                         ...prev,
                         password: newPassword,
                       }));
+                      // Marcar que el usuario editó manualmente la contraseña
+                      setPreviewEdited(true);
                       if (errores.password && newPassword.length >= 8) {
                         setErrores((prev) => ({ ...prev, password: "" }));
                       }
