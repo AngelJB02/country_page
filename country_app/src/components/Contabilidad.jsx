@@ -4,9 +4,12 @@ import "../CSS/Contabilidad.css"
 import LogoutButton from './LogoutBoton'
 import { UserPlus, Eye, XCircle, CheckCircle, Loader, Search, History, AlertTriangle, Clock, AlertCircle, Edit } from "lucide-react"
 import useRoleGuard from '../hooks/useRoleGuard';
+import CaballosAdmin from "./CaballosAdmin";
+import InstructorasAdmin from "./InstructorasAdmin";
+import ReservasAdmin from "./ReservasAdmin";
 
 const MembershipAdminDashboard = () => {
-  useRoleGuard(['admin', 'contabilidad']);
+  useRoleGuard(['administrador', 'contabilidad']);
 
   const [members, setMembers] = useState([])
   const [searchTerm, setSearchTerm] = useState("")
@@ -45,6 +48,7 @@ const MembershipAdminDashboard = () => {
     proxima_fecha: "",
     metodo_pago: "efectivo",
   })
+  const [activeTab, setActiveTab] = useState("clientes")
 
   // Refs para controlar foco y autofill
   const searchRef = useRef(null)
@@ -710,7 +714,7 @@ const MembershipAdminDashboard = () => {
       <div className="dashboard-header enhanced-header">
         <div className="header-bg">
           <div className="header-texts">
-            <h1 className="header-title">Panel de Contabilidad</h1>
+            <h1 className="header-title">Panel de Administrador</h1>
             <p className="header-subtitle">Gestiona usuarios y membresías de tu plataforma</p>
           </div>
           <div className="header-actions">
@@ -751,207 +755,306 @@ const MembershipAdminDashboard = () => {
         </div>
       </div>
 
-      {/* CONTROLES */}
-      <div className="controls-container enhanced-controls">
-        <div className="controls-inner">
-          <div className="search-filter-group enhanced-search-filter">
-            <Search size={18} className="search-icon external-search-icon" />
-            <div className="search-box">
-              <input
-                type="text"
-                className="search-input"
-                placeholder="Buscar usuario..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                ref={searchRef}
-                autoComplete="off"
-                name="dashboard-search"
-                autoCorrect="off"
-                spellCheck={false}
-                inputMode="search"
-                data-lpignore="true"
-                data-form-type="other"
-              />
-            </div>
-            <div className="filter-box">
-              <select className="status-filter" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                <option value="">Todos</option>
-                <option value="Activo">Activo</option>
-                <option value="Inactivo">Inactivo</option>
-                <option value="Bloqueado">Bloqueado</option>
-                <option value="Pendiente">Pendiente</option>
-              </select>
-            </div>
-          </div>
-          {/* Removed button from controls-inner as it's now in header-actions */}
-        </div>
-      </div>
-
-      {/* TABLA */}
-      {loading ? (
-        <div
-          style={{
-            textAlign: "center",
-            padding: "4rem 2rem",
-            background: "rgba(255, 255, 255, 0.9)",
-            borderRadius: "16px",
-            boxShadow: "0 4px 20px rgba(107,68,35,0.06)",
+      {/* NAVEGACIÓN DE PESTAÑAS */}
+      <div className="admin-tabs" style={{ 
+        display: "flex", 
+        gap: "0.5rem", 
+        marginTop: "2rem",
+        borderBottom: "2px solid #eee",
+        paddingBottom: "0"
+      }}>
+        <button
+          className={activeTab === "clientes" ? "tab-active" : "tab-inactive"}
+          onClick={() => setActiveTab("clientes")}
+          style={{ 
+            padding: "0.8rem 1.8rem", 
+            border: "none", 
+            borderBottom: activeTab === "clientes" ? "3px solid #c17b4a" : "3px solid transparent",
+            fontWeight: "bold", 
+            background: "transparent",
+            color: activeTab === "clientes" ? "#c17b4a" : "#8b5a2b", 
+            cursor: "pointer",
+            transition: "all 0.3s ease"
           }}
         >
-          <Loader size={40} className="spin" style={{ color: "var(--terracotta)", marginBottom: "1rem" }} />
-          <div
-            style={{
-              color: "var(--primary-brown)",
-              fontSize: "1.1rem",
-              fontWeight: "600",
-            }}
-          >
-            Cargando usuarios...
-          </div>
-        </div>
-      ) : (
-        <div style={{ overflow: "hidden", borderRadius: "16px" }}>
-          <table className="members-table">
-            <thead>
-              <tr>
-                <th>Nombre</th>
-                <th>Email</th>
-                <th>Estado</th>
-                <th>Mensualidad</th>
-                <th>Último Pago</th>
-                <th>Próximo Pago</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredMembers.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={7}
-                    style={{
-                      textAlign: "center",
-                      padding: "3rem",
-                      color: "var(--terracotta)",
-                      fontSize: "1.1rem",
-                      fontWeight: "600",
-                    }}
-                  >
-                    {searchTerm || statusFilter
-                      ? "No se encontraron usuarios con los filtros aplicados."
-                      : "No hay usuarios con rol de cliente."}
-                  </td>
-                </tr>
-              ) : (
-                filteredMembers.map((member) => {
-                  const expired = isPaymentExpired(member.paymentDate)
-                  const displayStatus = expired && member.status === "Activo" ? "Bloqueado" : member.status
+          Clientes
+        </button>
+        <button
+          className={activeTab === "caballos" ? "tab-active" : "tab-inactive"}
+          onClick={() => setActiveTab("caballos")}
+          style={{ 
+            padding: "0.8rem 1.8rem", 
+            border: "none", 
+            borderBottom: activeTab === "caballos" ? "3px solid #c17b4a" : "3px solid transparent",
+            fontWeight: "bold", 
+            background: "transparent",
+            color: activeTab === "caballos" ? "#c17b4a" : "#8b5a2b", 
+            cursor: "pointer",
+            transition: "all 0.3s ease"
+          }}
+        >
+          Caballos
+        </button>
+        <button
+          className={activeTab === "instructoras" ? "tab-active" : "tab-inactive"}
+          onClick={() => setActiveTab("instructoras")}
+          style={{ 
+            padding: "0.8rem 1.8rem", 
+            border: "none", 
+            borderBottom: activeTab === "instructoras" ? "3px solid #c17b4a" : "3px solid transparent",
+            fontWeight: "bold", 
+            background: "transparent",
+            color: activeTab === "instructoras" ? "#c17b4a" : "#8b5a2b", 
+            cursor: "pointer",
+            transition: "all 0.3s ease"
+          }}
+        >
+          Instructoras
+        </button>
+        <button
+          className={activeTab === "reservas" ? "tab-active" : "tab-inactive"}
+          onClick={() => setActiveTab("reservas")}
+          style={{ 
+            padding: "0.8rem 1.8rem", 
+            border: "none", 
+            borderBottom: activeTab === "reservas" ? "3px solid #c17b4a" : "3px solid transparent",
+            fontWeight: "bold", 
+            background: "transparent",
+            color: activeTab === "reservas" ? "#c17b4a" : "#8b5a2b", 
+            cursor: "pointer",
+            transition: "all 0.3s ease"
+          }}
+        >
+          Reservas
+        </button>
+      </div>
 
-                  return (
-                    <tr key={member.id}>
-                      <td style={{ fontWeight: "600" }}>{member.name}</td>
-                      <td style={{ color: "var(--stone-gray)" }}>{member.email}</td>
-                      <td>
-                        <select
-                          className="status-badge"
-                          value={member.status}
-                          onChange={async (e) => {
-                            const newStatus = e.target.value
-                            try {
-                              const response = await fetch(
-                                `http://localhost:3001/api/users/update-status/${member.id}`,
-                                {
-                                  method: "PATCH",
-                                  headers: { "Content-Type": "application/json" },
-                                  body: JSON.stringify({ estado: newStatus }),
-                                },
-                              )
-                              if (response.ok) {
-                                setMembers((prev) =>
-                                  prev.map((m) => (m.id === member.id ? { ...m, status: newStatus } : m)),
-                                )
-                                showNotification("Estado actualizado correctamente", "success")
-                              } else {
-                                const error = await response.json()
-                                showNotification("Error al actualizar el estado: " + (error?.error ?? "Error desconocido"), "error")
-                              }
-                            } catch {
-                              showNotification("Error de conexión. Inténtalo de nuevo.", "error")
-                            }
-                          }}
-                          style={{
-                            borderColor:
-                              displayStatus === "Activo"
-                                ? "#9caf88"
-                                : displayStatus === "Inactivo"
-                                  ? "#c17b4a"
-                                  : displayStatus === "Pendiente"
-                                    ? "#d4a574"
-                                    : "#8b5a2b",
-                            color:
-                              displayStatus === "Activo"
-                                ? "#9caf88"
-                                : displayStatus === "Inactivo"
-                                  ? "#c17b4a"
-                                  : displayStatus === "Pendiente"
-                                    ? "#d4a574"
-                                    : "#8b5a2b",
-                          }}
-                        >
-                          <option value="Activo">Activo</option>
-                          <option value="Inactivo">Inactivo</option>
-                          <option value="Bloqueado">Bloqueado</option>
-                          <option value="Pendiente">Pendiente</option>
-                        </select>
-                      </td>
-                      <td style={{ fontWeight: "600", color: "var(--primary-brown)" }}>${formatCurrency(member.monthlyFee)}</td>
-                      <td>{formatDate(member.lastPaymentDate)}</td>
+      {/* CONTENIDO DE CLIENTES */}
+      {activeTab === "clientes" && (
+        <div style={{ marginTop: "2rem" }}>
+          {/* CONTROLES */}
+          <div className="controls-container enhanced-controls">
+            <div className="controls-inner">
+              <div className="search-filter-group enhanced-search-filter">
+                <Search size={18} className="search-icon external-search-icon" />
+                <div className="search-box">
+                  <input
+                    type="text"
+                    className="search-input"
+                    placeholder="Buscar usuario..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    ref={searchRef}
+                    autoComplete="off"
+                    name="dashboard-search"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    inputMode="search"
+                    data-lpignore="true"
+                    data-form-type="other"
+                  />
+                </div>
+                <div className="filter-box">
+                  <select className="status-filter" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                    <option value="">Todos</option>
+                    <option value="Activo">Activo</option>
+                    <option value="Inactivo">Inactivo</option>
+                    <option value="Bloqueado">Bloqueado</option>
+                    <option value="Pendiente">Pendiente</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* TABLA */}
+          {loading ? (
+            <div
+              style={{
+                textAlign: "center",
+                padding: "4rem 2rem",
+                background: "rgba(255, 255, 255, 0.9)",
+                borderRadius: "16px",
+                boxShadow: "0 4px 20px rgba(107,68,35,0.06)",
+              }}
+            >
+              <Loader size={40} className="spin" style={{ color: "var(--terracotta)", marginBottom: "1rem" }} />
+              <div
+                style={{
+                  color: "var(--primary-brown)",
+                  fontSize: "1.1rem",
+                  fontWeight: "600",
+                }}
+              >
+                Cargando usuarios...
+              </div>
+            </div>
+          ) : (
+            <div style={{ overflow: "hidden", borderRadius: "16px" }}>
+              <table className="members-table">
+                <thead>
+                  <tr>
+                    <th>Nombre</th>
+                    <th>Email</th>
+                    <th>Estado</th>
+                    <th>Mensualidad</th>
+                    <th>Último Pago</th>
+                    <th>Próximo Pago</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredMembers.length === 0 ? (
+                    <tr>
                       <td
+                        colSpan={7}
                         style={{
-                          color: expired ? "#8b5a2b" : "var(--charcoal)",
-                          fontWeight: expired ? "600" : "500",
+                          textAlign: "center",
+                          padding: "3rem",
+                          color: "var(--terracotta)",
+                          fontSize: "1.1rem",
+                          fontWeight: "600",
                         }}
                       >
-                        {formatDate(member.paymentDate)}
-                      </td>
-                      <td>
-                        <button
-                          className="btn history-btn"
-                          onClick={() => openPaymentHistoryModal(member)}
-                          type="button"
-                          style={{
-                            background: "linear-gradient(135deg, var(--terracotta), var(--primary-brown))",
-                            color: "white",
-                            border: "none",
-                            position: "relative",
-                          }}
-                        >
-                          <History size={16} /> Historial
-                          {paymentCounts[member.id] && paymentCounts[member.id] > 0 && (
-                            <span className="payment-badge">
-                              {paymentCounts[member.id]}
-                            </span>
-                          )}
-                          {/* Alerta de pago vencido o próximo a vencer */}
-                          {(() => {
-                            const alert = getPaymentAlert(member.id)
-                            return alert ? (
-                              <span 
-                                className={alert.className}
-                                title={alert.title}
-                              >
-                                {alert.icon}
-                                <span className="alert-text">{alert.text}</span>
-                              </span>
-                            ) : null
-                          })()}
-                        </button>
+                        {searchTerm || statusFilter
+                          ? "No se encontraron usuarios con los filtros aplicados."
+                          : "No hay usuarios con rol de cliente."}
                       </td>
                     </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
+                  ) : (
+                    filteredMembers.map((member) => {
+                      const expired = isPaymentExpired(member.paymentDate)
+                      const displayStatus = expired && member.status === "Activo" ? "Bloqueado" : member.status
+
+                      return (
+                        <tr key={member.id}>
+                          <td style={{ fontWeight: "600" }}>{member.name}</td>
+                          <td style={{ color: "var(--stone-gray)" }}>{member.email}</td>
+                          <td>
+                            <select
+                              className="status-badge"
+                              value={member.status}
+                              onChange={async (e) => {
+                                const newStatus = e.target.value
+                                try {
+                                  const response = await fetch(
+                                    `http://localhost:3001/api/users/update-status/${member.id}`,
+                                    {
+                                      method: "PATCH",
+                                      headers: { "Content-Type": "application/json" },
+                                      body: JSON.stringify({ estado: newStatus }),
+                                    },
+                                  )
+                                  if (response.ok) {
+                                    setMembers((prev) =>
+                                      prev.map((m) => (m.id === member.id ? { ...m, status: newStatus } : m)),
+                                    )
+                                    showNotification("Estado actualizado correctamente", "success")
+                                  } else {
+                                    const error = await response.json()
+                                    showNotification("Error al actualizar el estado: " + (error?.error ?? "Error desconocido"), "error")
+                                  }
+                                } catch {
+                                  showNotification("Error de conexión. Inténtalo de nuevo.", "error")
+                                }
+                              }}
+                              style={{
+                                borderColor:
+                                  displayStatus === "Activo"
+                                    ? "#9caf88"
+                                    : displayStatus === "Inactivo"
+                                      ? "#c17b4a"
+                                      : displayStatus === "Pendiente"
+                                        ? "#d4a574"
+                                        : "#8b5a2b",
+                                color:
+                                  displayStatus === "Activo"
+                                    ? "#9caf88"
+                                    : displayStatus === "Inactivo"
+                                      ? "#c17b4a"
+                                      : displayStatus === "Pendiente"
+                                        ? "#d4a574"
+                                        : "#8b5a2b",
+                              }}
+                            >
+                              <option value="Activo">Activo</option>
+                              <option value="Inactivo">Inactivo</option>
+                              <option value="Bloqueado">Bloqueado</option>
+                              <option value="Pendiente">Pendiente</option>
+                            </select>
+                          </td>
+                          <td style={{ fontWeight: "600", color: "var(--primary-brown)" }}>${formatCurrency(member.monthlyFee)}</td>
+                          <td>{formatDate(member.lastPaymentDate)}</td>
+                          <td
+                            style={{
+                              color: expired ? "#8b5a2b" : "var(--charcoal)",
+                              fontWeight: expired ? "600" : "500",
+                            }}
+                          >
+                            {formatDate(member.paymentDate)}
+                          </td>
+                          <td>
+                            <button
+                              className="btn history-btn"
+                              onClick={() => openPaymentHistoryModal(member)}
+                              type="button"
+                              style={{
+                                background: "linear-gradient(135deg, var(--terracotta), var(--primary-brown))",
+                                color: "white",
+                                border: "none",
+                                position: "relative",
+                              }}
+                            >
+                              <History size={16} /> Historial
+                              {paymentCounts[member.id] && paymentCounts[member.id] > 0 && (
+                                <span className="payment-badge">
+                                  {paymentCounts[member.id]}
+                                </span>
+                              )}
+                              {/* Alerta de pago vencido o próximo a vencer */}
+                              {(() => {
+                                const alert = getPaymentAlert(member.id)
+                                return alert ? (
+                                  <span 
+                                    className={alert.className}
+                                    title={alert.title}
+                                  >
+                                    {alert.icon}
+                                    <span className="alert-text">{alert.text}</span>
+                                  </span>
+                                ) : null
+                              })()}
+                            </button>
+                          </td>
+                        </tr>
+                      )
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* CONTENIDO DE CABALLOS */}
+      {activeTab === "caballos" && (
+        <div style={{ marginTop: "2rem" }}>
+          <CaballosAdmin />
+        </div>
+      )}
+
+      {/* CONTENIDO DE INSTRUCTORAS */}
+      {activeTab === "instructoras" && (
+        <div style={{ marginTop: "2rem" }}>
+          <InstructorasAdmin />
+        </div>
+      )}
+
+      {/* CONTENIDO DE RESERVAS */}
+      {activeTab === "reservas" && (
+        <div style={{ marginTop: "2rem" }}>
+          <ReservasAdmin />
         </div>
       )}
 
@@ -1021,12 +1124,8 @@ const MembershipAdminDashboard = () => {
           <div className="modal-overlay" onClick={closeAddClientModal}>
             <div className="modal-content add-client-modal" onClick={(e) => e.stopPropagation()}>
               <h2>Agregar Nuevo Cliente</h2>
-
               <div className="modal-section">
                 <h3>Información Personal</h3>
-                <div style={{background: 'rgba(139, 111, 78, 0.1)', border: '1px solid rgba(139, 111, 78, 0.3)', borderRadius: '8px', padding: '12px', margin: '10px 0 20px 0', fontSize: '14px', color: '#8b6f4e'}}>
-                  🔑 <strong>Credenciales automáticas:</strong> El username y contraseña se generarán automáticamente y se enviarán por email al cliente.
-                </div>
                 <div className="modal-field">
                   <label>Nombre *:</label>
                   <input
@@ -1037,10 +1136,6 @@ const MembershipAdminDashboard = () => {
                     ref={addFirstInputRef}
                     autoComplete="off"
                     name="newclient-name"
-                    autoCorrect="off"
-                    spellCheck={false}
-                    data-lpignore="true"
-                    data-form-type="other"
                   />
                 </div>
                 <div className="modal-field">
@@ -1052,212 +1147,120 @@ const MembershipAdminDashboard = () => {
                     placeholder="Ingresa el apellido"
                     autoComplete="off"
                     name="newclient-lastname"
-                    autoCorrect="off"
-                    spellCheck={false}
-                    data-lpignore="true"
-                    data-form-type="other"
                   />
                 </div>
-                <div className="modal-field" style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
-                  <label style={{color: withoutEmail ? '#999' : 'inherit'}}>
-                    Email {!withoutEmail && '*'}:
-                  </label>
+                <div className="modal-field">
+                  <label>Edad:</label>
+                  <input
+                    type="number"
+                    value={newClient.edad || ""}
+                    onChange={(e) => setNewClient({ ...newClient, edad: e.target.value })}
+                    placeholder="Edad"
+                    min="0"
+                    autoComplete="off"
+                    name="newclient-age"
+                  />
+                </div>
+                <div className="modal-field">
+                  <label>Email:</label>
                   <input
                     type="email"
-                    value={withoutEmail ? '' : newClient.email}
-                    onChange={(e) => !withoutEmail && setNewClient({ ...newClient, email: e.target.value })}
-                    placeholder={withoutEmail ? "Email deshabilitado" : "ejemplo@email.com"}
+                    value={newClient.email}
+                    onChange={(e) => setNewClient({ ...newClient, email: e.target.value })}
+                    placeholder="ejemplo@email.com"
                     autoComplete="off"
                     name="newclient-email"
-                    inputMode="email"
-                    data-lpignore="true"
-                    data-form-type="other"
-                    disabled={withoutEmail}
-                    style={{
-                      border: '1px solid #ced4da',
-                      borderRadius: '4px',
-                      padding: '8px 12px',
-                      backgroundColor: withoutEmail ? '#f5f5f5' : 'white',
-                      color: withoutEmail ? '#999' : 'inherit',
-                      cursor: withoutEmail ? 'not-allowed' : 'text'
-                    }}
                   />
-                  <label style={{
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '8px', 
-                    cursor: 'pointer', 
-                    fontSize: '14px', 
-                    fontWeight: '500', 
-                    color: '#495057',
-                    marginTop: '4px'
-                  }} onClick={() => setWithoutEmail(!withoutEmail)}>
-                    <input
-                      type="checkbox"
-                      checked={withoutEmail}
-                      onChange={(e) => setWithoutEmail(e.target.checked)}
-                      style={{width: '16px', height: '16px'}}
-                    />
-                    Usuario sin correo electrónico
-                  </label>
-                  {withoutEmail && (
-                    <div style={{fontSize: '12px', color: '#666', marginTop: '4px'}}>
-                      Las credenciales se mostrarán para distribución manual
-                    </div>
-                  )}
                 </div>
-
-                {withoutEmail && previewCredentials.username && (
-                  <div style={{
-                    background: userCreatedSuccessfully ? '#d4edda' : '#fff3cd', 
-                    border: `1px solid ${userCreatedSuccessfully ? '#c3e6cb' : '#ffeaa7'}`, 
-                    borderRadius: '6px', 
-                    padding: '15px', 
-                    marginBottom: '15px'
-                  }}>
-                    <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px'}}>
-                      <h4 style={{margin: 0, color: userCreatedSuccessfully ? '#155724' : '#856404', fontSize: '14px'}}>
-                        {userCreatedSuccessfully ? '🎉 ¡Usuario creado exitosamente!' : '⚠️ Credenciales a crear:'}
-                      </h4>
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          if (userCreatedSuccessfully) {
-                            // Si ya se creó, usar las credenciales que ya tenemos
-                            const credentialsText = `Username: ${previewCredentials.username}\nContraseña: ${previewCredentials.password}`;
-                            navigator.clipboard.writeText(credentialsText);
-                            setCopyMessage("Texto copiado");
-                            setTimeout(() => setCopyMessage(""), 2000);
-                          } else {
-                            // Si no se ha creado, obtener credenciales reales del servidor
-                            setCopyMessage("Obteniendo credenciales reales...");
-                            const realCredentials = await getRealCredentials(
-                              newClient.nombre, 
-                              newClient.apellido, 
-                              previewCredentials.password
-                            );
-                            
-                            if (realCredentials) {
-                              // Actualizar la vista con las credenciales reales
-                              setPreviewCredentials(realCredentials);
-                              // Copiar las credenciales reales
-                              const credentialsText = `Username: ${realCredentials.username}\nContraseña: ${realCredentials.password}`;
-                              navigator.clipboard.writeText(credentialsText);
-                              setCopyMessage("✅ Credenciales reales copiadas");
-                              setTimeout(() => setCopyMessage(""), 3000);
-                            } else {
-                              setCopyMessage("❌ Error obteniendo credenciales");
-                              setTimeout(() => setCopyMessage(""), 2000);
-                            }
-                          }
-                        }}
-                        style={{
-                          padding: '6px 12px',
-                          backgroundColor: userCreatedSuccessfully ? '#28a745' : '#f0ad4e',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          fontSize: '12px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px'
-                        }}
-                        title="Copiar ambas credenciales"
-                      >
-                        📋 Copiar todo
-                      </button>
-                    </div>
-                    
-                    {copyMessage && (
-                      <div style={{
-                        background: '#d4edda',
-                        color: '#155724',
-                        border: '1px solid #c3e6cb',
-                        borderRadius: '4px',
-                        padding: '8px',
-                        marginBottom: '10px',
-                        fontSize: '12px',
-                        textAlign: 'center'
-                      }}>
-                        ✅ {copyMessage}
-                      </div>
-                    )}
-
-                    {!userCreatedSuccessfully && (
-                      <div style={{
-                        background: '#fcf8e3',
-                        color: '#8a6d3b',
-                        border: '1px solid #faebcc',
-                        borderRadius: '4px',
-                        padding: '10px',
-                        marginBottom: '12px',
-                        fontSize: '13px',
-                        fontWeight: '500'
-                      }}>
-                        💡 <strong>RECOMENDACIÓN:</strong> Copia estas credenciales ANTES de crear la cuenta. Una vez creada, el modal se cerrará automáticamente.
-                      </div>
-                    )}
-                    
-                    <div style={{marginBottom: '10px'}}>
-                      <label style={{fontSize: '12px', color: '#6c757d', fontWeight: 'bold'}}>Username:</label>
-                      <div style={{
-                        background: 'white', 
-                        border: '1px solid #ced4da', 
-                        borderRadius: '4px', 
-                        padding: '8px', 
-                        fontFamily: 'monospace', 
-                        fontSize: '14px'
-                      }}>
-                        {previewCredentials.username}
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <label style={{fontSize: '12px', color: '#6c757d', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px'}}>
-                        Contraseña:
-                        {!userCreatedSuccessfully && (
-                          <span style={{fontSize: '11px', color: '#8b6f4e', fontWeight: 'normal'}}>✏️ (editable)</span>
-                        )}
-                      </label>
-                      <input
-                        type="text"
-                        value={previewCredentials.password}
-                        onChange={(e) => !userCreatedSuccessfully && setPreviewCredentials({...previewCredentials, password: e.target.value})}
-                        disabled={userCreatedSuccessfully}
-                        style={{
-                          width: '100%',
-                          border: `2px solid ${
-                            userCreatedSuccessfully 
-                              ? '#28a745' 
-                              : previewCredentials.password.length > 0 && previewCredentials.password.length < 5
-                                ? '#dc3545'
-                                : '#8b6f4e'
-                          }`, 
-                          borderRadius: '4px', 
-                          padding: '8px', 
-                          fontFamily: 'monospace', 
-                          fontSize: '14px',
-                          backgroundColor: userCreatedSuccessfully ? '#f8fff9' : '#fafafa',
-                          cursor: userCreatedSuccessfully ? 'default' : 'text'
-                        }}
-                        placeholder={userCreatedSuccessfully ? "Contraseña final" : "Mínimo 5 caracteres"}
-                      />
-                      {!userCreatedSuccessfully && previewCredentials.password.length > 0 && previewCredentials.password.length < 5 && (
-                        <div style={{ fontSize: '11px', color: '#dc3545', marginTop: '4px', fontWeight: '500' }}>
-                          ⚠️ Contraseña muy corta ({previewCredentials.password.length}/5 caracteres)
-                        </div>
-                      )}
-                      {!userCreatedSuccessfully && previewCredentials.password.length >= 5 && (
-                        <div style={{ fontSize: '11px', color: '#28a745', marginTop: '4px', fontWeight: '500' }}>
-                          ✓ Contraseña válida ({previewCredentials.password.length} caracteres)
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
+                <div className="modal-field">
+                  <label>Teléfono:</label>
+                  <input
+                    type="text"
+                    value={newClient.telefono || ""}
+                    onChange={(e) => setNewClient({ ...newClient, telefono: e.target.value })}
+                    placeholder="Teléfono"
+                    autoComplete="off"
+                    name="newclient-phone"
+                  />
+                </div>
+                <div className="modal-field">
+                  <label>Contraseña:</label>
+                  <input
+                    type="text"
+                    value={newClient.contrasena || ""}
+                    onChange={(e) => setNewClient({ ...newClient, contrasena: e.target.value })}
+                    placeholder="Contraseña"
+                    autoComplete="off"
+                    name="newclient-password"
+                  />
+                </div>
+                <div className="modal-field">
+                  <label>Rol:</label>
+                  <select
+                    value={newClient.rol || "cliente"}
+                    onChange={(e) => setNewClient({ ...newClient, rol: e.target.value })}
+                    name="newclient-rol"
+                  >
+                    <option value="cliente">Cliente</option>
+                    <option value="propietario">Propietario</option>
+                    <option value="renta">Renta</option>
+                    <option value="media_renta">Media Renta</option>
+                    <option value="administrador">Administrador</option>
+                    <option value="instructora">Instructora</option>
+                    <option value="creadorcuentas">Creador de cuentas</option>
+                  </select>
+                </div>
+                <div className="modal-field">
+                  <label>Tipo de Cliente:</label>
+                  <select
+                    value={newClient.tipo_cliente || "general"}
+                    onChange={(e) => setNewClient({ ...newClient, tipo_cliente: e.target.value })}
+                    name="newclient-tipo-cliente"
+                  >
+                    <option value="general">General</option>
+                    <option value="propietario">Propietario</option>
+                    <option value="demo">Demo</option>
+                    <option value="renta">Renta</option>
+                    <option value="media_renta">Media Renta</option>
+                  </select>
+                </div>
+                <div className="modal-field">
+                  <label>Nivel:</label>
+                  <input
+                    type="text"
+                    value={newClient.nivel || ""}
+                    onChange={(e) => setNewClient({ ...newClient, nivel: e.target.value })}
+                    placeholder="Nivel"
+                    autoComplete="off"
+                    name="newclient-nivel"
+                  />
+                </div>
+                <div className="modal-field">
+                  <label>Tipo de Nivel:</label>
+                  <select
+                    value={newClient.tipo_nivel || "iniciacion"}
+                    onChange={(e) => setNewClient({ ...newClient, tipo_nivel: e.target.value })}
+                    name="newclient-tipo-nivel"
+                  >
+                    <option value="iniciacion">Iniciación</option>
+                    <option value="intermedio">Intermedio</option>
+                    <option value="paseo">Paseo</option>
+                    <option value="avanzado">Avanzado</option>
+                  </select>
+                </div>
+                <div className="modal-field">
+                  <label>Estatus:</label>
+                  <select
+                    value={newClient.estatus || "activo"}
+                    onChange={(e) => setNewClient({ ...newClient, estatus: e.target.value })}
+                    name="newclient-estatus"
+                  >
+                    <option value="activo">Activo</option>
+                    <option value="inactivo">Inactivo</option>
+                    <option value="bloqueado">Bloqueado</option>
+                  </select>
+                </div>
               </div>
-
               <div className="modal-section">
                 <h3>Información de Pagos</h3>
                 <div className="modal-field">

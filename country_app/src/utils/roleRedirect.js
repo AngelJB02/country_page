@@ -2,7 +2,7 @@
 export const roleRedirects = {
   admin: "/admin",
   instructor: "/instructor",
-  contabilidad: "/contabilidad",
+  administrador: "/contabilidad",
   viewer: "/dashboard-viewer",
   creadorcuentas: "/registro",
   cliente: "/MenuCalendario"

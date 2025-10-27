@@ -9,6 +9,7 @@ import reservasRoutes from "../routes/reservas_new.js";
 import horariosRoutes from "../routes/horarios.js";
 import usersRoutes from "../routes/users_new.js";
 import emailRoutes from "../routes/email.js";
+import caballosRoutes from "../routes/caballos.js";
 
 console.log("✅ Rutas importadas correctamente");
 
@@ -114,6 +115,7 @@ app.use(
 app.use("/api/horarios", horariosRoutes);
 app.use("/api/users", usersRoutes);
 app.use("/api/email", emailRoutes);
+app.use("/api/caballos", caballosRoutes);
 
 // ========================
 // Manejo de errores
