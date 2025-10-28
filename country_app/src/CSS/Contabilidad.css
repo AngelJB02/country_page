@@ -835,7 +835,7 @@ body.no-scroll {
   position: fixed;
   top: 20px;
   right: 20px;
-  z-index: 10000;
+  z-index: 99999;
   min-width: 300px;
   max-width: 500px;
   border-radius: var(--radius-md);

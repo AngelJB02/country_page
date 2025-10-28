@@ -10,6 +10,9 @@ import horariosRoutes from "../routes/horarios.js";
 import usersRoutes from "../routes/users_new.js";
 import emailRoutes from "../routes/email.js";
 import caballosRoutes from "../routes/caballos.js";
+import instructorasRoutes from "../routes/instructoras.js";
+import reservasAdminRoutes from "../routes/reservas_admin.js";
+import descansosRoutes from "../routes/descansos.js";
 
 console.log("✅ Rutas importadas correctamente");
 
@@ -116,6 +119,9 @@ app.use("/api/horarios", horariosRoutes);
 app.use("/api/users", usersRoutes);
 app.use("/api/email", emailRoutes);
 app.use("/api/caballos", caballosRoutes);
+app.use("/api/instructoras", instructorasRoutes);
+app.use("/api/reservas-admin", reservasAdminRoutes);
+app.use("/api/descansos", descansosRoutes);
 
 // ========================
 // Manejo de errores

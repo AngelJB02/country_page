@@ -779,6 +779,19 @@ router.post('/book', async (req, res) => {
   }
 });
 
+// Obtener clientes con tipo_cliente 'propietario'
+router.get('/propietarios', async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      "SELECT id, nombre, apellido, correo, estatus FROM usuarios WHERE rol = 'cliente' AND tipo_cliente = 'propietario' ORDER BY nombre, apellido"
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al obtener propietarios' });
+  }
+});
+
 // Cancelar reserva (cliente)
 router.delete('/:id/cancel/:clienteId', async (req, res) => {
   const { id, clienteId } = req.params;

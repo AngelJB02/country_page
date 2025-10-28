@@ -40,7 +40,7 @@ const CaballosAdmin = () => {
 
   const loadPropietarios = async () => {
     try {
-      const response = await fetch("http://localhost:3001/api/users/propietarios");
+      const response = await fetch("http://localhost:3001/api/reservas/propietarios");
       if (response.ok) {
         const data = await response.json();
         setPropietarios(data);
