@@ -1,0 +1,68 @@
+.ch-header {
+	background-color: white;
+	border-bottom: 1px solid #D4C4B0;
+	box-shadow: 0 2px 8px rgba(107, 68, 35, 0.08);
+	position: sticky;
+	top: 0;
+	z-index: 10;
+}
+
+.ch-container {
+	max-width: 1280px;
+	margin: 0 auto;
+	padding: 32px 48px;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.ch-info {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.ch-title {
+	font-size: 36px;
+	font-family: serif;
+	color: #6B4423;
+	letter-spacing: -0.025em;
+	margin: 0;
+}
+
+.ch-subtitle {
+	font-size: 18px;
+	color: #8B6F47;
+	font-weight: 300;
+	margin: 0;
+}
+
+.ch-logout-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 16px;
+	background-color: transparent;
+	border: none;
+	color: #8B6F47;
+	cursor: pointer;
+	border-radius: 6px;
+	transition: background-color 0.2s, color 0.2s, transform 0.12s;
+}
+
+.ch-logout-btn:hover,
+.ch-logout-btn:focus {
+	background-color: #F5F1E8;
+	color: #6B4423;
+	outline: none;
+}
+
+.ch-logout-btn:active {
+	transform: translateY(1px);
+}
+
+.ch-logout-icon {
+	/* keep arrow spacing consistent */
+	font-weight: 700;
+}
+
