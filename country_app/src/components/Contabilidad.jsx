@@ -769,10 +769,10 @@ const MembershipAdminDashboard = () => {
           style={{ 
             padding: "0.8rem 1.8rem", 
             border: "none", 
-            borderBottom: activeTab === "clientes" ? "3px solid #c17b4a" : "3px solid transparent",
+            borderBottom: activeTab === "clientes" ? "3px solid #2d5016" : "3px solid transparent",
             fontWeight: "bold", 
             background: "transparent",
-            color: activeTab === "clientes" ? "#c17b4a" : "#8b5a2b", 
+            color: activeTab === "clientes" ? "#2d5016" : "#4a7a2d", 
             cursor: "pointer",
             transition: "all 0.3s ease"
           }}
@@ -785,10 +785,10 @@ const MembershipAdminDashboard = () => {
           style={{ 
             padding: "0.8rem 1.8rem", 
             border: "none", 
-            borderBottom: activeTab === "caballos" ? "3px solid #c17b4a" : "3px solid transparent",
+            borderBottom: activeTab === "caballos" ? "3px solid #2d5016" : "3px solid transparent",
             fontWeight: "bold", 
             background: "transparent",
-            color: activeTab === "caballos" ? "#c17b4a" : "#8b5a2b", 
+            color: activeTab === "caballos" ? "#2d5016" : "#4a7a2d", 
             cursor: "pointer",
             transition: "all 0.3s ease"
           }}
@@ -801,10 +801,10 @@ const MembershipAdminDashboard = () => {
           style={{ 
             padding: "0.8rem 1.8rem", 
             border: "none", 
-            borderBottom: activeTab === "instructoras" ? "3px solid #c17b4a" : "3px solid transparent",
+            borderBottom: activeTab === "instructoras" ? "3px solid #2d5016" : "3px solid transparent",
             fontWeight: "bold", 
             background: "transparent",
-            color: activeTab === "instructoras" ? "#c17b4a" : "#8b5a2b", 
+            color: activeTab === "instructoras" ? "#2d5016" : "#4a7a2d", 
             cursor: "pointer",
             transition: "all 0.3s ease"
           }}
@@ -817,10 +817,10 @@ const MembershipAdminDashboard = () => {
           style={{ 
             padding: "0.8rem 1.8rem", 
             border: "none", 
-            borderBottom: activeTab === "reservas" ? "3px solid #c17b4a" : "3px solid transparent",
+            borderBottom: activeTab === "reservas" ? "3px solid #2d5016" : "3px solid transparent",
             fontWeight: "bold", 
             background: "transparent",
-            color: activeTab === "reservas" ? "#c17b4a" : "#8b5a2b", 
+            color: activeTab === "reservas" ? "#2d5016" : "#4a7a2d", 
             cursor: "pointer",
             transition: "all 0.3s ease"
           }}
@@ -890,7 +890,7 @@ const MembershipAdminDashboard = () => {
               </div>
             </div>
           ) : (
-            <div style={{ overflow: "hidden", borderRadius: "16px" }}>
+            <div className="table-container">
               <table className="members-table">
                 <thead>
                   <tr>

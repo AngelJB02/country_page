@@ -2,14 +2,14 @@
 
 :root {
   /* Paleta de colores basada en el logo */
-  --primary-brown: #6B4423;      /* Marrón principal del logo */
-  --secondary-brown: #8B5A2B;    /* Marrón más claro */
+  --primary-brown: #4a7a2d;      /* Marrón principal del logo */
+  --secondary-brown: #2d5016;    /* Verde oscuro */
   --dark-brown: #4A2F17;         /* Marrón oscuro para textos */
   --light-brown: #A67C52;        /* Marrón claro para acentos */
   --cream: #F5F1E8;              /* Crema cálido para fondos */
   --warm-white: #FEFBF6;         /* Blanco cálido */
   --sage-green: #9CAF88;         /* Verde salvia para naturaleza */
-  --terracotta: #C17B4A;         /* Terracota para acentos */
+  --terracotta: #7a9b6a;         /* Terracota para acentos */
   
   /* Grises naturales */
   --stone-gray: #D4C4B0;
@@ -17,14 +17,14 @@
   --charcoal: #3A3A3A;
   
   /* Transparencias */
-  --brown-overlay: rgba(107, 68, 35, 0.7);
-  --lightbrown-overlay: rgba(190, 120, 63, 0.7);
+  --brown-overlay: rgba(74, 122, 45, 0.7);
+  --lightbrown-overlay: rgba(45, 80, 22, 0.7);
   --cream-overlay: rgb(215, 215, 215, 0.9);
   
   /* Sombras naturales */
-  --soft-shadow: 0 4px 20px rgba(107, 68, 35, 0.1);
-  --medium-shadow: 0 8px 30px rgba(107, 68, 35, 0.15);
-  --strong-shadow: 0 12px 40px rgba(107, 68, 35, 0.2);
+  --soft-shadow: 0 4px 20px rgba(74, 122, 45, 0.1);
+  --medium-shadow: 0 8px 30px rgba(74, 122, 45, 0.15);
+  --strong-shadow: 0 12px 40px rgba(74, 122, 45, 0.2);
   
   /* Tipografías rústicas */
   --font-primary: 'Playfair Display', 'Georgia', serif;
