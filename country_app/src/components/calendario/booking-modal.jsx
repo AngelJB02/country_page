@@ -15,6 +15,7 @@ export function BookingModal({
   onCancel,
   isBookedByUser,
   hasBookingForDay,
+  hasBookingWithin24h,
   userName,
 }) {
   const [isLoading, setIsLoading] = useState(false)
@@ -85,6 +86,13 @@ export function BookingModal({
             </div>
           )}
 
+          {/* Warning if user has a recent booking within 24 hours */}
+          {!isBookedByUser && hasBookingWithin24h && (
+            <div className="bm-warning">
+              <p className="bm-warning-text">Podrás reservar dentro de 24 horas.</p>
+            </div>
+          )}
+
           {/* Current bookings list */}
           {slot.bookings.length > 0 && (
             <div className="bm-bookings">
@@ -132,7 +140,7 @@ export function BookingModal({
               </Button>
               <Button
                 onClick={handleConfirm}
-                disabled={isLoading || hasBookingForDay}
+                disabled={isLoading || hasBookingForDay || hasBookingWithin24h}
                 className="bm-btn bm-btn--primary"
               >
                 {isLoading ? "Confirmando..." : "Confirmar reserva"}

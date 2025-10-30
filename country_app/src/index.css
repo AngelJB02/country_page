@@ -1,9 +1,9 @@
+/* Optional: import tw-animate-css if you want animations */
+@import "tw-animate-css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* Optional: import tw-animate-css if you want animations */
-@import "tw-animate-css";
 
 /* Small overrides / tokens for the project */
 :root {

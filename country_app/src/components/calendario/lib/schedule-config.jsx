@@ -1,10 +1,10 @@
 export const SCHEDULE_CONFIGS = {
-  Iniciación: {
+  Intermedio: {
     days: ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"],
     timeSlots: ["16:00", "17:00", "18:00", "19:00"],
     capacity: 2,
   },
-  Intermedio: {
+  Iniciación: {
     days: ["Sábado", "Domingo"],
     timeSlots: ["10:00", "11:00", "12:00", "13:00", "16:00", "17:00", "18:00", "19:00"],
     capacity: 6,

@@ -1,5 +1,7 @@
 "use client"
 
+// Muestra la sección del calendario: título, descripción y el componente WeeklyCalendar.
+// Recibe nivel, userId y onSlotClick para delegar la selección de franjas al calendario.
 import { WeeklyCalendar } from "./weekly-calendar"
 
 export function CalendarGrid({ level, userId, onSlotClick }) {

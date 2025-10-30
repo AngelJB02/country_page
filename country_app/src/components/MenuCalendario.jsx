@@ -9,11 +9,24 @@ import { BookingModal } from './calendario/booking-modal';
 
 // Contexto
 import { BookingProvider, useBookings } from './calendario/lib/booking-context';
+import '../CSS/MenuCalendario.css'
+import ReservacionTabla from './calendario/reservacion_tabla'
 
 function CalendarContent({ userLevel, userId, userName, onLogout }) {
   const { bookings, addBooking, removeBooking, getUserBookingForDay } = useBookings();
+  const { hasBookingWithinHours } = useBookings();
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  // Reservas del usuario actual
+  const userBookings = bookings.filter(b => b.userId === userId);
+
+  const handleCancelBooking = (bookingId) => {
+    removeBooking(bookingId);
+    toast.info('Reserva cancelada', {
+      position: "top-right",
+      autoClose: 3000,
+    });
+  };
 
   const handleSlotClick = (slot) => {
     setSelectedSlot(slot);
@@ -27,18 +40,25 @@ function CalendarContent({ userLevel, userId, userName, onLogout }) {
 
   const handleConfirm = () => {
     if (!selectedSlot) return;
-    
-    addBooking({ 
-      userId, 
-      userName, 
-      timeSlotId: selectedSlot.id 
+    // Try to add booking; addBooking returns false if blocked by 24h rule
+    const result = addBooking({
+      userId,
+      userName,
+      timeSlotId: selectedSlot.id,
     });
-    
-    toast.success(`Reserva confirmada para ${selectedSlot.day} a las ${selectedSlot.time}`, {
-      position: "top-right",
-      autoClose: 3000,
-    });
-    
+
+    if (result === false) {
+      toast.error('No puedes reservar: tienes una reserva en las últimas 24 horas.', {
+        position: 'top-right',
+        autoClose: 4000,
+      });
+    } else {
+      toast.success(`Reserva confirmada para ${selectedSlot.day} a las ${selectedSlot.time}`, {
+        position: "top-right",
+        autoClose: 3000,
+      });
+    }
+
     closeModal();
   };
 
@@ -65,6 +85,8 @@ function CalendarContent({ userLevel, userId, userName, onLogout }) {
     ? Boolean(getUserBookingForDay(userId, selectedSlot.day)) 
     : false;
 
+  const hasBookingWithin24h = selectedSlot ? hasBookingWithinHours(userId, 24) : hasBookingWithinHours(userId, 24);
+
   return (
     <>
       <CalendarHeader 
@@ -73,11 +95,13 @@ function CalendarContent({ userLevel, userId, userName, onLogout }) {
         onLogout={onLogout}
       />
 
-      <div style={{ 
-        maxWidth: "1280px", 
-        margin: "0 auto", 
-        padding: "32px 24px" 
-      }}>
+      <div className="mc-container">
+        <div className="mc-header">
+          <h2 className="mc-title">Reserva tu clase</h2>
+          <p className="mc-subtitle">Selecciona un horario disponible para reservar tu clase.</p>
+        </div>
+        {/* Panel lateral / sección con las reservas del usuario (componente separado) */}
+        <ReservacionTabla userBookings={userBookings} onCancelBooking={handleCancelBooking} />
         <WeeklyCalendar
           userLevel={userLevel}
           userId={userId}
@@ -93,6 +117,7 @@ function CalendarContent({ userLevel, userId, userName, onLogout }) {
         onCancel={handleCancel}
         isBookedByUser={isBookedByUser}
         hasBookingForDay={hasBookingForDay}
+        hasBookingWithin24h={hasBookingWithin24h}
         userName={userName}
       />
     </>
@@ -112,10 +137,7 @@ function MenuCalendario() {
   };
 
   return (
-    <div style={{ 
-      minHeight: "100vh", 
-      backgroundColor: "#F5F1E8" 
-    }}>
+    <div className="mc-root">
       <BookingProvider>
         <CalendarContent 
           userLevel={userLevel}

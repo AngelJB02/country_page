@@ -16,17 +16,36 @@ const BookingContext = createContext(undefined);
 export function BookingProvider({ children }) {
     const [bookings, setBookings] = useState(MOCK_BOOKINGS);
 
+    // Helper: returns true if the user has a booking within the last `hours` hours
+    const hasBookingWithinHours = (userId, hours = 24) => {
+        const now = Date.now();
+        const ms = hours * 60 * 60 * 1000;
+        return bookings.some(b => {
+            if (!b.createdAt) return false; // treat unknown date as old
+            const t = Date.parse(b.createdAt);
+            if (Number.isNaN(t)) return false;
+            return b.userId === userId && (now - t) < ms;
+        });
+    };
+
     /**
      * addBooking(booking)
      * booking: { userId, userName, timeSlotId, capacity? }
      * Crea un nuevo booking con id generado y lo añade al estado.
      */
     const addBooking = (booking) => {
+        // Prevent booking if user has one within last 24 hours
+        if (hasBookingWithinHours(booking.userId, 24)) {
+            return false;
+        }
+
         const newBooking = {
             ...booking,
             id: `b${Date.now()}`,
+            createdAt: new Date().toISOString(),
         };
         setBookings((prev) => [...prev, newBooking]);
+        return newBooking.id;
     };
 
     /**
@@ -47,7 +66,7 @@ export function BookingProvider({ children }) {
     };
 
     return (
-        <BookingContext.Provider value={{ bookings, addBooking, removeBooking, getUserBookingForDay }}>
+        <BookingContext.Provider value={{ bookings, addBooking, removeBooking, getUserBookingForDay, hasBookingWithinHours }}>
             {children}
         </BookingContext.Provider>
     );

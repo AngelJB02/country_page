@@ -28,12 +28,15 @@
 .wc-legend-box--available { background-color: white; border: 2px solid #9CAF88; }
 .wc-legend-box--user { background-color: #C17B4A; }
 .wc-legend-box--full { background-color: #4A2F18; }
+.wc-legend-box--partial { background-color: #fff4e6; border: 2px solid #f1c27d; }
+.wc-legend-box--blocked { background-color: #333333; border: 2px solid #2a2a2a; }
 
 .wc-legend-text { color: #6B4423; }
 
 .wc-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    /* Mostrar cada día como una fila apilada (filas) en lugar de columnas */
+    display: flex;
+    flex-direction: column;
     gap: 24px;
 }
 
@@ -53,10 +56,114 @@
     margin: 0;
 }
 
-.wc-day-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
+.wc-day-date {
+    text-align: center;
+    font-size: 14px;
+    color: #6B4423;
+    margin-top: 6px;
+    margin-bottom: 0;
+}
+
+/* Controles de navegación de semana */
+.wc-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     gap: 12px;
+    margin-bottom: 8px;
+}
+
+.wc-week-range {
+    font-size: 14px;
+    color: #6B4423;
+    font-weight: 500;
+}
+
+.wc-arrow {
+    background: transparent;
+    border: 1px solid rgba(107,68,35,0.15);
+    color: #6B4423;
+    padding: 6px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+}
+
+.wc-arrow:hover {
+    background: rgba(107,68,35,0.04);
+}
+
+.wc-arrow:active {
+    transform: translateY(1px);
+}
+
+/* Header por día con acciones */
+.wc-day-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.wc-day-header-main {
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* mantener título y fecha centrados como antes */
+    flex: 1;
+    background-color: #E8E0D5;
+}
+
+
+.wc-day-header-actions { display: none; }
+
+.wc-day-arrow {
+    background: transparent;
+    border: 1px solid rgba(107,68,35,0.12);
+    color: #6B4423;
+    padding: 4px 6px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 1;
+}
+
+.wc-day-arrow--side { min-width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; }
+
+.wc-day-arrow:hover {
+    background: rgba(107,68,35,0.04);
+}
+
+/* En pantallas pequeñas, colocar las acciones ligeramente debajo para evitar solapado */
+@media (max-width: 640px) {
+    .wc-day-header {
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+    }
+    .wc-day-header-main { align-items: center; }
+    .wc-day-arrow--side { min-width: 28px; height: 28px; }
+}
+
+.wc-day-grid {
+    /* Mostrar las franjas del día en fila (horizontales). Permitimos scroll horizontal si sobran franjas. */
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+
+    /* Centrar franjas cuando hay pocas para que no queden pegadas a la izquierda */
+    justify-content: center;
+    align-items: center;
+}
+
+.wc-day-grid::-webkit-scrollbar {
+    height: 8px;
+}
+.wc-day-grid::-webkit-scrollbar-thumb {
+    background: rgba(0,0,0,0.12);
+    border-radius: 9999px;
 }
 
 .wc-notes { margin-top: 24px; padding: 16px; border-radius: 8px; }

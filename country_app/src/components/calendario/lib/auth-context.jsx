@@ -9,11 +9,11 @@ const AuthContext = createContext(undefined)
 const MOCK_USERS = {
     "maria@example.com": {
         password: "password",
-        user: { id: "1", name: "María García", level: "Iniciación" },
+        user: { id: "2", name: "María García", level: "avanzado" },
     },
     "carlos@example.com": {
         password: "password",
-        user: { id: "2", name: "Carlos Rodríguez", level: "Intermedio" },
+        user: { id: "1", name: "Carlos Rodríguez", level: "Intermedio" },
     },
     "ana@example.com": {
         password: "password",

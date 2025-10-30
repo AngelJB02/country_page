@@ -1,3 +1,4 @@
+@import url(../../../CSS/variables.css);
 .ch-header {
 	background-color: white;
 	border-bottom: 1px solid #D4C4B0;
@@ -10,51 +11,99 @@
 .ch-container {
 	max-width: 1280px;
 	margin: 0 auto;
-	padding: 32px 48px;
+	padding: 72px 48px;
+	/* allow absolute-centering of the inner .ch-info */
+	position: relative;
 	display: flex;
 	align-items: center;
-	justify-content: space-between;
+	justify-content: flex-end;
 }
 
 .ch-info {
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
+	gap: 9px;
+	text-align: center;
+	/* center the info block horizontally in the header while keeping the logout button on the right */
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	transform: translate(-50%, -50%);
 }
 
 .ch-title {
-	font-size: 36px;
+	font-size: 40px;
 	font-family: serif;
 	color: #6B4423;
 	letter-spacing: -0.025em;
 	margin: 0;
+    text-align: center;
 }
 
 .ch-subtitle {
 	font-size: 18px;
 	color: #8B6F47;
-	font-weight: 300;
+	/* Use a heavier weight so the subtitle appears bold */
+	font-weight: 700;
 	margin: 0;
+	font-family: var(--font-accent);
+	/* remove background, show only the border */
+	background-color: transparent;
+	/* keep padding so the border surrounds the text like a badge */
+	padding: 4px 10px;
+	display: inline-block;
+	border-radius: 12px;
+	border: 1px solid var(--light-brown);
+	box-shadow: none; /* no background lift */
+	overflow: visible;
+}
+
+/* Pequeño saludo de bienvenida situado por encima del nombre del cliente */
+.ch-welcome {
+	font-size: 20px;
+	color: #8B6F47;
+	margin: 0 0 6px 0;
+	font-weight: 500;
+	opacity: 0.95;
+	/* Use the project's accent font for UI text */
+	font-family: var(--font-accent);
+}
+
+/* Responsive fallback: on small screens stack normally to avoid overlap */
+@media (max-width: 640px) {
+	.ch-container {
+		padding: 16px 20px;
+	}
+
+	.ch-info {
+		position: static;
+		transform: none;
+		margin: 0 auto 8px auto;
+	}
 }
 
 .ch-logout-btn {
 	display: inline-flex;
-	align-items: center;
-	gap: 8px;
-	padding: 8px 16px;
-	background-color: transparent;
-	border: none;
-	color: #8B6F47;
-	cursor: pointer;
-	border-radius: 6px;
-	transition: background-color 0.2s, color 0.2s, transform 0.12s;
+ 	align-items: center;
+    font-size: 18px;
+ 	font-family: var(--font-accent);
+ 	/* apply brown background only on the logout button */
+ 	background-color: #A86A4F;
+ 	gap: 8px;
+ 	padding: 8px 16px;
+ 	border: none;
+ 	color: #ffffff;
+ 	cursor: pointer;
+ 	border-radius: 6px;
+ 	transition: background-color 0.2s, color 0.2s, transform 0.12s;
 }
 
 .ch-logout-btn:hover,
 .ch-logout-btn:focus {
-	background-color: #F5F1E8;
-	color: #6B4423;
-	outline: none;
+ 	/* slightly darker on hover */
+ 	background-color: #8f513f;
+ 	color: #ffffff;
+ 	outline: none;
 }
 
 .ch-logout-btn:active {

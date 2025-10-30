@@ -1,80 +1,49 @@
 
+import './css/tieme-slot-card.css'
+
+// Tarjeta de franja horaria: muestra hora, plazas y estado (disponible/reservada/bloqueada).
+// Usa clases CSS prefijadas `tsc-` y responde a click/Enter/Space para seleccionar la franja.
+
 export function TimeSlotCard({ time, capacity, bookedCount, isBookedByUser, isBlocked, onClick }) {
   const isFull = bookedCount >= capacity;
   const availableSpots = capacity - bookedCount;
 
-  const getStateStyles = () => {
-    if (isBlocked) {
-      return {
-        backgroundColor: "#4A2F18",
-        borderColor: "#4A2F18",
-        color: "white",
-        cursor: "not-allowed",
-      };
-    }
-    if (isBookedByUser) {
-      return {
-        backgroundColor: "#C17B4A",
-        borderColor: "#C17B4A",
-        color: "white",
-        cursor: "pointer",
-      };
-    }
-    if (isFull) {
-      return {
-        backgroundColor: "#4A2F18",
-        borderColor: "#4A2F18",
-        color: "white",
-        cursor: "not-allowed",
-      };
-    }
-    return {
-      backgroundColor: "white",
-      borderColor: "#9CAF88",
-      color: "#6B4423",
-      cursor: "pointer",
-    };
-  };
+  // Nuevo: si hay reservas (pero no estás tú) aplicamos un estado 'partial' para cambiar color
+  const hasSomeBookings = bookedCount > 0 && bookedCount < capacity;
 
-  const styles = getStateStyles();
+  const stateClass = isBlocked
+    ? 'tsc--blocked'
+    : isBookedByUser
+    ? 'tsc--booked' // tu reserva
+    : isFull
+    ? 'tsc--full' // completo
+    : hasSomeBookings
+    ? 'tsc--partial' // parcialmente reservado (otros usuarios)
+    : 'tsc--available';
 
-  const cardStyle = {
-    padding: "16px",
-    borderRadius: "8px",
-    border: `2px solid ${styles.borderColor}`,
-    backgroundColor: styles.backgroundColor,
-    color: styles.color,
-    cursor: styles.cursor,
-    transition: "all 0.2s",
-  };
-
-  const handleMouseEnter = (e) => {
-    if (!isBlocked && !isFull) {
-      e.currentTarget.style.boxShadow = "0 4px 12px rgba(107, 68, 35, 0.15)";
-      e.currentTarget.style.transform = "translateY(-2px)";
+  const handleKeyDown = (e) => {
+    if ((e.key === 'Enter' || e.key === ' ') && !isBlocked && !isFull) {
+      e.preventDefault();
+      onClick && onClick();
     }
-  };
-
-  const handleMouseLeave = (e) => {
-    e.currentTarget.style.boxShadow = "none";
-    e.currentTarget.style.transform = "translateY(0)";
   };
 
   return (
     <div
-      style={cardStyle}
+      className={`tsc-card ${stateClass}`}
       onClick={!isBlocked && !isFull ? onClick : undefined}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
+      onKeyDown={!isBlocked && !isFull ? handleKeyDown : undefined}
+      role={!isBlocked && !isFull ? 'button' : undefined}
+      tabIndex={!isBlocked && !isFull ? 0 : -1}
     >
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
-        <div style={{ fontSize: "18px", fontWeight: "600" }}>{time}</div>
+      <div className="tsc-inner">
+        <div className="tsc-time">{time}</div>
 
-        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "4px" }}>
+        <div className="tsc-horses">
           {Array.from({ length: capacity }).map((_, index) => (
             <span
               key={index}
-              style={{ fontSize: "24px", opacity: index < bookedCount ? 1 : 0.3 }}
+              className={`tsc-horse ${index < bookedCount ? 'tsc-horse--filled' : 'tsc-horse--empty'}`}
               title={index < bookedCount ? "Reservado" : "Disponible"}
             >
               🐴
@@ -82,7 +51,7 @@ export function TimeSlotCard({ time, capacity, bookedCount, isBookedByUser, isBl
           ))}
         </div>
 
-        <div style={{ fontSize: "12px", fontWeight: "500", textAlign: "center" }}>
+        <div className="tsc-meta">
           {isBlocked ? (
             "Bloqueado"
           ) : isBookedByUser ? (
@@ -90,7 +59,7 @@ export function TimeSlotCard({ time, capacity, bookedCount, isBookedByUser, isBl
           ) : isFull ? (
             "Completo"
           ) : (
-            <span style={{ color: "#9CAF88" }}>
+            <span className="tsc-available-text">
               {availableSpots} {availableSpots === 1 ? "plaza" : "plazas"}
             </span>
           )}
