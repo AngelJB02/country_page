@@ -178,7 +178,7 @@ const ReservasAdmin = () => {
           </div>
         </div>
       ) : (
-        <div style={{ overflow: "hidden", borderRadius: "16px" }}>
+        <div className="table-container">
           <table className="members-table">
             <thead>
               <tr>
