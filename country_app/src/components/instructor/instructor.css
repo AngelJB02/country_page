@@ -341,7 +341,7 @@
   display: inline-block;
 }
 
-/* .status-confirmada {
+.status-confirmada {
   background: var(--sage-green);
   color: var(--sage-green);
 }
@@ -349,7 +349,7 @@
 .status-pendiente {
   background: var(--soft-gray);
   color: var(--charcoal);
-} */
+} 
 
 .btn-attendance {
   background: transparent;
