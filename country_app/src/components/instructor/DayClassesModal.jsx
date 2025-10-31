@@ -70,7 +70,7 @@ function DayClassesModal({ date, classes, onClose, onClassClick }) {
                 </div>
                 <span style={{
                   backgroundColor: classItem.status === 'confirmada' ? 'var(--sage-green)' : 
-                                   classItem.status === 'completada' ? '#5E92F3' : 'var(--soft-gray)',
+                                  classItem.status === 'completada' ? '#5E92F3' : 'var(--soft-gray)',
                   color: classItem.status === 'pendiente' ? 'var(--charcoal)' : 'white',
                   padding: '4px 12px',
                   borderRadius: '12px',
