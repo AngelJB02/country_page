@@ -1,0 +1,17 @@
+/* Optional: import tw-animate-css if you want animations */
+@import "tw-animate-css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Small overrides / tokens for the project */
+:root {
+  --primary-brown: #6b4423;
+  --cream: #f5f1e8;
+}
+
+body {
+  @apply bg-[var(--cream)] text-[var(--primary-brown)];
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+}

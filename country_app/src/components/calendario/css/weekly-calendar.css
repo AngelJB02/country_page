@@ -1,0 +1,173 @@
+
+.wc-root {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.wc-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    justify-content: center;
+    font-size: 14px;
+}
+
+.wc-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.wc-legend-box {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+}
+
+.wc-legend-box--available { background-color: white; border: 2px solid #9CAF88; }
+.wc-legend-box--user { background-color: #C17B4A; }
+.wc-legend-box--full { background-color: #4A2F18; }
+.wc-legend-box--partial { background-color: #fff4e6; border: 2px solid #f1c27d; }
+.wc-legend-box--blocked { background-color: #333333; border: 2px solid #2a2a2a; }
+
+.wc-legend-text { color: #6B4423; }
+
+.wc-grid {
+    /* Mostrar cada día como una fila apilada (filas) en lugar de columnas */
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.wc-day {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.wc-day-title {
+    font-size: 20px;
+    font-family: serif;
+    color: #6B4423;
+    text-align: center;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #D4C4B0;
+    margin: 0;
+}
+
+.wc-day-date {
+    text-align: center;
+    font-size: 14px;
+    color: #6B4423;
+    margin-top: 6px;
+    margin-bottom: 0;
+}
+
+/* Controles de navegación de semana */
+.wc-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.wc-week-range {
+    font-size: 14px;
+    color: #6B4423;
+    font-weight: 500;
+}
+
+.wc-arrow {
+    background: transparent;
+    border: 1px solid rgba(107,68,35,0.15);
+    color: #6B4423;
+    padding: 6px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+}
+
+.wc-arrow:hover {
+    background: rgba(107,68,35,0.04);
+}
+
+.wc-arrow:active {
+    transform: translateY(1px);
+}
+
+/* Header por día con acciones */
+.wc-day-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.wc-day-header-main {
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* mantener título y fecha centrados como antes */
+    flex: 1;
+    background-color: #E8E0D5;
+}
+
+
+.wc-day-header-actions { display: none; }
+
+.wc-day-arrow {
+    background: transparent;
+    border: 1px solid rgba(107,68,35,0.12);
+    color: #6B4423;
+    padding: 4px 6px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 1;
+}
+
+.wc-day-arrow--side { min-width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; }
+
+.wc-day-arrow:hover {
+    background: rgba(107,68,35,0.04);
+}
+
+/* En pantallas pequeñas, colocar las acciones ligeramente debajo para evitar solapado */
+@media (max-width: 640px) {
+    .wc-day-header {
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+    }
+    .wc-day-header-main { align-items: center; }
+    .wc-day-arrow--side { min-width: 28px; height: 28px; }
+}
+
+.wc-day-grid {
+    /* Mostrar las franjas del día en fila (horizontales). Permitimos scroll horizontal si sobran franjas. */
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+
+    /* Centrar franjas cuando hay pocas para que no queden pegadas a la izquierda */
+    justify-content: center;
+    align-items: center;
+}
+
+.wc-day-grid::-webkit-scrollbar {
+    height: 8px;
+}
+.wc-day-grid::-webkit-scrollbar-thumb {
+    background: rgba(0,0,0,0.12);
+    border-radius: 9999px;
+}
+
+.wc-notes { margin-top: 24px; padding: 16px; border-radius: 8px; }
+.wc-notes--intermedio { background-color: rgba(156, 175, 136, 0.1); border: 1px solid rgba(156, 175, 136, 0.3); }
+.wc-notes--iniciacion { background-color: rgba(193, 123, 74, 0.1); border: 1px solid rgba(193, 123, 74, 0.3); }
+.wc-note-text { font-size: 14px; color: #6B4423; margin: 0; }
+.wc-note-strong { font-weight: 600; }
