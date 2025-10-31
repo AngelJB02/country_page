@@ -28,10 +28,6 @@
   padding: 0;
 }
 
-/* ============================================
-   NUEVA ESTRUCTURA DE VISTA (V2)
-   ============================================ */
-
 .dashboard-container-v2 {
   min-height: 100vh;
   background: var(--warm-white);
@@ -345,15 +341,15 @@
   display: inline-block;
 }
 
-.status-confirmada {
+/* .status-confirmada {
   background: var(--sage-green);
-  color: white;
+  color: var(--sage-green);
 }
 
 .status-pendiente {
   background: var(--soft-gray);
   color: var(--charcoal);
-}
+} */
 
 .btn-attendance {
   background: transparent;
