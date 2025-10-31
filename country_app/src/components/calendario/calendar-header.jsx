@@ -3,7 +3,7 @@
 // Gestiona la acción de logout mediante la prop `onLogout` y aplica estilos desde './css/calendar-header.css'.
 import './css/calendar-header.css'
 
-export function CalendarHeader({ clientName, level, onLogout }) {
+export function CalendarHeader({ clientName, level, onLogout, onChangePassword }) {
   return (
     <header className="ch-header">
       <div className="ch-container">
@@ -13,6 +13,17 @@ export function CalendarHeader({ clientName, level, onLogout }) {
           <h1 className="ch-title">{clientName}</h1>
           <p className="ch-subtitle">Nivel: {level}</p>
         </div>
+        {/* Change password button (optional) */}
+        {onChangePassword && (
+          <button
+            onClick={onChangePassword}
+            className="ch-change-btn"
+            aria-label="Cambiar contraseña"
+          >
+            Cambiar contraseña
+          </button>
+        )}
+
         <button
           onClick={onLogout}
           className="ch-logout-btn"

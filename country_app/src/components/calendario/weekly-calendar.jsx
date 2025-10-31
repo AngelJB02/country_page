@@ -2,7 +2,7 @@ import { TimeSlotCard } from './time-slot-card';
 import { SCHEDULE_CONFIGS } from './lib/schedule-config';
 import { useBookings } from './lib/booking-context';
 import { getCurrentWeek, formatDayLabel } from './utils/week';
-import { format, addDays } from 'date-fns'
+import { format, addDays, isBefore, startOfDay } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { useState } from 'react'
 import './css/weekly-calendar.css'
@@ -62,7 +62,19 @@ export function WeeklyCalendar({ userLevel, userId, onSlotClick }) {
   const slotsByDay = config.days.map((day) => ({
     day,
     date: dayNameToDate[day],
-    slots: timeSlots.filter((slot) => slot.day === day),
+    // marcar si la fecha del día es anterior a hoy y combinar con bloqueos por nivel
+    slots: timeSlots
+      .filter((slot) => slot.day === day)
+      .map((slot) => {
+        const date = dayNameToDate[day];
+        const todayStart = startOfDay(new Date());
+        const isPast = date ? isBefore(date, todayStart) : false;
+        return {
+          ...slot,
+          // mantener el bloqueo existente y añadir bloqueo si la fecha es pasada
+          isBlocked: Boolean(slot.isBlocked) || isPast,
+        };
+      }),
   }));
 
   return (

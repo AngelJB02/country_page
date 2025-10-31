@@ -11,8 +11,9 @@ import { BookingModal } from './calendario/booking-modal';
 import { BookingProvider, useBookings } from './calendario/lib/booking-context';
 import '../CSS/MenuCalendario.css'
 import ReservacionTabla from './calendario/reservacion_tabla'
+import ChangePasswordModal from './calendario/change-password-modal'
 
-function CalendarContent({ userLevel, userId, userName, onLogout }) {
+function CalendarContent({ userLevel, userId, userName, onLogout, onChangePassword }) {
   const { bookings, addBooking, removeBooking, getUserBookingForDay } = useBookings();
   const { hasBookingWithinHours } = useBookings();
   const [selectedSlot, setSelectedSlot] = useState(null);
@@ -93,6 +94,7 @@ function CalendarContent({ userLevel, userId, userName, onLogout }) {
         clientName={userName}
         level={userLevel}
         onLogout={onLogout}
+        onChangePassword={onChangePassword}
       />
 
       <div className="mc-container">
@@ -129,6 +131,7 @@ function MenuCalendario() {
   const [userLevel, setUserLevel] = useState("Intermedio");
   const [userId] = useState("user123");
   const [userName] = useState("María García");
+  const [isChangeOpen, setIsChangeOpen] = useState(false);
 
   const handleLogout = () => {
     // Aquí iría tu lógica de logout con axios
@@ -144,7 +147,9 @@ function MenuCalendario() {
           userId={userId}
           userName={userName}
           onLogout={handleLogout}
+          onChangePassword={() => setIsChangeOpen(true)}
         />
+        <ChangePasswordModal isOpen={isChangeOpen} onClose={() => setIsChangeOpen(false)} />
       </BookingProvider>
 
       <ToastContainer />

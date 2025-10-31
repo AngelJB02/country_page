@@ -115,3 +115,19 @@
 	font-weight: 700;
 }
 
+.ch-change-btn {
+	display: inline-flex;
+	align-items: center;
+	font-size: 16px;
+	font-family: var(--font-accent);
+	background: transparent;
+	color: var(--primary-brown);
+	border: 1px solid var(--stone-gray);
+	padding: 8px 12px;
+	border-radius: 6px;
+	margin-right: 8px;
+	cursor: pointer;
+}
+
+.ch-change-btn:hover { background: rgba(107,68,35,0.04); }
+
