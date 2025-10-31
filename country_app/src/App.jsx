@@ -29,9 +29,10 @@ function App() {
           </ProtectedRoute>
         } />
         <Route path="/instructor" element={
-          <ProtectedRoute>
-            <InstructorClases />
-          </ProtectedRoute>
+          <InstructorClases />
+          // <ProtectedRoute>
+          //   <InstructorClases />
+          // </ProtectedRoute>
         } />
         <Route path="/contabilidad" element={
           <ProtectedRoute>
