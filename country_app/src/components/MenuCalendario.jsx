@@ -134,9 +134,12 @@ function MenuCalendario() {
   const [isChangeOpen, setIsChangeOpen] = useState(false);
 
   const handleLogout = () => {
-    // Aquí iría tu lógica de logout con axios
     console.log("Cerrando sesión...");
-    // Ejemplo: axios.post('/api/logout').then(...)
+    // Limpiar datos de sesión
+    localStorage.clear();
+    sessionStorage.clear();
+    // Redirigir al login
+    window.location.href = "/login";
   };
 
   return (
