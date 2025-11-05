@@ -75,25 +75,48 @@ app.post("/api/login", async (req, res) => {
             nombre: user.nombre,
             rol: user.rol || "cliente",
             estatus: user.estatus,
+            tipo_nivel: user.tipo_nivel, // Agregar tipo_nivel
+            tipo_cliente: user.tipo_cliente, // Agregar tipo_cliente también
           },
         });
 
       case "inactivo":
         return res.json({
           mensaje: "⚠️ Tu cuenta está inactiva. Comunícate con el administrador.",
-          user: { id: user.id, nombre: user.nombre, rol: user.rol, estatus: user.estatus },
+          user: { 
+            id: user.id, 
+            nombre: user.nombre, 
+            rol: user.rol, 
+            estatus: user.estatus,
+            tipo_nivel: user.tipo_nivel,
+            tipo_cliente: user.tipo_cliente,
+          },
         });
 
       case "bloqueado":
         return res.status(403).json({
           mensaje: "🚫 Tu cuenta está bloqueada y no puedes iniciar sesión.",
-          user: { id: user.id, nombre: user.nombre, rol: user.rol, estatus: user.estatus },
+          user: { 
+            id: user.id, 
+            nombre: user.nombre, 
+            rol: user.rol, 
+            estatus: user.estatus,
+            tipo_nivel: user.tipo_nivel,
+            tipo_cliente: user.tipo_cliente,
+          },
         });
 
       default:
         return res.status(403).json({
           mensaje: "❌ Estado de usuario no permitido.",
-          user: { id: user.id, nombre: user.nombre, rol: user.rol, estatus: user.estatus },
+          user: { 
+            id: user.id, 
+            nombre: user.nombre, 
+            rol: user.rol, 
+            estatus: user.estatus,
+            tipo_nivel: user.tipo_nivel,
+            tipo_cliente: user.tipo_cliente,
+          },
         });
     }
   } catch (err) {
@@ -121,6 +144,7 @@ app.use("/api/email", emailRoutes);
 app.use("/api/caballos", caballosRoutes);
 app.use("/api/instructoras", instructorasRoutes);
 app.use("/api/reservas-admin", reservasAdminRoutes);
+app.use("/api/reservas", reservasRoutes);
 app.use("/api/descansos", descansosRoutes);
 
 // ========================

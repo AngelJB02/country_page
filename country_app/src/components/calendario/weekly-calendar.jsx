@@ -1,51 +1,22 @@
 import { TimeSlotCard } from './time-slot-card';
-import { SCHEDULE_CONFIGS } from './lib/schedule-config';
-import { useBookings } from './lib/booking-context';
+import { SCHEDULE_CONFIGS_BY_CLASS } from './lib/schedule-config';
+// import { useBookings } from './lib/booking-context';
 import { getCurrentWeek, formatDayLabel } from './utils/week';
 import { format, addDays, isBefore, startOfDay } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { useState } from 'react'
 import './css/weekly-calendar.css'
 
-export function WeeklyCalendar({ userLevel, userId, onSlotClick }) {
-  const config = SCHEDULE_CONFIGS[userLevel];
-  // bookings proviene del contexto y contiene todas las reservas actuales.
-  // Ejemplo de booking: { id: 'b1', userId: 'user123', userName: 'Juan', timeSlotId: 'Sábado-11:00' }
-  const { bookings } = useBookings();
-  const generateTimeSlots = () => {
-    const slots = [];
 
-    // Recorremos todos los días y franjas horarias configuradas para el nivel
-    config.days.forEach((day) => {
-      config.timeSlots.forEach((time) => {
-        const slotId = `${day}-${time}`;
-
-        // Reservas que pertenecen exactamente a este slot
-        const slotBookings = bookings.filter((b) => b.timeSlotId === slotId);
-
-        // Capacidad: prioridad a specialCapacity (ej. ciertos horarios con plazas distintas)
-        const capacity = config.specialCapacity?.[time] || config.capacity;
-
-        // Regla de bloqueo: ejemplo simple para nivel "Iniciación" (horas >= 17)
-        const hour = parseInt(time.split(":")[0], 10);
-        const isBlocked = userLevel === "Iniciación" && hour >= 17;
-
-        slots.push({
-          id: slotId,
-          day,
-          time,
-          capacity,
-          bookings: slotBookings,
-          isBlocked,
-        });
-      });
-    });
-
-    return slots;
-  };
-
-  const timeSlots = generateTimeSlots();
-
+export function WeeklyCalendar({ userLevel, userId, onSlotClick, userBookings = [], allWeekBookings = [], className, claseCupoMax }) {
+  // Obtener configuración por clase específica
+  const classConfig = SCHEDULE_CONFIGS_BY_CLASS[className];
+  
+  if (!classConfig) {
+    console.warn(`No se encontró configuración para la clase: ${className}`);
+    return <div>No hay horarios disponibles para esta clase</div>;
+  }
+  
   // fecha base para la semana mostrada (permite navegar semanas)
   const [currentDate, setCurrentDate] = useState(new Date())
 
@@ -58,24 +29,133 @@ export function WeeklyCalendar({ userLevel, userId, onSlotClick }) {
     const cap = name.charAt(0).toUpperCase() + name.slice(1)
     dayNameToDate[cap] = d
   })
+  
+  // Función para obtener los timeSlots correctos según el día
+  const getTimeSlotsForDay = (dayName) => {
+    const date = dayNameToDate[dayName];
+    if (!date) return [];
+    
+    const dayOfWeek = date.getDay(); // 0 = domingo, 6 = sábado
+    
+    // Determinar qué configuración usar según el día
+    if (classConfig.weekdays && dayOfWeek >= 1 && dayOfWeek <= 5) {
+      return classConfig.weekdays.timeSlots;
+    } else if (classConfig.saturday && dayOfWeek === 6) {
+      return classConfig.saturday.timeSlots;
+    } else if (classConfig.sunday && dayOfWeek === 0) {
+      return classConfig.sunday.timeSlots;
+    } else if (classConfig.weekend && (dayOfWeek === 0 || dayOfWeek === 6)) {
+      return classConfig.weekend.timeSlots;
+    }
+    
+    return [];
+  };
+  
+  // Función para obtener la capacidad correcta según el día
+  const getCapacityForDay = (dayName) => {
+    const date = dayNameToDate[dayName];
+    if (!date) return claseCupoMax || 6;
+    
+    const dayOfWeek = date.getDay();
+    
+    if (classConfig.weekdays && dayOfWeek >= 1 && dayOfWeek <= 5) {
+      return claseCupoMax || classConfig.weekdays.capacity;
+    } else if (classConfig.saturday && dayOfWeek === 6) {
+      return claseCupoMax || classConfig.saturday.capacity;
+    } else if (classConfig.sunday && dayOfWeek === 0) {
+      return claseCupoMax || classConfig.sunday.capacity;
+    } else if (classConfig.weekend && (dayOfWeek === 0 || dayOfWeek === 6)) {
+      return claseCupoMax || classConfig.weekend.capacity;
+    }
+    
+    return claseCupoMax || 6;
+  };
+  
+  // bookings: solo las del usuario, para marcar los slots reservados
+  const generateTimeSlots = (day, realDate) => {
+    const slots = [];
+    const timeSlots = getTimeSlotsForDay(day);
+    const capacity = getCapacityForDay(day);
+    
+    timeSlots.forEach((time) => {
+      const slotId = `${day}-${time}`;
+      
+      // Comparar con fecha exacta (YYYY-MM-DD)
+      const slotDateStr = realDate ? format(realDate, 'yyyy-MM-dd') : null;
+      
+      // Marcar como reservado si hay una reserva dummy o real que coincide
+      const slotBookings = userBookings.filter((b) => {
+        // Dummy (frontend)
+        if (b.timeSlotId && typeof b.timeSlotId === 'string') {
+          return b.timeSlotId === slotId;
+        }
+        // Real (backend): compara fecha exacta, hora y clase
+        if (b.fecha && b.hora_inicio && b.clase_nombre && slotDateStr) {
+          // Extraer solo la parte de fecha (YYYY-MM-DD) sin conversión de zona horaria
+          const reservaDateStr = b.fecha.split('T')[0];
+          return (
+            reservaDateStr === slotDateStr &&
+            b.hora_inicio.slice(0,5) === time &&
+            b.clase_nombre === className
+          );
+        }
+        return false;
+      });
+      
+      // Calcular cuántas reservas TOTALES hay para esta clase en esta fecha/hora exacta
+      const totalBookingsForSlot = allWeekBookings.filter((b) => {
+        if (b.fecha && b.hora_inicio && b.clase_nombre && slotDateStr) {
+          // Extraer solo la parte de fecha (YYYY-MM-DD) sin conversión de zona horaria
+          const reservaDateStr = b.fecha.split('T')[0];
+          return (
+            reservaDateStr === slotDateStr &&
+            b.hora_inicio.slice(0,5) === time &&
+            b.clase_nombre === className
+          );
+        }
+        return false;
+      }).length;
+      
+      const hour = parseInt(time.split(":")[0], 10);
+      const isBlocked = userLevel === "Iniciación" && hour >= 17;
+      slots.push({
+        id: slotId,
+        day,
+        date: realDate, // AGREGADO: incluir la fecha real del slot
+        time,
+        capacity,
+        bookings: slotBookings,
+        totalBooked: totalBookingsForSlot, // Total de reservas (para calcular si está lleno)
+        isBlocked,
+      });
+    });
+    return slots;
+  };
 
-  const slotsByDay = config.days.map((day) => ({
-    day,
-    date: dayNameToDate[day],
-    // marcar si la fecha del día es anterior a hoy y combinar con bloqueos por nivel
-    slots: timeSlots
-      .filter((slot) => slot.day === day)
-      .map((slot) => {
-        const date = dayNameToDate[day];
-        const todayStart = startOfDay(new Date());
-        const isPast = date ? isBefore(date, todayStart) : false;
-        return {
-          ...slot,
-          // mantener el bloqueo existente y añadir bloqueo si la fecha es pasada
-          isBlocked: Boolean(slot.isBlocked) || isPast,
-        };
-      }),
-  }));
+  // Obtener todos los días únicos de todas las configuraciones de la clase
+  const getAllDaysForClass = () => {
+    const allDays = new Set();
+    if (classConfig.weekdays) classConfig.weekdays.days.forEach(d => allDays.add(d));
+    if (classConfig.weekend) classConfig.weekend.days.forEach(d => allDays.add(d));
+    if (classConfig.saturday) classConfig.saturday.days.forEach(d => allDays.add(d));
+    if (classConfig.sunday) classConfig.sunday.days.forEach(d => allDays.add(d));
+    return Array.from(allDays);
+  };
+
+  const slotsByDay = getAllDaysForClass().map((day) => {
+    const date = dayNameToDate[day];
+    const todayStart = startOfDay(new Date());
+    const isPast = date ? isBefore(date, todayStart) : false;
+    
+    return {
+      day,
+      date,
+      slots: generateTimeSlots(day, date).map((slot) => ({
+        ...slot,
+        isBlocked: Boolean(slot.isBlocked) || isPast,
+      })),
+    };
+  });
 
   return (
     <div className="wc-root">
@@ -134,13 +214,13 @@ export function WeeklyCalendar({ userLevel, userId, onSlotClick }) {
             <div className="wc-day-grid">
               {slots.map((slot) => {
                 // Determina si el slot ya está reservado por este usuario
-                const isBookedByUser = slot.bookings.some((b) => b.userId === userId);
+                const isBookedByUser = slot.bookings.some((b) => b.userId === userId || b.cliente_id === userId);
                 return (
                   <TimeSlotCard
                     key={slot.id}
                     time={slot.time}
                     capacity={slot.capacity}
-                    bookedCount={slot.bookings.length}
+                    bookedCount={slot.totalBooked || slot.bookings.length}
                     isBookedByUser={isBookedByUser}
                     isBlocked={slot.isBlocked || false}
                     onClick={() => onSlotClick(slot)}

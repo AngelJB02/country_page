@@ -1,5 +1,7 @@
+
 import express from 'express';
 import db from '../server/db.js';
+import { DateTime } from 'luxon';
 
 const router = express.Router();
 
@@ -690,14 +692,41 @@ router.post('/book', async (req, res) => {
   }
 
   try {
-    // Verificar que la reserva sea al menos 2 horas antes
-    const ahora = new Date();
-    const fechaHoraReserva = new Date(`${fecha} ${hora_inicio}`);
-    const diferenciaHoras = (fechaHoraReserva - ahora) / (1000 * 60 * 60);
+    // Verificar que la reserva sea al menos 2 horas antes (zona horaria Cancún)
+    // Requiere: npm install luxon
+    const ahora = DateTime.now().setZone('America/Cancun');
+    const [year, month, day] = fecha.split('-').map(Number);
+    const [hora, minuto, segundo = '00'] = hora_inicio.split(':');
+    const fechaHoraReserva = DateTime.fromObject({
+      year,
+      month,
+      day,
+      hour: Number(hora),
+      minute: Number(minuto),
+      second: Number(segundo)
+    }, { zone: 'America/Cancun' });
+    const diferenciaHoras = fechaHoraReserva.diff(ahora, 'hours').hours;
+
+    // Log para debugging - SIEMPRE se ejecuta
+    console.log('\n=== VALIDACIÓN DE RESERVA ===');
+    console.log('Cliente ID:', cliente_id);
+    console.log('Clase ID:', clase_id);
+    console.log('Fecha recibida:', fecha);
+    console.log('Hora inicio recibida:', hora_inicio);
+    console.log('---');
+    console.log('Hora actual (Cancún):', ahora.toISO());
+    console.log('Hora actual (readable):', ahora.toFormat('yyyy-MM-dd HH:mm:ss'));
+    console.log('---');
+    console.log('Hora de la reserva (Cancún):', fechaHoraReserva.toISO());
+    console.log('Hora de la reserva (readable):', fechaHoraReserva.toFormat('yyyy-MM-dd HH:mm:ss'));
+    console.log('---');
+    console.log('Diferencia en horas:', diferenciaHoras.toFixed(2));
+    console.log('¿Pasa validación? (>= 2):', diferenciaHoras >= 2);
+    console.log('=============================\n');
 
     if (diferenciaHoras < 2) {
       return res.status(400).json({ 
-        error: 'Las reservas deben hacerse al menos 2 horas antes' 
+        error: 'Las reservas deben hacerse al menos 2 horas antes (horario Cancún)' 
       });
     }
 
@@ -751,14 +780,99 @@ router.post('/book', async (req, res) => {
       });
     }
 
-    // Crear la reserva
+    // ===================== ASIGNACIÓN AUTOMÁTICA DE INSTRUCTORA =====================
+    // Buscar instructoras aptas para la clase, disponibles y sin conflicto de horario
+    // Prioridades de asignación:
+    // 1. Instructora que YA tenga reserva en este mismo horario (para agrupar alumnos)
+    // 2. Instructora SIN clases consecutivas (para dar descanso)
+    // 3. Menor número de reservas en la semana (balanceo de carga)
+    // 4. Desempate por ID
+
+    // Primero: buscar si hay una instructora que ya tiene reserva en este horario exacto
+    const [instructoraActual] = await db.query(`
+      SELECT DISTINCT r.instructora_id, COUNT(*) as alumnos_en_slot
+      FROM reservas r
+      JOIN instructoras i ON r.instructora_id = i.id
+      JOIN instructora_clase ic ON i.id = ic.instructora_id AND ic.clase_id = ? AND ic.activo = 1
+      WHERE r.fecha = ?
+        AND r.hora_inicio = ?
+        AND r.clase_id = ?
+        AND r.estatus IN ('pendiente','confirmada')
+        AND i.disponibilidad = 'disponible'
+        AND r.instructora_id NOT IN (
+          SELECT d.instructora_id FROM descansos d WHERE ? BETWEEN d.fecha_inicio AND d.fecha_fin
+        )
+      GROUP BY r.instructora_id
+      HAVING alumnos_en_slot < ?
+      LIMIT 1
+    `, [clase_id, formatDateForMySQL(fecha), formatTimeForMySQL(hora_inicio), clase_id, fecha, infoClase.cupo_max]);
+
+    let instructora_id = null;
+
+    // Si hay una instructora que ya tiene alumnos en este slot y no está llena, asignarle
+    if (instructoraActual.length > 0) {
+      instructora_id = instructoraActual[0].instructora_id;
+      console.log(`✅ Asignando a instructora existente en el slot (tiene ${instructoraActual[0].alumnos_en_slot} alumnos)`);
+    } else {
+      // Si no, buscar la mejor instructora disponible según prioridades
+      const [candidatas] = await db.query(`
+        SELECT i.id as instructora_id, i.nombre, i.apellido,
+          (SELECT COUNT(*) FROM reservas r2 
+           WHERE r2.instructora_id = i.id 
+             AND r2.fecha BETWEEN DATE_SUB(?, INTERVAL WEEKDAY(?) DAY) 
+             AND DATE_ADD(DATE_SUB(?, INTERVAL WEEKDAY(?) DAY), INTERVAL 6 DAY) 
+             AND r2.estatus IN ('pendiente','confirmada')) as reservas_semana,
+          (SELECT COUNT(*) FROM reservas r3
+           WHERE r3.instructora_id = i.id
+             AND r3.fecha = ?
+             AND (r3.hora_fin = ? OR r3.hora_inicio = ?)
+             AND r3.estatus IN ('pendiente','confirmada')) as clases_consecutivas
+        FROM instructoras i
+        JOIN instructora_clase ic ON i.id = ic.instructora_id AND ic.clase_id = ? AND ic.activo = 1
+        WHERE i.disponibilidad = 'disponible'
+          AND i.id NOT IN (
+            SELECT d.instructora_id FROM descansos d WHERE ? BETWEEN d.fecha_inicio AND d.fecha_fin
+          )
+          AND i.id NOT IN (
+            SELECT r.instructora_id FROM reservas r WHERE r.fecha = ?
+              AND r.hora_inicio = ?
+              AND r.clase_id = ?
+              AND r.estatus IN ('pendiente','confirmada')
+          )
+        ORDER BY clases_consecutivas ASC, reservas_semana ASC, i.id ASC
+        LIMIT 1
+      `, [
+        fecha, fecha, fecha, fecha, // para calcular semana de la reserva
+        fecha, hora_inicio, hora_fin, // para detectar clases consecutivas
+        clase_id,
+        fecha,
+        fecha,
+        hora_inicio,
+        clase_id
+      ]);
+
+      if (candidatas.length > 0) {
+        instructora_id = candidatas[0].instructora_id;
+        console.log(`✅ Asignando nueva instructora al slot (sin clases consecutivas: ${candidatas[0].clases_consecutivas === 0})`);
+      }
+    }
+
+    if (!instructora_id) {
+      return res.status(400).json({
+        error: 'No hay instructoras disponibles para este horario',
+        razon: 'Todas las instructoras aptas están ocupadas, en descanso o no pueden impartir esta clase.'
+      });
+    }
+
+    // Crear la reserva con instructora asignada
     const [result] = await db.query(`
       INSERT INTO reservas (
-        cliente_id, clase_id, fecha, hora_inicio, hora_fin, 
+        cliente_id, instructora_id, clase_id, fecha, hora_inicio, hora_fin, 
         estatus, tipo
-      ) VALUES (?, ?, ?, ?, ?, 'pendiente', ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, 'pendiente', ?)
     `, [
-      cliente_id, 
+      cliente_id,
+      instructora_id,
       clase_id,
       formatDateForMySQL(fecha),
       formatTimeForMySQL(hora_inicio),
@@ -771,11 +885,47 @@ router.post('/book', async (req, res) => {
     res.json({
       message: 'Reserva creada correctamente',
       id: result.insertId,
-      nota: 'La instructora asignará el caballo antes de la clase'
+      instructora_id,
+      nota: 'Instructora asignada automáticamente'
     });
   } catch (err) {
     console.error('Error creando reserva:', err);
     res.status(500).json({ error: 'Error al crear reserva' });
+  }
+});
+
+// Obtener todas las reservas de una semana (para calcular disponibilidad)
+router.get('/week', async (req, res) => {
+  try {
+    const { fecha_inicio, fecha_fin } = req.query;
+    
+    if (!fecha_inicio || !fecha_fin) {
+      return res.status(400).json({ error: 'Se requieren fecha_inicio y fecha_fin' });
+    }
+
+    const query = `
+      SELECT 
+        r.id,
+        r.cliente_id,
+        r.clase_id,
+        r.fecha,
+        r.hora_inicio,
+        r.hora_fin,
+        r.estatus,
+        cl.nombre as clase_nombre,
+        cl.cupo_max
+      FROM reservas r
+      LEFT JOIN clases cl ON r.clase_id = cl.id
+      WHERE r.fecha BETWEEN ? AND ?
+      AND r.estatus IN ('pendiente', 'confirmada')
+      ORDER BY r.fecha, r.hora_inicio
+    `;
+
+    const [rows] = await db.query(query, [formatDateForMySQL(fecha_inicio), formatDateForMySQL(fecha_fin)]);
+    res.json(rows);
+  } catch (err) {
+    console.error('Error obteniendo reservas de la semana:', err);
+    res.status(500).json({ error: 'Error al obtener reservas de la semana' });
   }
 });
 

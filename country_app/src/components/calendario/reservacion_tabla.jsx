@@ -10,12 +10,28 @@ export function ReservacionTabla({ userBookings = [], onCancelBooking }) {
       ) : (
         <ul className="mc-bookings-list">
           {userBookings.map((b) => {
-            const [day, time] = b.timeSlotId.split('-');
+            let day = '', time = '', clase = '';
+            if (typeof b.timeSlotId === 'string' && b.timeSlotId.includes('-')) {
+              [day, time] = b.timeSlotId.split('-');
+              clase = b.clase_nombre || '';
+            } else {
+              // Reserva real del backend
+              if (b.fecha && b.hora_inicio) {
+                // Extraer fecha sin conversión de zona horaria
+                const fechaStr = b.fecha.split('T')[0]; // YYYY-MM-DD
+                const [year, month, dayNum] = fechaStr.split('-');
+                const fechaObj = new Date(parseInt(year), parseInt(month) - 1, parseInt(dayNum));
+                day = fechaObj.toLocaleDateString('es-MX', { weekday: 'long', day: '2-digit', month: '2-digit' });
+                time = b.hora_inicio.slice(0,5);
+                clase = b.clase_nombre || '';
+              }
+            }
             return (
               <li key={b.id} className="mc-booking-item">
                 <div className="mc-booking-info">
                   <span className="mc-booking-day">{day}</span>
                   <span className="mc-booking-time">{time}</span>
+                  {clase && <span className="mc-booking-class">{clase}</span>}
                 </div>
                 <button
                   className="mc-booking-cancel"
