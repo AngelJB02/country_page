@@ -3,6 +3,7 @@ import { Calendar, Users, Clock, Download, Check, X, ChevronLeft, ChevronRight }
 import { CalendarView } from "./instructor/CalendarView"
 import { DayClassesModal } from "./instructor/DayClassesModal"
 import { AttendanceModal } from "./instructor/atendance-modal"
+import HorseSelect from "./instructor/HorseSelect"
 import useInstructorDashboard from "./instructor/constants.jsx"
 import LogoutButton from "./LogoutBoton"
 import "./instructor/instructor.css"
@@ -22,7 +23,59 @@ export default function InstructorClases() {
     handleAttendanceChange,
     handleDateClick,
     handleClassClickFromModal,
+    obtenerCaballosParaClase,
+    handleHorseChange,
+    loading,
+    error,
+    instructoraInfo,
   } = useInstructorDashboard()
+
+  // Mostrar loading
+  if (loading) {
+    return (
+      <div className="dashboard-container-v2" style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '50vh' 
+      }}>
+        <div>
+          <p>Cargando datos de la instructora...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Mostrar error
+  if (error) {
+    return (
+      <div className="dashboard-container-v2" style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '50vh' 
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <h3>Error al cargar los datos</h3>
+          <p>{error}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            style={{
+              padding: '10px 20px',
+              backgroundColor: '#007bff',
+              color: 'white',
+              border: 'none',
+              borderRadius: '5px',
+              cursor: 'pointer'
+            }}
+          >
+            Reintentar
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <>
       <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Source+Sans+Pro:wght@400;600;700&display=swap" rel="stylesheet" />
@@ -36,7 +89,12 @@ export default function InstructorClases() {
             </div>
             <div>
               <h1 className="header-title">Panel del Instructor</h1>
-              <p className="header-subtitle">Brigitte López</p>
+              <p className="header-subtitle">
+                {instructoraInfo ? 
+                  `${instructoraInfo.nombre} ${instructoraInfo.apellido}` : 
+                  'Cargando...'
+                }
+              </p>
             </div>
           </div>
           
@@ -183,23 +241,12 @@ export default function InstructorClases() {
                         </td>
                         <td>{classItem.studentAge} años</td>
                         <td>
-                          <select 
-                            className="horse-select"
-                            value={classItem.horse}
-                            onChange={(e) => {
-                              setClasses(prev => 
-                                prev.map(c => c.id === classItem.id ? {...c, horse: e.target.value} : c)
-                              )
-                            }}
+                          <HorseSelect
+                            classItem={classItem}
+                            onHorseChange={handleHorseChange}
+                            obtenerCaballosParaClase={obtenerCaballosParaClase}
                             disabled={activeView === 'history'}
-                          >
-                            <option value="Luna">Luna</option>
-                            <option value="Trueno">Trueno</option>
-                            <option value="Canela">Canela</option>
-                            <option value="Estrella">Estrella</option>
-                            <option value="Paloma">Paloma</option>
-                            <option value="Rayo">Rayo</option>
-                          </select>
+                          />
                         </td>
                         <td>
                           <span className={`status-badge status-${classItem.status}`}>
