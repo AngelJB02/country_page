@@ -63,6 +63,210 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// Obtener clases/reservas de una instructora usando usuario_id
+router.get('/clases/:usuario_id', async (req, res) => {
+  const { usuario_id } = req.params;
+  
+  console.log(`🔍 Buscando instructora con usuario_id: ${usuario_id}`);
+  
+  try {
+    // Primero obtener la información de la instructora
+    const [instructoraRows] = await db.query(`
+      SELECT 
+        i.id as instructora_id,
+        i.nombre,
+        i.apellido
+      FROM instructoras i
+      WHERE i.usuario_id = ?
+    `, [usuario_id]);
+    
+    console.log(`👤 Resultados de instructora:`, instructoraRows);
+    
+    if (instructoraRows.length === 0) {
+      console.log(`❌ No se encontró instructora con usuario_id: ${usuario_id}`);
+      return res.status(404).json({ error: 'Instructora no encontrada para este usuario' });
+    }
+    
+    const instructora = instructoraRows[0];
+    
+    console.log(`📋 Buscando clases para instructora ID: ${instructora.instructora_id} (${instructora.nombre} ${instructora.apellido})`);
+    
+    // Obtener todas las reservas/clases de esta instructora
+    const [clasesRows] = await db.query(`
+      SELECT 
+        r.id,
+        r.fecha,
+        r.hora_inicio as horario,
+        u.nombre as student_nombre,
+        u.apellido as student_apellido,
+        u.edad as studentAge,
+        u.tipo_nivel as student_nivel,
+        c.nombre as type,
+        cab.nombre as horse,
+        r.estatus as status,
+        'pendiente' as attendance
+      FROM reservas r
+      LEFT JOIN clases c ON r.clase_id = c.id
+      LEFT JOIN caballos cab ON r.caballo_id = cab.id
+      LEFT JOIN usuarios u ON r.cliente_id = u.id
+      WHERE r.instructora_id = ?
+      ORDER BY r.fecha DESC, r.hora_inicio ASC
+    `, [instructora.instructora_id]);
+    
+    console.log(`🎯 Encontradas ${clasesRows.length} reservas para la instructora`);
+    console.log('📊 Primeras 2 reservas:', clasesRows.slice(0, 2));
+    
+    // Formatear los datos para que coincidan con el frontend
+    const clasesFormateadas = clasesRows.map(clase => {
+      // Formatear la fecha para que sea compatible
+      const fecha = clase.fecha ? new Date(clase.fecha).toISOString().split('T')[0] : null;
+      
+      // Formatear la hora para mostrar solo HH:MM
+      const hora = clase.horario ? clase.horario.slice(0, 5) : '00:00';
+      
+      return {
+        id: clase.id,
+        type: clase.type || 'Sin tipo',
+        date: fecha,
+        time: hora,
+        horse: clase.horse || 'Sin asignar',
+        student: clase.student_nombre && clase.student_apellido ? 
+          `${clase.student_nombre} ${clase.student_apellido}` : 'Sin nombre',
+        studentAge: clase.studentAge || 0,
+        studentLevel: clase.student_nivel || 'Intermedio', // Nivel del estudiante
+        status: clase.status || 'pendiente',
+        attendance: clase.attendance || 'pendiente',
+        level: clase.student_nivel || 'Intermedio' // Mantenemos level para compatibilidad
+      };
+    });
+    
+    res.json({
+      instructora: {
+        id: instructora.instructora_id,
+        nombre: instructora.nombre,
+        apellido: instructora.apellido
+      },
+      clases: clasesFormateadas
+    });
+    
+  } catch (err) {
+    console.error('Error al obtener clases de instructora:', err);
+    res.status(500).json({ error: 'Error al obtener clases de instructora' });
+  }
+});
+
+// ENDPOINT TEMPORAL PARA DEBUGGING - Mostrar todas las instructoras y sus reservas
+router.get('/debug/all', async (req, res) => {
+  try {
+    console.log('🔧 DEBUG: Obteniendo todas las instructoras...');
+    
+    // Mostrar todas las instructoras
+    const [instructoras] = await db.query(`
+      SELECT 
+        i.id as instructora_id,
+        i.usuario_id,
+        i.nombre,
+        i.apellido,
+        u.username
+      FROM instructoras i
+      LEFT JOIN usuarios u ON i.usuario_id = u.id
+    `);
+    
+    console.log('👩‍🏫 Instructoras en la base de datos:', instructoras);
+    
+    // Mostrar todas las reservas
+    const [reservas] = await db.query(`
+      SELECT 
+        r.id,
+        r.instructora_id,
+        r.cliente_id,
+        r.fecha,
+        r.hora_inicio,
+        r.estatus,
+        u.nombre as cliente_nombre
+      FROM reservas r
+      LEFT JOIN usuarios u ON r.cliente_id = u.id
+      LIMIT 10
+    `);
+    
+    console.log('📅 Primeras 10 reservas en la base de datos:', reservas);
+    
+    res.json({
+      instructoras,
+      reservas,
+      mensaje: 'Datos de debug - revisar consola del servidor'
+    });
+    
+  } catch (err) {
+    console.error('Error en debug:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Actualizar asistencia de una reserva
+router.put('/reservas/:id/asistencia', async (req, res) => {
+  const { id } = req.params;
+  const { asistencia } = req.body;
+  
+  console.log(`🎯 Actualizando asistencia de reserva ${id} a: ${asistencia}`);
+
+  if (!["presente", "ausente", "justificado", "pendiente"].includes(asistencia)) {
+    return res.status(400).json({ 
+      error: "Valor de asistencia no válido. Opciones: presente, ausente, justificado, pendiente" 
+    });
+  }
+
+  try {
+    // Primero verificar que la reserva existe
+    const [reservaCheck] = await db.query("SELECT * FROM reservas WHERE id = ?", [id]);
+    if (reservaCheck.length === 0) {
+      return res.status(404).json({ error: "Reserva no encontrada" });
+    }
+
+    const reserva = reservaCheck[0];
+
+    // Verificar si ya existe un registro de asistencia para esta reserva
+    const [existingAsistencia] = await db.query(
+      "SELECT * FROM asistencias WHERE reserva_id = ?", 
+      [id]
+    );
+
+    if (existingAsistencia.length > 0) {
+      // Actualizar registro existente
+      await db.query(
+        "UPDATE asistencias SET asistio = ?, registrado_en = NOW() WHERE reserva_id = ?",
+        [asistencia, id]
+      );
+      console.log(`✅ Asistencia actualizada para reserva ${id}`);
+    } else {
+      // Crear nuevo registro de asistencia
+      await db.query(
+        "INSERT INTO asistencias (reserva_id, instructora_id, asistio, registrado_en) VALUES (?, ?, ?, NOW())",
+        [id, reserva.instructora_id, asistencia]
+      );
+      console.log(`✅ Nueva asistencia creada para reserva ${id}`);
+    }
+
+    // Si la asistencia se marcó como presente o ausente, cambiar el status a completada
+    if (asistencia === 'presente' || asistencia === 'ausente') {
+      await db.query(
+        "UPDATE reservas SET estatus = 'completada' WHERE id = ?",
+        [id]
+      );
+    }
+
+    res.json({ 
+      message: "Asistencia actualizada correctamente", 
+      asistencia: asistencia,
+      reserva_id: id 
+    });
+    
+  } catch (err) {
+    console.error("Error al actualizar asistencia:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Crear nueva instructora
 // Este endpoint crea tanto el usuario como el registro en instructoras
 router.post('/', async (req, res) => {
@@ -71,15 +275,14 @@ router.post('/', async (req, res) => {
     apellido, 
     correo, 
     telefono, 
-    especialidad, 
     disponibilidad,
     customPassword 
   } = req.body;
   
   // Validar campos requeridos
-  if (!nombre || !apellido || !especialidad) {
+  if (!nombre || !apellido) {
     return res.status(400).json({ 
-      error: 'Faltan datos requeridos: nombre, apellido y especialidad son obligatorios' 
+      error: 'Faltan datos requeridos: nombre y apellido son obligatorios' 
     });
   }
   
@@ -117,9 +320,9 @@ router.post('/', async (req, res) => {
     
     // 4. Crear registro en tabla instructoras
     const [instructorResult] = await connection.query(
-      `INSERT INTO instructoras (usuario_id, nombre, apellido, num_contacto, especialidad, disponibilidad, fecha_registro) 
-       VALUES (?, ?, ?, ?, ?, ?, NOW())`,
-      [usuarioId, nombre, apellido, telefono, especialidad, disponibilidad || 'disponible']
+      `INSERT INTO instructoras (usuario_id, nombre, apellido, num_contacto, disponibilidad, fecha_registro) 
+       VALUES (?, ?, ?, ?, ?, NOW())`,
+      [usuarioId, nombre, apellido, telefono, disponibilidad || 'disponible']
     );
     
     await connection.commit();
@@ -133,7 +336,6 @@ router.post('/', async (req, res) => {
         apellido,
         num_contacto: telefono,
         correo,
-        especialidad,
         disponibilidad: disponibilidad || 'disponible',
         username,
         password

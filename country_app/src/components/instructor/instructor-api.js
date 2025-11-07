@@ -109,6 +109,60 @@ export const obtenerCaballos = async () => {
 };
 
 /**
+ * Obtiene caballos filtrados por especialidad según el nivel del cliente
+ * @param {string} nivelCliente - Nivel del cliente ('Iniciación', 'Intermedio', 'Avanzado')
+ * @returns {Promise<Array>}
+ */
+export const obtenerCaballosPorNivel = async (nivelCliente) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/caballos`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error HTTP: ${response.status}`);
+    }
+
+    const caballos = await response.json();
+    
+    // Normalizar el nivel del cliente a formato estándar
+    const nivelNormalizado = nivelCliente.toLowerCase();
+    
+    // Mapeo de nivel de cliente a especialidad de caballo (todo en minúsculas)
+    const mapeoEspecialidad = {
+      'iniciación': 'iniciacion',
+      'iniciacion': 'iniciacion',
+      'intermedio': 'paseo', 
+      'avanzado': 'salto'
+    };
+
+    const especialidadBuscada = mapeoEspecialidad[nivelNormalizado];
+    
+    if (!especialidadBuscada) {
+      console.warn(`Nivel de cliente no reconocido: ${nivelCliente}`);
+      return caballos; // Devolver todos si no se reconoce el nivel
+    }
+
+    // Filtrar caballos que tengan la especialidad requerida
+    const caballosFiltrados = caballos.filter(caballo => {
+      if (!caballo.especialidad) return false;
+      return caballo.especialidad.toLowerCase().includes(especialidadBuscada);
+    });
+
+    console.log(`🐎 Caballos filtrados para nivel ${nivelCliente} (busca "${especialidadBuscada}"):`, caballosFiltrados.length);
+    console.log('📋 Caballos disponibles:', caballosFiltrados.map(c => `${c.nombre} (${c.especialidad})`));
+    return caballosFiltrados;
+    
+  } catch (error) {
+    console.error('Error al obtener caballos por nivel:', error);
+    throw error;
+  }
+};
+
+/**
  * Obtiene el usuario actual del localStorage
  * @returns {Object|null}
  */

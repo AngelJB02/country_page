@@ -13,7 +13,7 @@ const CaballosAdmin = () => {
     propietario_id: "",
     disponibilidad: "disponible",
     estatus: "publico",
-    especialidad: "mixto",
+    especialidad: [],
     descripcion: ""
   });
   const [editingHorse, setEditingHorse] = useState(null);
@@ -30,6 +30,32 @@ const CaballosAdmin = () => {
     setTimeout(() => {
       setNotification({ show: false, message: "", type: "" });
     }, 4000);
+  };
+
+  // Funciones para manejar especialidades múltiples
+  const especialidadesDisponibles = ['iniciacion', 'paseo', 'salto'];
+  
+  const parseEspecialidades = (especialidadString) => {
+    if (!especialidadString) return [];
+    return especialidadString.split(',').filter(e => e.trim() !== '');
+  };
+
+  const formatEspecialidades = (especialidadesArray) => {
+    if (!especialidadesArray || especialidadesArray.length === 0) return '';
+    return especialidadesArray.join(',');
+  };
+
+  const handleEspecialidadToggle = (especialidad, isNewHorse = true) => {
+    const currentEspecialidades = isNewHorse ? newHorse.especialidad : editingHorse.especialidad;
+    const newEspecialidades = currentEspecialidades.includes(especialidad)
+      ? currentEspecialidades.filter(e => e !== especialidad)
+      : [...currentEspecialidades, especialidad];
+    
+    if (isNewHorse) {
+      setNewHorse({ ...newHorse, especialidad: newEspecialidades });
+    } else {
+      setEditingHorse({ ...editingHorse, especialidad: newEspecialidades });
+    }
   };
 
   // Cargar lista de caballos desde el endpoint
@@ -80,7 +106,7 @@ const CaballosAdmin = () => {
       propietario_id: "",
       disponibilidad: "disponible",
       estatus: "publico",
-      especialidad: "mixto",
+      especialidad: [],
       descripcion: ""
     });
     setAddHorseModalOpen(true);
@@ -101,7 +127,8 @@ const CaballosAdmin = () => {
   const openEditHorseModal = (caballo) => {
     setEditingHorse({
       ...caballo,
-      propietario_id: caballo.propietario_id || ""
+      propietario_id: caballo.propietario_id || "",
+      especialidad: parseEspecialidades(caballo.especialidad)
     });
     setEditHorseModalOpen(true);
   };
@@ -129,7 +156,7 @@ const CaballosAdmin = () => {
         propietario_id: editingHorse.propietario_id ? parseInt(editingHorse.propietario_id) : null,
         disponibilidad: editingHorse.disponibilidad,
         estatus: editingHorse.estatus,
-        especialidad: editingHorse.especialidad,
+        especialidad: editingHorse.especialidad, // Enviar como array
         descripcion: editingHorse.descripcion.trim()
       };
 
@@ -208,9 +235,11 @@ const CaballosAdmin = () => {
         propietario_id: newHorse.propietario_id ? parseInt(newHorse.propietario_id) : null,
         disponibilidad: newHorse.disponibilidad,
         estatus: newHorse.estatus,
-        especialidad: newHorse.especialidad,
+        especialidad: newHorse.especialidad, // Enviar como array
         descripcion: newHorse.descripcion.trim()
       };
+
+      console.log('🐎 Enviando datos del caballo:', horseData);
 
       const response = await fetch("http://localhost:3001/api/caballos", {
         method: "POST",
@@ -225,7 +254,8 @@ const CaballosAdmin = () => {
         loadCaballos(); // Recargar la lista
       } else {
         const error = await response.json();
-        showNotification("Error al agregar caballo: " + (error?.error ?? "Error desconocido"), "error");
+        console.error('❌ Error del servidor:', error);
+        showNotification("Error al agregar caballo: " + (error?.error ?? error?.message ?? "Error desconocido"), "error");
       }
     } catch (error) {
       console.error("Error al crear caballo:", error);
@@ -387,7 +417,30 @@ const CaballosAdmin = () => {
                       </select>
                     </td>
                     <td style={{ fontWeight: "600", color: "var(--primary-brown)" }}>
-                      {caballo.especialidad.charAt(0).toUpperCase() + caballo.especialidad.slice(1)}
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
+                        {parseEspecialidades(caballo.especialidad).map(esp => (
+                          <span 
+                            key={esp}
+                            style={{
+                              backgroundColor: '#e8f5e8',
+                              color: '#2d5016',
+                              padding: '0.2rem 0.5rem',
+                              borderRadius: '12px',
+                              fontSize: '0.75rem',
+                              fontWeight: '500',
+                              textTransform: 'capitalize',
+                              border: '1px solid #9caf88'
+                            }}
+                          >
+                            {esp}
+                          </span>
+                        ))}
+                        {parseEspecialidades(caballo.especialidad).length === 0 && (
+                          <span style={{ fontStyle: 'italic', color: '#999', fontSize: '0.9rem' }}>
+                            Sin especialidades
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td style={{ color: "var(--charcoal)" }}>{caballo.descripcion || "—"}</td>
                     <td>
@@ -551,18 +604,38 @@ const CaballosAdmin = () => {
                   </select>
                 </div>
                 <div className="modal-field">
-                  <label>Especialidad:</label>
-                  <select
-                    value={editingHorse.especialidad}
-                    onChange={e => setEditingHorse({ ...editingHorse, especialidad: e.target.value })}
-                    name="edithorse-especialidad"
-                  >
-                    <option value="iniciacion">Iniciación</option>
-                    <option value="intermedio">Intermedio</option>
-                    <option value="paseo">Paseo</option>
-                    <option value="salto">Salto</option>
-                    <option value="mixto">Mixto</option>
-                  </select>
+                  <label>Especialidades:</label>
+                  <div style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', 
+                    gap: '0.5rem',
+                    marginTop: '0.5rem'
+                  }}>
+                    {especialidadesDisponibles.map(esp => (
+                      <label key={esp} style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '0.5rem',
+                        padding: '0.5rem',
+                        border: '1px solid #ddd',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        backgroundColor: editingHorse.especialidad.includes(esp) ? '#e8f5e8' : '#fff'
+                      }}>
+                        <input
+                          type="checkbox"
+                          checked={editingHorse.especialidad.includes(esp)}
+                          onChange={() => handleEspecialidadToggle(esp, false)}
+                        />
+                        <span style={{ fontSize: '0.9rem', textTransform: 'capitalize' }}>
+                          {esp}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                  <small style={{ color: "var(--stone-gray)", fontSize: "0.85rem", marginTop: "0.3rem", display: "block" }}>
+                    Selecciona una o más especialidades para este caballo
+                  </small>
                 </div>
                 <div className="modal-field">
                   <label>Descripción:</label>
@@ -649,18 +722,38 @@ const CaballosAdmin = () => {
                   </select>
                 </div>
                 <div className="modal-field">
-                  <label>Especialidad:</label>
-                  <select
-                    value={newHorse.especialidad}
-                    onChange={e => setNewHorse({ ...newHorse, especialidad: e.target.value })}
-                    name="newhorse-especialidad"
-                  >
-                    <option value="iniciacion">Iniciación</option>
-                    <option value="intermedio">Intermedio</option>
-                    <option value="paseo">Paseo</option>
-                    <option value="salto">Salto</option>
-                    <option value="mixto">Mixto</option>
-                  </select>
+                  <label>Especialidades:</label>
+                  <div style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', 
+                    gap: '0.5rem',
+                    marginTop: '0.5rem'
+                  }}>
+                    {especialidadesDisponibles.map(esp => (
+                      <label key={esp} style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '0.5rem',
+                        padding: '0.5rem',
+                        border: '1px solid #ddd',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        backgroundColor: newHorse.especialidad.includes(esp) ? '#e8f5e8' : '#fff'
+                      }}>
+                        <input
+                          type="checkbox"
+                          checked={newHorse.especialidad.includes(esp)}
+                          onChange={() => handleEspecialidadToggle(esp, true)}
+                        />
+                        <span style={{ fontSize: '0.9rem', textTransform: 'capitalize' }}>
+                          {esp}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                  <small style={{ color: "var(--stone-gray)", fontSize: "0.85rem", marginTop: "0.3rem", display: "block" }}>
+                    Selecciona una o más especialidades para este caballo
+                  </small>
                 </div>
                 <div className="modal-field">
                   <label>Descripción:</label>

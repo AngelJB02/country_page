@@ -1,0 +1,54 @@
+/* Estilos para HorseSelect */
+.horse-select {
+  padding: 8px 12px;
+  border: 2px solid #ddd;
+  border-radius: 6px;
+  font-family: 'Source Sans Pro', sans-serif;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  background-color: white;
+  cursor: pointer;
+}
+
+.horse-select:hover {
+  border-color: #4a90e2;
+  box-shadow: 0 2px 4px rgba(74, 144, 226, 0.1);
+}
+
+.horse-select:focus {
+  outline: none;
+  border-color: #4a90e2;
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+}
+
+.horse-select:disabled {
+  background-color: #f5f5f5;
+  color: #999;
+  cursor: not-allowed;
+}
+
+/* Estilos para las opciones cuando están seleccionadas */
+.horse-select option:checked {
+  font-weight: bold;
+}
+
+/* Colores específicos para tipos de caballos */
+.horse-option-pony {
+  background-color: #e8f5e8 !important;
+  color: #2d5a2d !important;
+}
+
+.horse-option-salto {
+  background-color: #fff3cd !important;
+  color: #856404 !important;
+}
+
+.horse-option-grande {
+  background-color: #e3f2fd !important;
+  color: #1565c0 !important;
+}
+
+.horse-option-error {
+  background-color: #f8d7da !important;
+  color: #721c24 !important;
+}

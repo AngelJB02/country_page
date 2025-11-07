@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react"
-import { obtenerClasesInstructora, actualizarAsistencia, obtenerUsuarioActual } from "./instructor-api"
+import { obtenerClasesInstructora, actualizarAsistencia, obtenerUsuarioActual, obtenerCaballosPorNivel } from "./instructor-api"
 
 export default function InstructorDashboard() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -15,6 +15,7 @@ export default function InstructorDashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [instructoraInfo, setInstructoraInfo] = useState(null)
+  const [caballosPorNivel, setCaballosPorNivel] = useState({}) // Nuevo estado para caballos
 
   // Obtener la fecha de hoy solo una vez
   const today = useMemo(() => {
@@ -157,6 +158,37 @@ export default function InstructorDashboard() {
     setSelectedClass(classItem)
     setShowAttendanceModal(true)
   }
+
+  // Función para obtener caballos disponibles para una clase específica
+  const obtenerCaballosParaClase = async (nivelCliente) => {
+    try {
+      // Si ya tenemos los caballos para este nivel, devolverlos del cache
+      if (caballosPorNivel[nivelCliente]) {
+        return caballosPorNivel[nivelCliente]
+      }
+
+      // Si no, obtener del servidor
+      const caballos = await obtenerCaballosPorNivel(nivelCliente)
+      
+      // Guardar en cache
+      setCaballosPorNivel(prev => ({
+        ...prev,
+        [nivelCliente]: caballos
+      }))
+
+      return caballos
+    } catch (error) {
+      console.error(`Error al obtener caballos para nivel ${nivelCliente}:`, error)
+      return []
+    }
+  }
+
+  // Función para manejar el cambio de caballo
+  const handleHorseChange = (classId, newHorse) => {
+    setClasses(prev => 
+      prev.map(c => c.id === classId ? {...c, horse: newHorse} : c)
+    )
+  }
   
   return {
     searchTerm, setSearchTerm,
@@ -172,6 +204,8 @@ export default function InstructorDashboard() {
     handleAttendanceChange,
     handleDateClick,
     handleClassClickFromModal,
+    obtenerCaballosParaClase, // Nueva función exportada
+    handleHorseChange, // Nueva función exportada
     loading, 
     error, 
     instructoraInfo,

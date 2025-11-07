@@ -62,6 +62,8 @@ router.get('/:id', async (req, res) => {
 // POST - Crear un nuevo caballo
 router.post('/', async (req, res) => {
   try {
+    console.log('🐎 Datos recibidos en el backend:', req.body);
+    
     const {
       nombre,
       propietario_id,
@@ -70,6 +72,8 @@ router.post('/', async (req, res) => {
       especialidad = 'mixto',
       descripcion = ''
     } = req.body;
+    
+    console.log('📋 Especialidad extraída:', especialidad, 'Tipo:', typeof especialidad);
 
     // Validaciones
     if (!nombre || nombre.trim() === '') {
@@ -99,10 +103,27 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Estatus inválido' });
     }
 
-    const especialidadesValidas = ['iniciacion', 'intermedio', 'paseo', 'salto', 'mixto'];
-    if (!especialidadesValidas.includes(especialidad)) {
-      return res.status(400).json({ error: 'Especialidad inválida' });
+    const especialidadesValidas = ['iniciacion', 'paseo', 'salto'];
+    
+    // Validar especialidades (puede ser string o array)
+    let especialidadFinal = especialidad;
+    if (Array.isArray(especialidad)) {
+      // Si es array, validar cada especialidad
+      for (const esp of especialidad) {
+        if (!especialidadesValidas.includes(esp)) {
+          return res.status(400).json({ error: `Especialidad inválida: ${esp}` });
+        }
+      }
+      // Convertir array a string separado por comas
+      especialidadFinal = especialidad.join(',');
+    } else {
+      // Si es string, validar directamente
+      if (!especialidadesValidas.includes(especialidad)) {
+        return res.status(400).json({ error: 'Especialidad inválida' });
+      }
     }
+
+    console.log('🔍 Especialidad procesada:', { original: especialidad, final: especialidadFinal });
 
     // Insertar el nuevo caballo
     const [result] = await db.query(`
@@ -119,7 +140,7 @@ router.post('/', async (req, res) => {
       propietario_id || null,
       disponibilidad,
       estatus,
-      especialidad,
+      especialidadFinal,
       descripcion.trim()
     ]);
 
@@ -205,9 +226,24 @@ router.put('/:id', async (req, res) => {
     }
 
     if (especialidad) {
-      const especialidadesValidas = ['iniciacion', 'intermedio', 'paseo', 'salto', 'mixto'];
-      if (!especialidadesValidas.includes(especialidad)) {
-        return res.status(400).json({ error: 'Especialidad inválida' });
+      const especialidadesValidas = ['iniciacion', 'paseo', 'salto'];
+      
+      // Validar especialidades (puede ser string o array)
+      let especialidadFinal = especialidad;
+      if (Array.isArray(especialidad)) {
+        // Si es array, validar cada especialidad
+        for (const esp of especialidad) {
+          if (!especialidadesValidas.includes(esp)) {
+            return res.status(400).json({ error: `Especialidad inválida: ${esp}` });
+          }
+        }
+        // Convertir array a string separado por comas
+        especialidadFinal = especialidad.join(',');
+      } else {
+        // Si es string, validar directamente
+        if (!especialidadesValidas.includes(especialidad)) {
+          return res.status(400).json({ error: 'Especialidad inválida' });
+        }
       }
     }
 
@@ -233,7 +269,14 @@ router.put('/:id', async (req, res) => {
     }
     if (especialidad !== undefined) {
       updates.push('especialidad = ?');
-      values.push(especialidad);
+      
+      // Procesar especialidad (array o string)
+      let especialidadFinal = especialidad;
+      if (Array.isArray(especialidad)) {
+        especialidadFinal = especialidad.join(',');
+      }
+      
+      values.push(especialidadFinal);
     }
     if (descripcion !== undefined) {
       updates.push('descripcion = ?');

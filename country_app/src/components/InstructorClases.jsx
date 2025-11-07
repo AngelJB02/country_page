@@ -3,6 +3,7 @@ import { Calendar, Users, Clock, Download, Check, X, ChevronLeft, ChevronRight }
 import { CalendarView } from "./instructor/CalendarView"
 import { DayClassesModal } from "./instructor/DayClassesModal"
 import { AttendanceModal } from "./instructor/atendance-modal"
+import HorseSelect from "./instructor/HorseSelect"
 import useInstructorDashboard from "./instructor/constants.jsx"
 import LogoutButton from "./LogoutBoton"
 import "./instructor/instructor.css"
@@ -22,6 +23,8 @@ export default function InstructorClases() {
     handleAttendanceChange,
     handleDateClick,
     handleClassClickFromModal,
+    obtenerCaballosParaClase,
+    handleHorseChange,
     loading,
     error,
     instructoraInfo,
@@ -238,23 +241,12 @@ export default function InstructorClases() {
                         </td>
                         <td>{classItem.studentAge} años</td>
                         <td>
-                          <select 
-                            className="horse-select"
-                            value={classItem.horse}
-                            onChange={(e) => {
-                              setClasses(prev => 
-                                prev.map(c => c.id === classItem.id ? {...c, horse: e.target.value} : c)
-                              )
-                            }}
+                          <HorseSelect
+                            classItem={classItem}
+                            onHorseChange={handleHorseChange}
+                            obtenerCaballosParaClase={obtenerCaballosParaClase}
                             disabled={activeView === 'history'}
-                          >
-                            <option value="Luna">Luna</option>
-                            <option value="Trueno">Trueno</option>
-                            <option value="Canela">Canela</option>
-                            <option value="Estrella">Estrella</option>
-                            <option value="Paloma">Paloma</option>
-                            <option value="Rayo">Rayo</option>
-                          </select>
+                          />
                         </td>
                         <td>
                           <span className={`status-badge status-${classItem.status}`}>
