@@ -83,5 +83,10 @@ CREATE TABLE IF NOT EXISTS instructora_clase (
 -- NOTAS:
 -- - No se crean claves foráneas aquí para evitar romper datos existentes; se pueden añadir en una migración posterior.
 -- - La lógica (p.ej., conteos de uso/semanas y alertas) se implementará desde backend.
--- - La carga de horarios (INSERT de slots) se hará desde el backend o una seed separada para no acoplar a esta migración.
 -- - La tabla instructora_clase permite control granular de permisos por instructora y clase.
+-- - Los datos iniciales (horarios e instructoras) están en el archivo 003_datos_iniciales.sql
+-- - No se crean claves foráneas aquí para evitar romper datos existentes; se pueden añadir en una migración posterior.
+-- - La lógica (p.ej., conteos de uso/semanas y alertas) se implementará desde backend.
+-- - Se incluyen todos los horarios e instructoras según especificaciones del negocio.
+-- - La tabla instructora_clase permite control granular de permisos por instructora y clase.
+-- - Las contraseñas son hashes de ejemplo; deben cambiarse en primer login.
