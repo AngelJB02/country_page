@@ -1,4 +1,5 @@
-import { useState } from "react"
+import { useState, useEffect, useMemo } from "react"
+import { obtenerClasesInstructora, actualizarAsistencia, obtenerUsuarioActual } from "./instructor-api"
 
 export default function InstructorDashboard() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -10,205 +11,85 @@ export default function InstructorDashboard() {
   const [selectedDate, setSelectedDate] = useState(null)
   const [showDateClasses, setShowDateClasses] = useState(false)
   const [dateClasses, setDateClasses] = useState([])
+  const [classes, setClasses] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [instructoraInfo, setInstructoraInfo] = useState(null)
 
-  const [classes, setClasses] = useState([
-    {
-      id: 1,
-      type: "Iniciación",
-      date: "2025-10-27",
-      time: "09:00",
-      horse: "Luna",
-      student: "María García",
-      studentAge: 8,
-      status: "confirmada",
-      attendance: "pendiente",
-      level: "Principiante",
-    },
-    {
-      id: 2,
-      type: "Salto",
-      date: "2025-10-27",
-      time: "11:00",
-      horse: "Trueno",
-      student: "Carlos Rodríguez",
-      studentAge: 15,
-      status: "confirmada",
-      attendance: "pendiente",
-      level: "Intermedio",
-    },
-    {
-      id: 3,
-      type: "Paseo",
-      date: "2025-10-27",
-      time: "14:00",
-      horse: "Canela",
-      student: "Ana Martínez",
-      studentAge: 12,
-      status: "pendiente",
-      attendance: "pendiente",
-      level: "Avanzado",
-    },
-    {
-      id: 4,
-      type: "Intermedio",
-      date: "2025-10-27",
-      time: "16:00",
-      horse: "Estrella",
-      student: "Pedro López",
-      studentAge: 14,
-      status: "confirmada",
-      attendance: "pendiente",
-      level: "Intermedio",
-    },
-    {
-      id: 5,
-      type: "Iniciación",
-      date: "2025-10-28",
-      time: "10:00",
-      horse: "Paloma",
-      student: "Laura Sánchez",
-      studentAge: 9,
-      status: "confirmada",
-      attendance: "pendiente",
-      level: "Principiante",
-    },
-    {
-      id: 6,
-      type: "Salto",
-      date: "2025-10-28",
-      time: "15:00",
-      horse: "Rayo",
-      student: "Miguel Torres",
-      studentAge: 16,
-      status: "pendiente",
-      attendance: "pendiente",
-      level: "Avanzado",
-    },
-    {
-      id: 7,
-      type: "Avanzado",
-      date: "2025-10-29",
-      time: "12:00",
-      horse: "Luna",
-      student: "Sofia Ramírez",
-      studentAge: 17,
-      status: "confirmada",
-      attendance: "pendiente",
-      level: "Avanzado",
-    },
-    {
-      id: 8,
-      type: "Iniciación",
-      date: "2025-10-30",
-      time: "14:00",
-      horse: "Canela",
-      student: "Diego Fernández",
-      studentAge: 10,
-      status: "confirmada",
-      attendance: "pendiente",
-      level: "Principiante",
-    },
-    {
-      id: 9,
-      type: "Intermedio",
-      date: "2025-10-31",
-      time: "16:00",
-      horse: "Trueno",
-      student: "Valentina Cruz",
-      studentAge: 13,
-      status: "confirmada",
-      attendance: "pendiente",
-      level: "Intermedio",
-    },
-    {
-      id: 10,
-      type: "Paseo",
-      date: "2025-11-01",
-      time: "11:00",
-      horse: "Paloma",
-      student: "Sebastián Morales",
-      studentAge: 11,
-      status: "pendiente",
-      attendance: "pendiente",
-      level: "Principiante",
-    },
-    // Clases pasadas para el historial
-    {
-      id: 11,
-      type: "Salto",
-      date: "2025-10-20",
-      time: "10:00",
-      horse: "Trueno",
-      student: "Carlos Rodríguez",
-      studentAge: 15,
-      status: "completada",
-      attendance: "asistió",
-      level: "Intermedio",
-    },
-    {
-      id: 12,
-      type: "Paseo",
-      date: "2025-10-21",
-      time: "11:00",
-      horse: "Paloma",
-      student: "Ana Martínez",
-      studentAge: 12,
-      status: "completada",
-      attendance: "asistió",
-      level: "Avanzado",
-    },
-    {
-      id: 13,
-      type: "Iniciación",
-      date: "2025-10-22",
-      time: "09:00",
-      horse: "Luna",
-      student: "María García",
-      studentAge: 8,
-      status: "completada",
-      attendance: "faltó",
-      level: "Principiante",
-    },
-    {
-      id: 14,
-      type: "Intermedio",
-      date: "2025-10-23",
-      time: "15:00",
-      horse: "Estrella",
-      student: "Pedro López",
-      studentAge: 14,
-      status: "completada",
-      attendance: "asistió",
-      level: "Intermedio",
-    },
-    {
-      id: 15,
-      type: "Avanzado",
-      date: "2025-10-24",
-      time: "13:00",
-      horse: "Rayo",
-      student: "Sofia Ramírez",
-      studentAge: 17,
-      status: "completada",
-      attendance: "asistió",
-      level: "Avanzado",
-    },
-  ])
+  // Obtener la fecha de hoy solo una vez
+  const today = useMemo(() => {
+    const fechaHoy = new Date().toISOString().split('T')[0];
+    console.log('📅 Fecha de hoy calculada:', fechaHoy);
+    return fechaHoy;
+  }, []);
 
-  const todayClasses = classes.filter(c => c.date === "2025-10-27")
+  // useEffect para cargar los datos de la instructora al montar el componente
+  useEffect(() => {
+    const cargarDatos = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        
+        // Obtener el usuario del localStorage
+        const usuario = obtenerUsuarioActual()
+        
+        console.log('🔍 Usuario del localStorage:', usuario)
+        
+        if (!usuario || !usuario.id) {
+          throw new Error('No se encontró información de usuario')
+        }
+        
+        console.log(`📞 Llamando API con usuario_id: ${usuario.id}`)
+        
+        // Obtener las clases de la instructora
+        const { instructora, clases } = await obtenerClasesInstructora(usuario.id)
+        
+        console.log('📋 Datos recibidos del servidor:', { instructora, clases })
+        console.log('🎯 Cantidad de clases:', clases.length)
+        
+        setInstructoraInfo(instructora)
+        setClasses(clases)
+        
+      } catch (err) {
+        console.error('Error al cargar datos:', err)
+        setError(err.message)
+        // Si hay error, cargar datos de ejemplo para desarrollo
+        setClasses([
+          {
+            id: 1,
+            type: "Iniciación",
+            date: "2025-11-07",
+            time: "09:00",
+            horse: "Luna",
+            student: "Estudiante de ejemplo",
+            studentAge: 10,
+            status: "confirmada",
+            attendance: "pendiente",
+            level: "Principiante",
+          }
+        ])
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    cargarDatos()
+  }, [])
+
+  const todayClasses = classes.filter(c => c.date === today)
   
   const weekClasses = classes.filter(c => {
     const classDate = new Date(c.date)
-    const today = new Date("2025-10-27")
-    const weekFromNow = new Date(today)
-    weekFromNow.setDate(today.getDate() + 7)
-    return classDate >= today && classDate <= weekFromNow
+    const todayDate = new Date(today)
+    const weekFromNow = new Date(todayDate)
+    weekFromNow.setDate(todayDate.getDate() + 7)
+    return classDate >= todayDate && classDate <= weekFromNow
   })
 
   const pastClasses = classes.filter(c => {
     const classDate = new Date(c.date)
-    const today = new Date("2025-10-27")
-    return classDate < today
+    const todayDate = new Date(today)
+    return classDate < todayDate
   }).sort((a, b) => new Date(b.date) - new Date(a.date))
 
   const filteredClasses = (activeView === 'today' ? todayClasses : 
@@ -222,15 +103,47 @@ export default function InstructorDashboard() {
     return matchesSearch && matchesType && matchesStatus
   })
 
-  const handleAttendanceChange = (id, attendance) => {
-    setClasses(prev => 
-      prev.map(c => 
-        c.id === id 
-          ? { ...c, attendance, status: 'completada' } 
-          : c
+  const handleAttendanceChange = async (id, attendance) => {
+    try {
+      console.log(`🎯 Actualizando asistencia: ${attendance} para reserva ${id}`)
+      
+      // Mapear los valores del frontend al backend
+      const attendanceMap = {
+        'asistió': 'presente',
+        'faltó': 'ausente', 
+        'pendiente': 'pendiente'
+      }
+      
+      const backendAttendance = attendanceMap[attendance] || attendance;
+      
+      // Primero actualizar el estado local para respuesta inmediata
+      setClasses(prev => 
+        prev.map(c => 
+          c.id === id 
+            ? { ...c, attendance, status: 'completada' } 
+            : c
+        )
       )
-    )
-    setShowAttendanceModal(false)
+      setShowAttendanceModal(false)
+      
+      // Luego actualizar en el backend
+      await actualizarAsistencia(id, backendAttendance)
+      
+      console.log(`✅ Asistencia actualizada correctamente`)
+      
+    } catch (error) {
+      console.error('Error al actualizar asistencia:', error)
+      // Revertir el cambio local si falla la API
+      setClasses(prev => 
+        prev.map(c => 
+          c.id === id 
+            ? { ...c, attendance: 'pendiente', status: 'confirmada' } 
+            : c
+        )
+      )
+      // Aquí podrías mostrar una notificación de error
+      alert('Error al actualizar la asistencia. Por favor, inténtalo de nuevo.')
+    }
   }
 
   const handleDateClick = (date, classes) => {
@@ -244,6 +157,7 @@ export default function InstructorDashboard() {
     setSelectedClass(classItem)
     setShowAttendanceModal(true)
   }
+  
   return {
     searchTerm, setSearchTerm,
     filterType, setFilterType,
@@ -258,5 +172,8 @@ export default function InstructorDashboard() {
     handleAttendanceChange,
     handleDateClick,
     handleClassClickFromModal,
+    loading, 
+    error, 
+    instructoraInfo,
   }
 }

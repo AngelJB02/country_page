@@ -22,7 +22,57 @@ export default function InstructorClases() {
     handleAttendanceChange,
     handleDateClick,
     handleClassClickFromModal,
+    loading,
+    error,
+    instructoraInfo,
   } = useInstructorDashboard()
+
+  // Mostrar loading
+  if (loading) {
+    return (
+      <div className="dashboard-container-v2" style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '50vh' 
+      }}>
+        <div>
+          <p>Cargando datos de la instructora...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Mostrar error
+  if (error) {
+    return (
+      <div className="dashboard-container-v2" style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '50vh' 
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <h3>Error al cargar los datos</h3>
+          <p>{error}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            style={{
+              padding: '10px 20px',
+              backgroundColor: '#007bff',
+              color: 'white',
+              border: 'none',
+              borderRadius: '5px',
+              cursor: 'pointer'
+            }}
+          >
+            Reintentar
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <>
       <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Source+Sans+Pro:wght@400;600;700&display=swap" rel="stylesheet" />
@@ -36,7 +86,12 @@ export default function InstructorClases() {
             </div>
             <div>
               <h1 className="header-title">Panel del Instructor</h1>
-              <p className="header-subtitle">Brigitte López</p>
+              <p className="header-subtitle">
+                {instructoraInfo ? 
+                  `${instructoraInfo.nombre} ${instructoraInfo.apellido}` : 
+                  'Cargando...'
+                }
+              </p>
             </div>
           </div>
           
