@@ -150,8 +150,13 @@ const verificarDisponibilidadCaballo = async (caballoId, fecha, horaInicio, hora
 // Verificar restricciones por tipo de cliente
 const verificarRestriccionesCliente = async (clienteId, fecha, tipoCliente) => {
   try {
+    // PROPIETARIO y RENTA: Sin límites de reservas
+    if (tipoCliente === 'propietario' || tipoCliente === 'renta') {
+      return { permitido: true };
+    }
+
+    // MEDIA_RENTA: Máximo 3 reservas por semana
     if (tipoCliente === 'media_renta') {
-      // Verificar límite de 3 reservas por semana
       const inicioSemana = new Date(fecha);
       inicioSemana.setDate(inicioSemana.getDate() - inicioSemana.getDay());
       const finSemana = new Date(inicioSemana);
@@ -161,7 +166,7 @@ const verificarRestriccionesCliente = async (clienteId, fecha, tipoCliente) => {
         SELECT COUNT(*) as total FROM reservas
         WHERE cliente_id = ?
         AND fecha BETWEEN ? AND ?
-        AND estatus IN ('pendiente', 'confirmada', 'completada')
+        AND estatus IN ('pendiente', 'confirmada')
       `, [clienteId, formatDateForMySQL(inicioSemana), formatDateForMySQL(finSemana)]);
 
       if (reservasSemanales[0].total >= 3) {
@@ -170,9 +175,39 @@ const verificarRestriccionesCliente = async (clienteId, fecha, tipoCliente) => {
           razon: 'Límite de 3 reservas por semana alcanzado (media renta)' 
         };
       }
+      return { permitido: true };
     }
 
-    // Verificar que no tenga más de una reserva activa
+    // DEMO: Solo fines de semana (sábado=6, domingo=0)
+    if (tipoCliente === 'demo') {
+      const fechaObj = new Date(fecha);
+      const diaSemana = fechaObj.getDay();
+      
+      if (diaSemana !== 0 && diaSemana !== 6) {
+        return { 
+          permitido: false, 
+          razon: 'Las clases demo solo están disponibles en fines de semana' 
+        };
+      }
+      
+      // Demo puede tener solo una reserva activa
+      const [reservasActivas] = await db.query(`
+        SELECT COUNT(*) as total FROM reservas
+        WHERE cliente_id = ?
+        AND fecha >= CURDATE()
+        AND estatus IN ('pendiente', 'confirmada')
+      `, [clienteId]);
+
+      if (reservasActivas[0].total > 0) {
+        return { 
+          permitido: false, 
+          razon: 'Ya tienes una reserva activa. Solo se permite una reserva demo a la vez' 
+        };
+      }
+      return { permitido: true };
+    }
+
+    // GENERAL: Solo una reserva activa a la vez
     const [reservasActivas] = await db.query(`
       SELECT COUNT(*) as total FROM reservas
       WHERE cliente_id = ?
@@ -897,10 +932,14 @@ router.post('/book', async (req, res) => {
 // Obtener todas las reservas de una semana (para calcular disponibilidad)
 router.get('/week', async (req, res) => {
   try {
-    const { fecha_inicio, fecha_fin } = req.query;
+    const { fecha_inicio, fecha_fin, cliente_id } = req.query;
     
     if (!fecha_inicio || !fecha_fin) {
       return res.status(400).json({ error: 'Se requieren fecha_inicio y fecha_fin' });
+    }
+
+    if (!cliente_id) {
+      return res.status(400).json({ error: 'Se requiere cliente_id' });
     }
 
     const query = `
@@ -917,11 +956,11 @@ router.get('/week', async (req, res) => {
       FROM reservas r
       LEFT JOIN clases cl ON r.clase_id = cl.id
       WHERE r.fecha BETWEEN ? AND ?
-      AND r.estatus IN ('pendiente', 'confirmada')
+        AND r.cliente_id = ?
       ORDER BY r.fecha, r.hora_inicio
     `;
 
-    const [rows] = await db.query(query, [formatDateForMySQL(fecha_inicio), formatDateForMySQL(fecha_fin)]);
+    const [rows] = await db.query(query, [formatDateForMySQL(fecha_inicio), formatDateForMySQL(fecha_fin), cliente_id]);
     res.json(rows);
   } catch (err) {
     console.error('Error obteniendo reservas de la semana:', err);

@@ -4,22 +4,26 @@ import './css/tieme-slot-card.css'
 // Tarjeta de franja horaria: muestra hora, plazas y estado (disponible/reservada/bloqueada).
 // Usa clases CSS prefijadas `tsc-` y responde a click/Enter/Space para seleccionar la franja.
 
-export function TimeSlotCard({ time, capacity, bookedCount, isBookedByUser, isBlocked, onClick }) {
+export function TimeSlotCard({ time, capacity, bookedCount, isBookedByUser, isBlocked, userStatus, instructoraNombre, onClick }) {
   const isFull = bookedCount >= capacity;
   const availableSpots = capacity - bookedCount;
-
-  // Nuevo: si hay reservas (pero no estás tú) aplicamos un estado 'partial' para cambiar color
   const hasSomeBookings = bookedCount > 0 && bookedCount < capacity;
 
-  const stateClass = isBlocked
+  // Estado visual según el estatus de la reserva del usuario
+  let stateClass = isBlocked
     ? 'tsc--blocked'
-    : isBookedByUser
-    ? 'tsc--booked' // tu reserva
+    : isBookedByUser && (userStatus === 'confirmada' || userStatus === 'pendiente')
+    ? 'tsc--booked'
     : isFull
-    ? 'tsc--full' // completo
+    ? 'tsc--full'
     : hasSomeBookings
-    ? 'tsc--partial' // parcialmente reservado (otros usuarios)
+    ? 'tsc--partial'
     : 'tsc--available';
+
+  // Si el usuario tiene reserva completada/cancelada, no marcar como reservado
+  if (isBookedByUser && (userStatus === 'completada' || userStatus === 'cancelada')) {
+    stateClass = userStatus === 'completada' ? 'tsc--attended' : 'tsc--cancelled';
+  }
 
   const handleKeyDown = (e) => {
     if ((e.key === 'Enter' || e.key === ' ') && !isBlocked && !isFull) {
@@ -27,6 +31,21 @@ export function TimeSlotCard({ time, capacity, bookedCount, isBookedByUser, isBl
       onClick && onClick();
     }
   };
+
+  let metaText = null;
+  if (isBlocked) {
+    metaText = 'Bloqueado';
+  } else if (isBookedByUser && userStatus === 'completada') {
+    metaText = 'Ya asististe';
+  } else if (isBookedByUser && userStatus === 'cancelada') {
+    metaText = 'Cancelada';
+  } else if (isBookedByUser) {
+    metaText = 'Tu reserva';
+  } else if (isFull) {
+    metaText = 'Completo';
+  } else {
+    metaText = <span className="tsc-available-text">{availableSpots} {availableSpots === 1 ? "plaza" : "plazas"}</span>;
+  }
 
   return (
     <div
@@ -52,16 +71,9 @@ export function TimeSlotCard({ time, capacity, bookedCount, isBookedByUser, isBl
         </div>
 
         <div className="tsc-meta">
-          {isBlocked ? (
-            "Bloqueado"
-          ) : isBookedByUser ? (
-            "Tu reserva"
-          ) : isFull ? (
-            "Completo"
-          ) : (
-            <span className="tsc-available-text">
-              {availableSpots} {availableSpots === 1 ? "plaza" : "plazas"}
-            </span>
+          {metaText}
+          {isBookedByUser && instructoraNombre && (
+            <div className="tsc-instructora">Instructora: {instructoraNombre}</div>
           )}
         </div>
       </div>

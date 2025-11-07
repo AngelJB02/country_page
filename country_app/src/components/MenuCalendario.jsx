@@ -10,15 +10,13 @@ import { BookingModal } from './calendario/booking-modal';
 
 // Contexto
 // import { BookingProvider, useBookings } from './calendario/lib/booking-context';
-import { fetchUserBookings, createBooking, fetchWeekBookings } from './calendario/booking-api';
+import { fetchUserBookings, createBooking, fetchWeekBookings, cancelBooking } from './calendario/booking-api';
 import { fetchClasses } from './calendario/booking-classes-api';
 import '../CSS/MenuCalendario.css'
 import ReservacionTabla from './calendario/reservacion_tabla'
 import ChangePasswordModal from './calendario/change-password-modal'
 
-
-
-function CalendarContent({ userLevel, userId, userName, onLogout, onChangePassword }) {
+function CalendarContent({ userLevel, userId, userName, userType, onLogout, onChangePassword }) {
   const [userBookings, setUserBookings] = useState([]);
   const [allWeekBookings, setAllWeekBookings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -43,7 +41,7 @@ function CalendarContent({ userLevel, userId, userName, onLogout, onChangePasswo
         const fechaInicio = weekStart.toISOString().split('T')[0];
         const fechaFin = weekEnd.toISOString().split('T')[0];
         
-        const weekData = await fetchWeekBookings(fechaInicio, fechaFin);
+        const weekData = await fetchWeekBookings(fechaInicio, fechaFin, userId);
         setAllWeekBookings(weekData);
       } catch (e) {
         toast.error('Error al cargar tus reservas');
@@ -67,12 +65,28 @@ function CalendarContent({ userLevel, userId, userName, onLogout, onChangePasswo
   }, []);
 
   const handleCancelBooking = async (bookingId) => {
-    // Falta endpoint real de cancelación, simula borrado local
-    setUserBookings((prev) => prev.filter((b) => b.id !== bookingId));
-    toast.info('Reserva cancelada', {
-      position: "top-right",
-      autoClose: 3000,
-    });
+    try {
+      await cancelBooking(bookingId, userId);
+      toast.info('Reserva cancelada', {
+        position: "top-right",
+        autoClose: 3000,
+      });
+      // Refresca reservas
+      const data = await fetchUserBookings(userId);
+      setUserBookings(data);
+      // Refresca reservas de la semana
+      const today = new Date();
+      const weekStart = new Date(today);
+      weekStart.setDate(today.getDate() - today.getDay() + 1);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6);
+      const fechaInicio = weekStart.toISOString().split('T')[0];
+      const fechaFin = weekEnd.toISOString().split('T')[0];
+      const weekData = await fetchWeekBookings(fechaInicio, fechaFin, userId);
+      setAllWeekBookings(weekData);
+    } catch (e) {
+      toast.error(e.response?.data?.error || 'Error al cancelar reserva');
+    }
   };
 
 
@@ -99,6 +113,32 @@ function CalendarContent({ userLevel, userId, userName, onLogout, onChangePasswo
   const [selectedClass, setSelectedClass] = useState(null);
 
   const handleSlotClick = (slot, clase) => {
+    // Restricción para tipo demo: solo fines de semana
+    if (userType === 'demo') {
+      const dayOfWeek = slot.date ? slot.date.getDay() : -1;
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) { // 0 = domingo, 6 = sábado
+        toast.warning('Los usuarios demo solo pueden reservar fines de semana', {
+          position: "top-right",
+          autoClose: 4000,
+        });
+        return;
+      }
+    }
+
+    // Restricción para media_renta: máximo 3 reservas activas
+    if (userType === 'media_renta') {
+      const reservasActivas = userBookings.filter(b => 
+        b.estatus === 'pendiente' || b.estatus === 'confirmada'
+      ).length;
+      if (reservasActivas >= 3) {
+        toast.warning('Has alcanzado el límite de 3 reservas activas', {
+          position: "top-right",
+          autoClose: 4000,
+        });
+        return;
+      }
+    }
+
     setSelectedSlot(slot);
     setSelectedClass(clase);
     setIsModalOpen(true);
@@ -141,7 +181,7 @@ function CalendarContent({ userLevel, userId, userName, onLogout, onChangePasswo
       weekEnd.setDate(weekStart.getDate() + 6);
       const fechaInicio = weekStart.toISOString().split('T')[0];
       const fechaFin = weekEnd.toISOString().split('T')[0];
-      const weekData = await fetchWeekBookings(fechaInicio, fechaFin);
+      const weekData = await fetchWeekBookings(fechaInicio, fechaFin, userId);
       setAllWeekBookings(weekData);
     } catch (error) {
       // DEBUG: Ver qué está llegando
@@ -190,9 +230,13 @@ function CalendarContent({ userLevel, userId, userName, onLogout, onChangePasswo
     closeModal();
   };
 
-  // Determina si el usuario ya reservó ese slot
+  // Determina si el usuario ya reservó ese slot (solo confirmada/pendiente)
   const isBookedByUser = selectedSlot
     ? userBookings.some(b => {
+        // Excluir reservas canceladas o completadas
+        if (b.estatus === 'cancelada' || b.estatus === 'completada') {
+          return false;
+        }
         // Para reservas dummy
         if (b.timeSlotId && typeof b.timeSlotId === 'string') {
           return b.timeSlotId === selectedSlot.id;
@@ -208,9 +252,14 @@ function CalendarContent({ userLevel, userId, userName, onLogout, onChangePasswo
       })
     : false;
 
-  // Determina si el usuario ya tiene reserva ese día
-  const hasBookingForDay = selectedSlot
+  // Determina si el usuario ya tiene reserva ese día (solo confirmada/pendiente)
+  // Excepto para propietario, renta y media_renta que pueden tener múltiples reservas por día
+  const hasBookingForDay = selectedSlot && userType !== 'propietario' && userType !== 'renta' && userType !== 'media_renta'
     ? userBookings.some(b => {
+        // Excluir reservas canceladas o completadas
+        if (b.estatus === 'cancelada' || b.estatus === 'completada') {
+          return false;
+        }
         // Para reservas dummy
         if (b.timeSlotId && typeof b.timeSlotId === 'string') {
           return b.timeSlotId.startsWith(selectedSlot.day);
@@ -242,6 +291,53 @@ function CalendarContent({ userLevel, userId, userName, onLogout, onChangePasswo
         <div className="mc-header">
           <h2 className="mc-title">Reserva tu clase</h2>
           <p className="mc-subtitle">Selecciona un horario disponible para reservar tu clase.</p>
+          
+          {/* Indicador visual de tipo de cliente */}
+          {userType && userType !== 'general' && (
+            <div style={{ 
+              marginTop: 12, 
+              padding: '10px 16px', 
+              background: 
+                userType === 'propietario' ? '#d4edda' :
+                userType === 'renta' ? '#d1ecf1' :
+                userType === 'media_renta' ? '#fff3cd' :
+                userType === 'demo' ? '#f8d7da' : '#f5f1e8',
+              borderRadius: 8, 
+              border: `2px solid ${
+                userType === 'propietario' ? '#28a745' :
+                userType === 'renta' ? '#17a2b8' :
+                userType === 'media_renta' ? '#ffc107' :
+                userType === 'demo' ? '#dc3545' : '#d4c4b0'
+              }`,
+              display: 'inline-block'
+            }}>
+              <p style={{ margin: 0, fontSize: '0.95em', fontWeight: 600, color: '#333' }}>
+                Tipo de cuenta: <span style={{ textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  {userType === 'propietario' ? 'Propietario' :
+                   userType === 'renta' ? 'Renta' :
+                   userType === 'media_renta' ? 'Media Renta' :
+                   userType === 'demo' ? 'Demo' : userType}
+                </span>
+              </p>
+            </div>
+          )}
+          
+          {/* Mostrar contador de reservas para media_renta */}
+          {userType === 'media_renta' && (
+            <div style={{ marginTop: 8, padding: '8px 16px', background: '#f5f1e8', borderRadius: 8, border: '1px solid #d4c4b0' }}>
+              <p style={{ margin: 0, fontSize: '0.95em', color: '#6b4423' }}>
+                <strong>Reservas activas:</strong> {userBookings.filter(b => b.estatus === 'pendiente' || b.estatus === 'confirmada').length} / 3
+              </p>
+            </div>
+          )}
+          {/* Mensaje informativo para demo */}
+          {userType === 'demo' && (
+            <div style={{ marginTop: 8, padding: '8px 16px', background: '#fff3cd', borderRadius: 8, border: '1px solid #ffc107' }}>
+              <p style={{ margin: 0, fontSize: '0.95em', color: '#856404' }}>
+                <strong>Usuario Demo:</strong> Solo puedes reservar clases los fines de semana.
+              </p>
+            </div>
+          )}
         </div>
         {/* Panel lateral / sección con las reservas del usuario (componente separado) */}
         <ReservacionTabla userBookings={userBookings} onCancelBooking={handleCancelBooking} />
@@ -256,6 +352,7 @@ function CalendarContent({ userLevel, userId, userName, onLogout, onChangePasswo
               <WeeklyCalendar
                 userLevel={userLevel}
                 userId={userId}
+                userType={userType}
                 onSlotClick={slot => handleSlotClick(slot, clase)}
                 userBookings={userBookings}
                 allWeekBookings={allWeekBookings}
@@ -325,6 +422,18 @@ function MenuCalendario() {
     }
     return 'Usuario';
   });
+  const [userType] = useState(() => {
+    const user = localStorage.getItem('user');
+    if (user) {
+      try {
+        const parsed = JSON.parse(user);
+        return parsed.tipo_cliente || 'general'; // propietario, renta, media_renta, demo, general
+      } catch {
+        return 'general';
+      }
+    }
+    return 'general';
+  });
   const [isChangeOpen, setIsChangeOpen] = useState(false);
 
   const handleLogout = () => {
@@ -342,6 +451,7 @@ function MenuCalendario() {
         userLevel={userLevel}
         userId={userId}
         userName={userName}
+        userType={userType}
         onLogout={handleLogout}
         onChangePassword={() => setIsChangeOpen(true)}
       />

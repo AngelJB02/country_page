@@ -27,8 +27,22 @@ export async function createBooking({ cliente_id, clase_id, fecha, hora_inicio }
 }
 
 // Obtener todas las reservas de una semana para mostrar disponibilidad
-export async function fetchWeekBookings(fechaInicio, fechaFin) {
-  const res = await fetch(`http://localhost:3001/api/reservas/week?fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}`);
+export async function fetchWeekBookings(fechaInicio, fechaFin, clienteId) {
+  const res = await fetch(`http://localhost:3001/api/reservas/week?fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}&cliente_id=${clienteId}`);
   if (!res.ok) throw new Error('Error al obtener reservas de la semana');
   return res.json();
+}
+
+// Cancelar reserva (cambia estatus a cancelada, no elimina)
+export async function cancelBooking(reservaId, clienteId) {
+  const res = await fetch(`http://localhost:3001/api/reservas/${reservaId}/cancel/${clienteId}`, {
+    method: 'DELETE',
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    const error = new Error(data.error || 'Error al cancelar reserva');
+    error.response = { data };
+    throw error;
+  }
+  return data;
 }

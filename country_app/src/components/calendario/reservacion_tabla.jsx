@@ -26,19 +26,41 @@ export function ReservacionTabla({ userBookings = [], onCancelBooking }) {
                 clase = b.clase_nombre || '';
               }
             }
+            // Mostrar estatus visualmente
+            let statusLabel = '';
+            let statusClass = '';
+            if (b.estatus === 'cancelada') {
+              statusLabel = 'Cancelada';
+              statusClass = 'mc-booking-status-cancelada';
+            } else if (b.estatus === 'completada') {
+              statusLabel = 'Completada';
+              statusClass = 'mc-booking-status-completada';
+            } else if (b.estatus === 'confirmada') {
+              statusLabel = 'Confirmada';
+              statusClass = 'mc-booking-status-confirmada';
+            } else if (b.estatus === 'pendiente') {
+              statusLabel = 'Pendiente';
+              statusClass = 'mc-booking-status-pendiente';
+            }
             return (
               <li key={b.id} className="mc-booking-item">
                 <div className="mc-booking-info">
                   <span className="mc-booking-day">{day}</span>
                   <span className="mc-booking-time">{time}</span>
                   {clase && <span className="mc-booking-class">{clase}</span>}
+                  {statusLabel && (
+                    <span className={`mc-booking-status ${statusClass}`}>{statusLabel}</span>
+                  )}
                 </div>
-                <button
-                  className="mc-booking-cancel"
-                  onClick={() => onCancelBooking && onCancelBooking(b.id)}
-                >
-                  Cancelar
-                </button>
+                {(b.estatus === 'pendiente' || b.estatus === 'confirmada') && (
+                  <button
+                    className="mc-booking-cancel"
+                    onClick={() => onCancelBooking && onCancelBooking(b.id)}
+                    title="Cancelar reserva"
+                  >
+                    Cancelar
+                  </button>
+                )}
               </li>
             )
           })}
