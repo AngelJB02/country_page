@@ -123,7 +123,25 @@ export default function InstructorDashboard() {
     const [tYear, tMonth, tDay] = today.split('-').map(Number);
     const todayDate = new Date(tYear, tMonth - 1, tDay);
     
-    return classDate < todayDate;
+    // Si es de un día anterior, incluirla
+    if (classDate < todayDate) {
+      return true;
+    }
+    
+    // Si es de hoy, verificar si la hora ya pasó
+    if (classDate.getTime() === todayDate.getTime() && c.time) {
+      const now = new Date();
+      const [horaClase, minutoClase] = c.time.split(':').map(Number);
+      const horaActual = now.getHours();
+      const minutoActual = now.getMinutes();
+      
+      // Si la hora de la clase ya pasó, incluirla en el historial
+      if (horaClase < horaActual || (horaClase === horaActual && minutoClase < minutoActual)) {
+        return true;
+      }
+    }
+    
+    return false;
   }).sort((a, b) => {
     // Ordenar por fecha descendente
     const [aYear, aMonth, aDay] = a.date.split('-').map(Number);
