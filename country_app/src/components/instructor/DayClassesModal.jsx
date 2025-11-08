@@ -1,6 +1,9 @@
 import { Clock } from "lucide-react"
 
 function DayClassesModal({ date, classes, onClose, onClassClick }) {
+  // Filtrar clases canceladas como medida de seguridad adicional
+  const activeClasses = classes.filter(c => c.status !== 'cancelada');
+  
   return (
     <div style={{
       position: 'fixed',
@@ -34,11 +37,21 @@ function DayClassesModal({ date, classes, onClose, onClassClick }) {
           Clases del {date.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
         </h3>
         <p style={{ color: 'var(--secondary-brown)', marginBottom: '24px' }}>
-          {classes.length} clase{classes.length !== 1 ? 's' : ''} programada{classes.length !== 1 ? 's' : ''}
+          {activeClasses.length} clase{activeClasses.length !== 1 ? 's' : ''} programada{activeClasses.length !== 1 ? 's' : ''}
         </p>
         
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
-          {classes.map((classItem) => (
+        {activeClasses.length === 0 ? (
+          <div style={{ 
+            textAlign: 'center', 
+            padding: '40px', 
+            color: 'var(--secondary-brown)',
+            marginBottom: '24px'
+          }}>
+            <p>No hay clases activas para esta fecha</p>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
+            {activeClasses.map((classItem) => (
             <div
               key={classItem.id}
               style={{
@@ -99,7 +112,8 @@ function DayClassesModal({ date, classes, onClose, onClassClick }) {
               </div>
             </div>
           ))}
-        </div>
+          </div>
+        )}
 
         <button
           onClick={onClose}

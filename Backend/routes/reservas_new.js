@@ -116,6 +116,26 @@ const verificarDisponibilidadCaballo = async (caballoId, fecha, horaInicio, hora
       return { disponible: false, razon: 'Caballo ocupado en ese horario' };
     }
 
+    // NUEVA REGLA: Verificar si ya trabajó 3 veces en actividades que no sean iniciación
+    const [actividadesHoy] = await db.query(`
+      SELECT COUNT(*) as total FROM reservas r
+      JOIN clases c ON r.clase_id = c.id
+      WHERE r.caballo_id = ?
+      AND r.fecha = ?
+      AND r.estatus IN ('confirmada', 'completada')
+      AND LOWER(c.nombre) NOT LIKE '%iniciaci%'
+    `, [caballoId, fecha]);
+
+    const actividadesNoIniciacion = actividadesHoy[0]?.total || 0;
+    
+    // Si la clase actual no es iniciación y ya trabajó 3 veces, no puede trabajar más
+    if (tipoClase && !tipoClase.toLowerCase().includes('iniciaci') && actividadesNoIniciacion >= 3) {
+      return { 
+        disponible: false, 
+        razon: `Caballo ya trabajó ${actividadesNoIniciacion} veces hoy en actividades no-iniciación. Necesita descansar.` 
+      };
+    }
+
     // Verificar descanso obligatorio para salto/avanzado (3 horas)
     if (tipoClase === 'salto') {
       const [ultimaReserva] = await db.query(`
@@ -436,17 +456,35 @@ router.put('/admin/:id/status', async (req, res) => {
   }
 
   try {
-    const [result] = await db.query(`
-      UPDATE reservas 
-      SET estatus = ?, observaciones = COALESCE(?, observaciones)
-      WHERE id = ?
-    `, [estatus, observaciones, id]);
+    // Si se está cancelando la reserva, también quitar el caballo asignado
+    if (estatus === 'cancelada') {
+      const [result] = await db.query(`
+        UPDATE reservas 
+        SET estatus = ?, observaciones = COALESCE(?, observaciones), caballo_asignado = NULL
+        WHERE id = ?
+      `, [estatus, observaciones, id]);
 
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'Reserva no encontrada' });
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: 'Reserva no encontrada' });
+      }
+
+      res.json({ 
+        message: 'Reserva cancelada correctamente y caballo liberado',
+        caballo_liberado: true 
+      });
+    } else {
+      const [result] = await db.query(`
+        UPDATE reservas 
+        SET estatus = ?, observaciones = COALESCE(?, observaciones)
+        WHERE id = ?
+      `, [estatus, observaciones, id]);
+
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: 'Reserva no encontrada' });
+      }
+
+      res.json({ message: 'Estatus de reserva actualizado correctamente' });
     }
-
-    res.json({ message: 'Estatus de reserva actualizado correctamente' });
   } catch (err) {
     console.error('Error actualizando estatus de reserva:', err);
     res.status(500).json({ error: 'Error al actualizar estatus de reserva' });
@@ -527,11 +565,20 @@ router.put('/admin/:reservaId/attendance', async (req, res) => {
       `[Admin] Clase completada. ${observaciones || ''}` : 
       `[Admin] No asistió. ${observaciones || ''}`;
 
-    await db.query(`
-      UPDATE reservas 
-      SET estatus = ?, observaciones = ?
-      WHERE id = ?
-    `, [nuevoEstatus, nuevasObservaciones.trim(), reservaId]);
+    // Si no asistió (cancelada), también liberar el caballo
+    if (!asistio) {
+      await db.query(`
+        UPDATE reservas 
+        SET estatus = ?, observaciones = ?, caballo_asignado = NULL
+        WHERE id = ?
+      `, [nuevoEstatus, nuevasObservaciones.trim(), reservaId]);
+    } else {
+      await db.query(`
+        UPDATE reservas 
+        SET estatus = ?, observaciones = ?
+        WHERE id = ?
+      `, [nuevoEstatus, nuevasObservaciones.trim(), reservaId]);
+    }
 
     res.json({ 
       message: asistio ? 'Asistencia registrada correctamente' : 'Ausencia registrada correctamente' 
@@ -1017,12 +1064,15 @@ router.delete('/:id/cancel/:clienteId', async (req, res) => {
       return res.status(400).json({ error: 'No se puede cancelar una reserva completada' });
     }
 
-    // Cancelar la reserva
+    // Cancelar la reserva y liberar el caballo
     await db.query(`
-      UPDATE reservas SET estatus = 'cancelada' WHERE id = ?
+      UPDATE reservas SET estatus = 'cancelada', caballo_asignado = NULL WHERE id = ?
     `, [id]);
 
-    res.json({ message: 'Reserva cancelada correctamente' });
+    res.json({ 
+      message: 'Reserva cancelada correctamente',
+      caballo_liberado: true 
+    });
   } catch (err) {
     console.error('Error cancelando reserva:', err);
     res.status(500).json({ error: 'Error al cancelar reserva' });
@@ -1258,14 +1308,24 @@ router.put('/instructor/:reservaId/attendance', async (req, res) => {
       `Clase completada. ${observaciones || ''}` : 
       `No asistió. ${observaciones || ''}`;
 
-    await db.query(`
-      UPDATE reservas 
-      SET estatus = ?, observaciones = ?
-      WHERE id = ?
-    `, [nuevoEstatus, nuevasObservaciones.trim(), reservaId]);
+    // Si no asistió (cancelada), también liberar el caballo
+    if (!asistio) {
+      await db.query(`
+        UPDATE reservas 
+        SET estatus = ?, observaciones = ?, caballo_asignado = NULL
+        WHERE id = ?
+      `, [nuevoEstatus, nuevasObservaciones.trim(), reservaId]);
+    } else {
+      await db.query(`
+        UPDATE reservas 
+        SET estatus = ?, observaciones = ?
+        WHERE id = ?
+      `, [nuevoEstatus, nuevasObservaciones.trim(), reservaId]);
+    }
 
     res.json({ 
-      message: asistio ? 'Asistencia registrada correctamente' : 'Ausencia registrada correctamente' 
+      message: asistio ? 'Asistencia registrada correctamente' : 'Ausencia registrada correctamente y caballo liberado',
+      caballo_liberado: !asistio // Indicar si se liberó el caballo
     });
   } catch (err) {
     console.error('Error registrando asistencia:', err);

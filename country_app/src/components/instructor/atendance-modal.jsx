@@ -37,12 +37,17 @@ function AttendanceModal({ classData, onClose, onAttendanceChange }) {
         
         <div style={{ marginBottom: '24px' }}>
           <p style={{ color: 'var(--charcoal)', marginBottom: '8px' }}>
-            <strong>Fecha:</strong> {new Date(classData.date).toLocaleDateString('es-ES', { 
-              weekday: 'long', 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric' 
-            })}
+            <strong>Fecha:</strong> {(() => {
+              // Crear fecha asegurándonos de que use la zona horaria local
+              const [year, month, day] = classData.date.split('-');
+              const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+              return date.toLocaleDateString('es-ES', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              });
+            })()}
           </p>
           <p style={{ color: 'var(--charcoal)', marginBottom: '8px' }}>
             <strong>Hora:</strong> {classData.time}

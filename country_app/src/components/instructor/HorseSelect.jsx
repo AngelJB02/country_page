@@ -113,11 +113,40 @@ const HorseSelect = ({
   // Verificar si el caballo actual está en la lista de caballos disponibles
   const caballoActualDisponible = caballos.find(c => c.nombre === classItem.horse)
   
+  // Si la clase está cancelada, no permitir selección
+  const isClassCancelled = classItem.status === 'cancelada'
+  
+  if (isClassCancelled) {
+    return (
+      <select className="horse-select" disabled style={{ backgroundColor: '#f8f9fa', color: '#6c757d' }}>
+        <option>Clase cancelada</option>
+      </select>
+    )
+  }
+  
   return (
     <select 
       className="horse-select"
       value={caballoActualDisponible ? classItem.horse : ''}
-      onChange={(e) => onHorseChange(classItem.id, e.target.value)}
+      onChange={(e) => {
+        const selectedValue = e.target.value;
+        if (selectedValue === '') {
+          // Si se selecciona vacío, enviar string vacío
+          onHorseChange(classItem.id, '');
+        } else {
+          // Buscar el caballo completo para enviar ID y nombre
+          const caballoSeleccionado = caballosOrdenados.find(c => c.nombre === selectedValue);
+          if (caballoSeleccionado) {
+            onHorseChange(classItem.id, {
+              id: caballoSeleccionado.id,
+              nombre: caballoSeleccionado.nombre
+            });
+          } else {
+            // Fallback: enviar solo el nombre
+            onHorseChange(classItem.id, selectedValue);
+          }
+        }
+      }}
       disabled={disabled || caballos.length === 0}
       style={{ minWidth: '200px' }}
     >
@@ -126,6 +155,9 @@ const HorseSelect = ({
           ❌ {classItem.horse} (No disponible para este nivel)
         </option>
       )}
+      <option value="" style={{ color: '#6c757d' }}>
+        Sin asignar caballo
+      </option>
       {caballos.length === 0 && !loading && (
         <option value="" style={{ backgroundColor: '#f8d7da', color: '#721c24' }}>
           Sin caballos disponibles

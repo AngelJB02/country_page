@@ -470,4 +470,146 @@ router.get('/disponibles/:especialidad', async (req, res) => {
   }
 });
 
+// GET - Obtener actividades del día de un caballo específico
+router.get('/:id/actividades-dia', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { fecha } = req.query;
+
+    if (!fecha) {
+      return res.status(400).json({ error: 'Parámetro fecha es requerido (formato: YYYY-MM-DD)' });
+    }
+
+    // Obtener actividades del día para el caballo (excluyendo iniciación)
+    const [actividades] = await db.query(`
+      SELECT 
+        COUNT(*) as actividades_no_iniciacion,
+        GROUP_CONCAT(DISTINCT c.nombre) as tipos_clases
+      FROM reservas r
+      JOIN clases c ON r.clase_id = c.id
+      WHERE r.caballo_id = ?
+      AND r.fecha = ?
+      AND r.estatus IN ('confirmada', 'completada')
+      AND LOWER(c.nombre) NOT LIKE '%iniciaci%'
+    `, [id, fecha]);
+
+    const actividadesTotal = await db.query(`
+      SELECT COUNT(*) as total_actividades FROM reservas r
+      WHERE r.caballo_id = ?
+      AND r.fecha = ?
+      AND r.estatus IN ('confirmada', 'completada')
+    `, [id, fecha]);
+
+    const resultado = {
+      caballo_id: parseInt(id),
+      fecha: fecha,
+      actividades_no_iniciacion: actividades[0]?.actividades_no_iniciacion || 0,
+      total_actividades: actividadesTotal[0]?.total_actividades || 0,
+      tipos_clases: actividades[0]?.tipos_clases || '',
+      necesita_descanso: (actividades[0]?.actividades_no_iniciacion || 0) >= 3
+    };
+
+    res.json(resultado);
+  } catch (error) {
+    console.error('Error al obtener actividades del caballo:', error);
+    res.status(500).json({ error: 'Error al obtener actividades del caballo' });
+  }
+});
+
+// GET - Obtener caballos disponibles filtrados por nivel, fecha y hora
+router.get('/disponibles-filtrado', async (req, res) => {
+  try {
+    const { nivel, fecha, hora } = req.query;
+    
+    console.log('🔍 Buscando caballos disponibles:', { nivel, fecha, hora });
+    
+    if (!nivel) {
+      return res.status(400).json({ error: 'Parámetro nivel es requerido' });
+    }
+    
+    // Mapear niveles de cliente a especialidades de caballos
+    const especialidadesMap = {
+      'Iniciación': ['iniciacion', 'mixto'],
+      'Intermedio': ['iniciacion', 'intermedio', 'mixto'],
+      'Avanzado': ['iniciacion', 'intermedio', 'avanzado', 'mixto']
+    };
+    
+    const especialidades = especialidadesMap[nivel];
+    if (!especialidades) {
+      return res.status(400).json({ error: 'Nivel no válido' });
+    }
+    
+    // Construir la consulta base
+    let query = `
+      SELECT 
+        c.id,
+        c.nombre,
+        c.especialidad,
+        c.disponibilidad,
+        c.estatus,
+        CONCAT(u.nombre, ' ', u.apellido) as propietario_nombre
+      FROM caballos c
+      LEFT JOIN usuarios u ON c.propietario_id = u.id
+      WHERE c.estatus = 'activo' 
+        AND c.disponibilidad = 'disponible'
+        AND c.especialidad IN (${especialidades.map(() => '?').join(',')})
+    `;
+    
+    let params = [...especialidades];
+    
+    // Si se especifica fecha y hora, filtrar caballos ocupados
+    if (fecha && hora) {
+      query += `
+        AND c.id NOT IN (
+          SELECT r.caballo_id 
+          FROM reservas r 
+          WHERE r.caballo_id IS NOT NULL
+            AND r.fecha = ?
+            AND r.hora_inicio <= ?
+            AND r.hora_fin > ?
+            AND r.estatus != 'cancelada'
+        )
+      `;
+      params.push(fecha, hora, hora);
+    }
+    
+    // Si se especifica fecha, filtrar caballos que necesitan descanso (más de 3 actividades no-iniciación)
+    if (fecha) {
+      query += `
+        AND c.id NOT IN (
+          SELECT subq.caballo_id
+          FROM (
+            SELECT 
+              r.caballo_id,
+              COUNT(*) as actividades
+            FROM reservas r
+            JOIN clases cl ON r.clase_id = cl.id
+            WHERE r.caballo_id IS NOT NULL
+              AND r.fecha = ?
+              AND r.estatus != 'cancelada'
+              AND cl.nombre NOT LIKE '%iniciaci%'
+            GROUP BY r.caballo_id
+            HAVING COUNT(*) >= 3
+          ) subq
+        )
+      `;
+      params.push(fecha);
+    }
+    
+    query += ` ORDER BY c.nombre ASC`;
+    
+    console.log('🗃️ Query SQL:', query);
+    console.log('📝 Parámetros:', params);
+    
+    const [caballos] = await db.query(query, params);
+    
+    console.log(`✅ Encontrados ${caballos.length} caballos disponibles`);
+    res.json(caballos);
+    
+  } catch (error) {
+    console.error('Error al obtener caballos disponibles:', error);
+    res.status(500).json({ error: 'Error al obtener caballos disponibles' });
+  }
+});
+
 export default router;

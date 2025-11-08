@@ -155,6 +155,33 @@ router.get('/clases/:usuario_id', async (req, res) => {
   }
 });
 
+// Obtener ID de instructora por usuario_id
+router.get('/by-user/:userId', async (req, res) => {
+  const { userId } = req.params;
+  
+  try {
+    console.log(`🔍 Buscando instructora_id para usuario_id: ${userId}`);
+    
+    const [rows] = await db.query(`
+      SELECT id as instructora_id, nombre, apellido
+      FROM instructoras
+      WHERE usuario_id = ?
+    `, [userId]);
+    
+    if (rows.length === 0) {
+      console.log(`❌ No se encontró instructora para usuario_id: ${userId}`);
+      return res.status(404).json({ error: 'Instructora no encontrada para este usuario' });
+    }
+    
+    console.log(`✅ Encontrada instructora:`, rows[0]);
+    res.json(rows[0]);
+    
+  } catch (err) {
+    console.error('Error al obtener instructora por usuario:', err);
+    res.status(500).json({ error: 'Error al obtener instructora por usuario' });
+  }
+});
+
 // ENDPOINT TEMPORAL PARA DEBUGGING - Mostrar todas las instructoras y sus reservas
 router.get('/debug/all', async (req, res) => {
   try {

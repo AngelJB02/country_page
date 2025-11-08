@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react"
-import { obtenerClasesInstructora, actualizarAsistencia, obtenerUsuarioActual, obtenerCaballosPorNivel } from "./instructor-api"
+import { obtenerClasesInstructora, actualizarAsistencia, obtenerUsuarioActual, obtenerCaballosPorNivel, asignarCaballo } from "./instructor-api"
 
 export default function InstructorDashboard() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -47,6 +47,12 @@ export default function InstructorDashboard() {
         
         console.log('📋 Datos recibidos del servidor:', { instructora, clases })
         console.log('🎯 Cantidad de clases:', clases.length)
+        console.log('🔍 Clases detalladas:', clases.map(c => ({ 
+          id: c.id, 
+          date: c.date, 
+          status: c.status, 
+          student: c.student 
+        })))
         
         setInstructoraInfo(instructora)
         setClasses(clases)
@@ -78,31 +84,68 @@ export default function InstructorDashboard() {
   }, [])
 
   const todayClasses = classes.filter(c => c.date === today)
+  console.log(`📅 Clases de hoy (${today}):`, todayClasses.length, todayClasses.map(c => ({ id: c.id, status: c.status, student: c.student })));
   
   const weekClasses = classes.filter(c => {
-    const classDate = new Date(c.date)
-    const todayDate = new Date(today)
-    const weekFromNow = new Date(todayDate)
-    weekFromNow.setDate(todayDate.getDate() + 7)
-    return classDate >= todayDate && classDate <= weekFromNow
+    // Comparar fechas directamente como strings (YYYY-MM-DD)
+    const [cYear, cMonth, cDay] = c.date.split('-').map(Number);
+    const classDate = new Date(cYear, cMonth - 1, cDay);
+    
+    const [tYear, tMonth, tDay] = today.split('-').map(Number);
+    const todayDate = new Date(tYear, tMonth - 1, tDay);
+    
+    const weekFromNow = new Date(todayDate);
+    weekFromNow.setDate(todayDate.getDate() + 7);
+    
+    return classDate >= todayDate && classDate <= weekFromNow;
   })
 
   const pastClasses = classes.filter(c => {
-    const classDate = new Date(c.date)
-    const todayDate = new Date(today)
-    return classDate < todayDate
-  }).sort((a, b) => new Date(b.date) - new Date(a.date))
+    // Comparar fechas directamente como strings (YYYY-MM-DD)
+    const [cYear, cMonth, cDay] = c.date.split('-').map(Number);
+    const classDate = new Date(cYear, cMonth - 1, cDay);
+    
+    const [tYear, tMonth, tDay] = today.split('-').map(Number);
+    const todayDate = new Date(tYear, tMonth - 1, tDay);
+    
+    return classDate < todayDate;
+  }).sort((a, b) => {
+    // Ordenar por fecha descendente
+    const [aYear, aMonth, aDay] = a.date.split('-').map(Number);
+    const [bYear, bMonth, bDay] = b.date.split('-').map(Number);
+    const dateA = new Date(aYear, aMonth - 1, aDay);
+    const dateB = new Date(bYear, bMonth - 1, bDay);
+    return dateB - dateA;
+  })
 
-  const filteredClasses = (activeView === 'today' ? todayClasses : 
-                          activeView === 'week' ? weekClasses :
-                          activeView === 'history' ? pastClasses : classes).filter((cls) => {
+  // Filtrar clases por vista y excluir canceladas de vistas activas
+  const getClassesByView = () => {
+    let viewClasses;
+    if (activeView === 'today') {
+      viewClasses = todayClasses.filter(c => c.status !== 'cancelada');
+    } else if (activeView === 'week') {
+      viewClasses = weekClasses.filter(c => c.status !== 'cancelada');
+    } else if (activeView === 'history') {
+      viewClasses = pastClasses; // En historial SÍ mostramos las canceladas
+    } else {
+      viewClasses = classes.filter(c => c.status !== 'cancelada'); // Vista general sin canceladas
+    }
+    
+    console.log(`📊 ${activeView} view - clases antes del filtro:`, viewClasses.length);
+    return viewClasses;
+  };
+
+  const filteredClasses = getClassesByView().filter((cls) => {
     const matchesSearch =
       (cls.student || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (cls.type || "").toLowerCase().includes(searchTerm.toLowerCase())
     const matchesType = filterType === "all" || cls.type === filterType
     const matchesStatus = filterStatus === "all" || cls.status === filterStatus
-    return matchesSearch && matchesType && matchesStatus
+    const matches = matchesSearch && matchesType && matchesStatus;
+    return matches;
   })
+  
+  console.log(`✅ Clases filtradas finales (${activeView}):`, filteredClasses.length);
 
   const handleAttendanceChange = async (id, attendance) => {
     try {
@@ -118,11 +161,21 @@ export default function InstructorDashboard() {
       const backendAttendance = attendanceMap[attendance] || attendance;
       
       // Primero actualizar el estado local para respuesta inmediata
+      const updatedClass = { 
+        ...{}, 
+        attendance, 
+        status: attendance === 'faltó' ? 'cancelada' : 'completada'
+      };
+      
+      // Si faltó, también quitar el caballo
+      if (attendance === 'faltó') {
+        updatedClass.horse = null;
+        updatedClass.caballo_asignado = null;
+      }
+      
       setClasses(prev => 
         prev.map(c => 
-          c.id === id 
-            ? { ...c, attendance, status: 'completada' } 
-            : c
+          c.id === id ? { ...c, ...updatedClass } : c
         )
       )
       setShowAttendanceModal(false)
@@ -138,7 +191,7 @@ export default function InstructorDashboard() {
       setClasses(prev => 
         prev.map(c => 
           c.id === id 
-            ? { ...c, attendance: 'pendiente', status: 'confirmada' } 
+            ? { ...c, attendance: 'pendiente', status: 'confirmada' }  // Revertir estado, mantener caballo original
             : c
         )
       )
@@ -164,30 +217,57 @@ export default function InstructorDashboard() {
     try {
       // Si ya tenemos los caballos para este nivel, devolverlos del cache
       if (caballosPorNivel[nivelCliente]) {
-        return caballosPorNivel[nivelCliente]
+        return caballosPorNivel[nivelCliente];
       }
 
-      // Si no, obtener del servidor
-      const caballos = await obtenerCaballosPorNivel(nivelCliente)
+      // Si no, obtener del servidor (con fecha actual para verificar descansos)
+      const fechaHoy = new Date().toISOString().split('T')[0];
+      const caballos = await obtenerCaballosPorNivel(nivelCliente, fechaHoy);
       
       // Guardar en cache
       setCaballosPorNivel(prev => ({
         ...prev,
         [nivelCliente]: caballos
-      }))
+      }));
 
-      return caballos
+      return caballos;
     } catch (error) {
-      console.error(`Error al obtener caballos para nivel ${nivelCliente}:`, error)
-      return []
+      console.error(`Error al obtener caballos para nivel ${nivelCliente}:`, error);
+      return [];
     }
-  }
+  };
 
   // Función para manejar el cambio de caballo
-  const handleHorseChange = (classId, newHorse) => {
-    setClasses(prev => 
-      prev.map(c => c.id === classId ? {...c, horse: newHorse} : c)
-    )
+  const handleHorseChange = async (classId, caballoData) => {
+    try {
+      console.log(`🐎 Asignando caballo:`, caballoData, `a clase:`, classId);
+      
+      // caballoData puede ser un objeto {id, nombre} o solo el nombre
+      const caballoId = caballoData.id || caballoData;
+      const caballoNombre = caballoData.nombre || caballoData;
+      
+      // Actualizar estado local inmediatamente para UX
+      setClasses(prev => 
+        prev.map(c => c.id === classId ? {...c, horse: caballoNombre} : c)
+      );
+      
+      // Solo asignar al backend si se proporcionó un ID válido de caballo
+      if (caballoId && caballoId !== '' && caballoId !== caballoNombre) {
+        await asignarCaballo(classId, caballoId);
+        console.log(`✅ Caballo asignado correctamente en el backend`);
+      } else if (caballoNombre === '' || caballoNombre === null) {
+        // Si se está quitando el caballo, solo actualizar localmente por ahora
+        console.log(`ℹ️ Caballo removido localmente`);
+      }
+      
+    } catch (error) {
+      console.error('Error al asignar caballo:', error);
+      // Revertir cambio local si falla
+      setClasses(prev => 
+        prev.map(c => c.id === classId ? {...c, horse: c.horse} : c)
+      );
+      alert(`Error al asignar caballo: ${error.message}`);
+    }
   }
   
   return {

@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 
 // Componente Vista de Calendario
 function CalendarView({ classes, onDateClick }) {
-  const [currentMonth, setCurrentMonth] = useState(new Date(2025, 9)) // Octubre 2025
+  const [currentMonth, setCurrentMonth] = useState(new Date()) // Mes actual
 
   const getDaysInMonth = (date) => {
     const year = date.getFullYear()
@@ -17,8 +17,13 @@ function CalendarView({ classes, onDateClick }) {
   }
 
   const getClassesForDate = (date) => {
-    const dateStr = date.toISOString().split('T')[0]
-    return classes.filter(c => c.date === dateStr)
+    // Formatear fecha de manera segura sin problemas de zona horaria
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+    // Filtrar clases canceladas del calendario
+    return classes.filter(c => c.date === dateStr && c.status !== 'cancelada')
   }
 
   const { daysInMonth, startingDayOfWeek } = getDaysInMonth(currentMonth)
@@ -34,7 +39,7 @@ function CalendarView({ classes, onDateClick }) {
     const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day)
     const dateClasses = getClassesForDate(date)
     const hasClasses = dateClasses.length > 0
-    const today = new Date(2025, 9, 27)
+    const today = new Date() // Usar la fecha actual real
     const isToday = date.toDateString() === today.toDateString()
     
     days.push(

@@ -220,10 +220,15 @@ export default function InstructorClases() {
                         {activeView !== 'today' && (
                           <td>
                             <span style={{ fontWeight: '600' }}>
-                              {new Date(classItem.date).toLocaleDateString('es-ES', {
-                                day: 'numeric',
-                                month: 'short'
-                              })}
+                              {(() => {
+                                // Crear fecha asegurándonos de que use la zona horaria local
+                                const [year, month, day] = classItem.date.split('-');
+                                const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                                return date.toLocaleDateString('es-ES', {
+                                  day: 'numeric',
+                                  month: 'short'
+                                });
+                              })()}
                             </span>
                           </td>
                         )}
