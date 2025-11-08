@@ -27,8 +27,9 @@ const HorseSelect = ({
       try {
         setLoading(true)
         console.log(`🐎 Cargando caballos para nivel: ${classItem.studentLevel}`)
-        const caballosDisponibles = await obtenerCaballosParaClase(classItem.studentLevel)
-        console.log(`✅ Caballos obtenidos:`, caballosDisponibles)
+        console.log(`📅 Clase info:`, { id: classItem.id, date: classItem.date, time: classItem.time })
+        const caballosDisponibles = await obtenerCaballosParaClase(classItem.studentLevel, classItem)
+        console.log(`✅ Caballos obtenidos para clase ${classItem.id}:`, caballosDisponibles.length)
         setCaballos(caballosDisponibles)
       } catch (error) {
         console.error('Error al cargar caballos:', error)
@@ -39,7 +40,7 @@ const HorseSelect = ({
     }
 
     cargarCaballos()
-  }, [classItem.studentLevel, obtenerCaballosParaClase])
+  }, [classItem.studentLevel, classItem.date, classItem.time, obtenerCaballosParaClase])
 
   if (loading) {
     return (

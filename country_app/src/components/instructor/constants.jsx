@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react"
-import { obtenerClasesInstructora, actualizarAsistencia, obtenerUsuarioActual, obtenerCaballosPorNivel, asignarCaballo } from "./instructor-api"
+import { obtenerClasesInstructora, actualizarAsistencia, obtenerUsuarioActual, obtenerCaballosPorNivel, obtenerCaballosDisponiblesParaHorario, asignarCaballo } from "./instructor-api"
 
 export default function InstructorDashboard() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -15,7 +15,7 @@ export default function InstructorDashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [instructoraInfo, setInstructoraInfo] = useState(null)
-  const [caballosPorNivel, setCaballosPorNivel] = useState({}) // Nuevo estado para caballos
+  const [caballosPorNivel, setCaballosPorNivel] = useState({}) // Cache simple por nivel
 
   // Obtener la fecha de hoy solo una vez
   const today = useMemo(() => {
@@ -56,6 +56,21 @@ export default function InstructorDashboard() {
         
         setInstructoraInfo(instructora)
         setClasses(clases)
+        
+        // PRE-CARGAR caballos para niveles comunes (en background)
+        const nivelesComunes = ['Intermedio', 'Iniciación', 'Avanzado'];
+        const fechaHoy = new Date().toISOString().split('T')[0];
+        
+        console.log('🐎 Pre-cargando caballos para niveles comunes...');
+        nivelesComunes.forEach(async (nivel) => {
+          try {
+            const caballos = await obtenerCaballosPorNivel(nivel, fechaHoy);
+            setCaballosPorNivel(prev => ({ ...prev, [nivel]: caballos }));
+            console.log(`✅ Caballos ${nivel}: ${caballos.length}`);
+          } catch (err) {
+            console.warn(`Error cargando caballos ${nivel}:`, err);
+          }
+        });
         
       } catch (err) {
         console.error('Error al cargar datos:', err)
@@ -212,19 +227,29 @@ export default function InstructorDashboard() {
     setShowAttendanceModal(true)
   }
 
-  // Función para obtener caballos disponibles para una clase específica
-  const obtenerCaballosParaClase = async (nivelCliente) => {
+  // Función para obtener caballos disponibles para una clase específica (CON FILTRADO INTELIGENTE)
+  const obtenerCaballosParaClase = async (nivelCliente, classItem = null) => {
     try {
-      // Si ya tenemos los caballos para este nivel, devolverlos del cache
+      console.log('🔍 Obteniendo caballos para:', { nivelCliente, classItem });
+
+      // Si tenemos información de la clase con fecha y hora, usar filtrado por horario
+      if (classItem && classItem.date && classItem.time) {
+        console.log('🗓️ Aplicando filtrado por horario para:', classItem.date, classItem.time, 'Clase ID:', classItem.id);
+        return await obtenerCaballosDisponiblesParaHorario(nivelCliente, classItem.date, classItem.time, classItem.id);
+      }
+      
+      // Si ya tenemos los caballos para este nivel, devolverlos INMEDIATAMENTE
       if (caballosPorNivel[nivelCliente]) {
+        console.log('⚡ INMEDIATO: Caballos del cache para nivel:', nivelCliente);
         return caballosPorNivel[nivelCliente];
       }
 
-      // Si no, obtener del servidor (con fecha actual para verificar descansos)
+      // Solo si NO tenemos cache, hacer llamada al servidor
+      console.log('🌐 Primera vez: Cargando caballos para nivel:', nivelCliente);
       const fechaHoy = new Date().toISOString().split('T')[0];
       const caballos = await obtenerCaballosPorNivel(nivelCliente, fechaHoy);
       
-      // Guardar en cache
+      // Guardar en cache para que las siguientes sean inmediatas
       setCaballosPorNivel(prev => ({
         ...prev,
         [nivelCliente]: caballos
