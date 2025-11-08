@@ -460,7 +460,7 @@ router.put('/admin/:id/status', async (req, res) => {
     if (estatus === 'cancelada') {
       const [result] = await db.query(`
         UPDATE reservas 
-        SET estatus = ?, observaciones = COALESCE(?, observaciones), caballo_asignado = NULL
+        SET estatus = ?, observaciones = COALESCE(?, observaciones), caballo_id = NULL
         WHERE id = ?
       `, [estatus, observaciones, id]);
 
@@ -569,7 +569,7 @@ router.put('/admin/:reservaId/attendance', async (req, res) => {
     if (!asistio) {
       await db.query(`
         UPDATE reservas 
-        SET estatus = ?, observaciones = ?, caballo_asignado = NULL
+        SET estatus = ?, observaciones = ?, caballo_id = NULL
         WHERE id = ?
       `, [nuevoEstatus, nuevasObservaciones.trim(), reservaId]);
     } else {
@@ -1075,7 +1075,7 @@ router.delete('/:id/cancel/:clienteId', async (req, res) => {
 
     // Cancelar la reserva y liberar el caballo
     await db.query(`
-      UPDATE reservas SET estatus = 'cancelada', caballo_asignado = NULL WHERE id = ?
+      UPDATE reservas SET estatus = 'cancelada', caballo_id = NULL WHERE id = ?
     `, [id]);
 
     res.json({ 
@@ -1321,7 +1321,7 @@ router.put('/instructor/:reservaId/attendance', async (req, res) => {
     if (!asistio) {
       await db.query(`
         UPDATE reservas 
-        SET estatus = ?, observaciones = ?, caballo_asignado = NULL
+        SET estatus = ?, observaciones = ?, caballo_id = NULL
         WHERE id = ?
       `, [nuevoEstatus, nuevasObservaciones.trim(), reservaId]);
     } else {

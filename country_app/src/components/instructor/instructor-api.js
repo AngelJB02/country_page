@@ -35,11 +35,32 @@ export const obtenerClasesInstructora = async (usuarioId) => {
  */
 export const actualizarAsistencia = async (reservaId, asistencia) => {
   try {
+    console.log('🔍 DEBUG - Actualizando asistencia:', { reservaId, asistencia });
+    
     // Obtener el usuario actual para obtener la instructora_id
     const usuario = obtenerUsuarioActual();
     if (!usuario || !usuario.id) {
       throw new Error('No se encontró información de usuario');
     }
+
+    console.log('👤 Usuario del localStorage:', usuario);
+
+    // Primero obtener el instructora_id real basado en usuario_id
+    const instructoraResponse = await fetch(`${API_BASE_URL}/instructoras/clases/${usuario.id}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!instructoraResponse.ok) {
+      throw new Error(`Error obteniendo instructora: ${instructoraResponse.status}`);
+    }
+
+    const { instructora } = await instructoraResponse.json();
+    const instructoraId = instructora.id; // Usar 'id' no 'instructora_id'
+    
+    console.log('🏫 Instructora ID obtenido:', instructoraId);
 
     const response = await fetch(`${API_BASE_URL}/reservas/instructor/${reservaId}/attendance`, {
       method: 'PUT',
@@ -48,7 +69,7 @@ export const actualizarAsistencia = async (reservaId, asistencia) => {
       },
       body: JSON.stringify({ 
         asistio: asistencia === 'presente',
-        instructora_id: usuario.id,
+        instructora_id: instructoraId, // Usar el ID correcto de la tabla instructoras
         observaciones: asistencia === 'ausente' ? 'Marcado por instructora' : ''
       }),
     });

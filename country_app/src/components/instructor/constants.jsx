@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { obtenerClasesInstructora, actualizarAsistencia, obtenerUsuarioActual, obtenerCaballosPorNivel, obtenerCaballosDisponiblesParaHorario, asignarCaballo } from "./instructor-api"
 
 export default function InstructorDashboard() {
@@ -196,12 +196,14 @@ export default function InstructorDashboard() {
       setShowAttendanceModal(false)
       
       // Luego actualizar en el backend
+      console.log('🔍 DEBUG - Datos a enviar:', { reservaId: id, asistencia: backendAttendance });
       await actualizarAsistencia(id, backendAttendance)
       
       console.log(`✅ Asistencia actualizada correctamente`)
       
     } catch (error) {
-      console.error('Error al actualizar asistencia:', error)
+      console.error('❌ Error detallado al actualizar asistencia:', error)
+      console.log('🔍 Error completo:', error.message, error.status)
       // Revertir el cambio local si falla la API
       setClasses(prev => 
         prev.map(c => 
@@ -227,10 +229,10 @@ export default function InstructorDashboard() {
     setShowAttendanceModal(true)
   }
 
-  // Función para obtener caballos disponibles para una clase específica (CON FILTRADO INTELIGENTE)
-  const obtenerCaballosParaClase = async (nivelCliente, classItem = null) => {
+  // 🚀 Función para obtener caballos OPTIMIZADA con useCallback para evitar re-renderizados
+  const obtenerCaballosParaClase = useCallback(async (nivelCliente, classItem = null) => {
     try {
-      console.log('🔍 Obteniendo caballos para:', { nivelCliente, classItem });
+      console.log('🔍 ESTABLE - Obteniendo caballos para:', { nivelCliente, classItem });
 
       // Si tenemos información de la clase con fecha y hora, usar filtrado por horario
       if (classItem && classItem.date && classItem.time) {
@@ -260,7 +262,7 @@ export default function InstructorDashboard() {
       console.error(`Error al obtener caballos para nivel ${nivelCliente}:`, error);
       return [];
     }
-  };
+  }, [caballosPorNivel]); // Solo depende del cache de caballos, NO de classes
 
   // Función para manejar el cambio de caballo
   const handleHorseChange = async (classId, caballoData) => {
