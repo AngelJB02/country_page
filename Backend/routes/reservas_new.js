@@ -865,12 +865,13 @@ router.post('/book', async (req, res) => {
     // ===================== ASIGNACIÓN AUTOMÁTICA DE INSTRUCTORA =====================
     // Buscar instructoras aptas para la clase, disponibles y sin conflicto de horario
     // Prioridades de asignación:
-    // 1. Instructora que YA tenga reserva en este mismo horario (para agrupar alumnos)
-    // 2. Instructora SIN clases consecutivas (para dar descanso)
-    // 3. Menor número de reservas en la semana (balanceo de carga)
-    // 4. Desempate por ID
+    // 1. Instructora que YA tenga reserva en este mismo horario Y MISMA CLASE (para agrupar alumnos)
+    // 2. Primera reserva del horario: asignación ALEATORIA entre instructoras disponibles
+    // 3. Instructora SIN clases consecutivas (para dar descanso)
+    // 4. Menor número de reservas en la semana (balanceo de carga)
+    // IMPORTANTE: Una instructora NO puede tener dos clases al mismo tiempo (aunque sean de diferente categoría)
 
-    // Primero: buscar si hay una instructora que ya tiene reserva en este horario exacto
+    // Primero: buscar si hay una instructora que ya tiene reserva en ESTE HORARIO Y ESTA CLASE exacta
     const [instructoraActual] = await db.query(`
       SELECT DISTINCT r.instructora_id, COUNT(*) as alumnos_en_slot
       FROM reservas r
@@ -891,12 +892,13 @@ router.post('/book', async (req, res) => {
 
     let instructora_id = null;
 
-    // Si hay una instructora que ya tiene alumnos en este slot y no está llena, asignarle
+    // Si hay una instructora que ya tiene alumnos en este slot y clase específica, asignarle
     if (instructoraActual.length > 0) {
       instructora_id = instructoraActual[0].instructora_id;
       console.log(`✅ Asignando a instructora existente en el slot (tiene ${instructoraActual[0].alumnos_en_slot} alumnos)`);
     } else {
-      // Si no, buscar la mejor instructora disponible según prioridades
+      // Si no hay nadie en el slot, buscar TODAS las instructoras disponibles
+      // EXCLUIR instructoras que YA tengan CUALQUIER clase en este horario (sin importar categoría)
       const [candidatas] = await db.query(`
         SELECT i.id as instructora_id, i.nombre, i.apellido,
           (SELECT COUNT(*) FROM reservas r2 
@@ -916,26 +918,33 @@ router.post('/book', async (req, res) => {
             SELECT d.instructora_id FROM descansos d WHERE ? BETWEEN d.fecha_inicio AND d.fecha_fin
           )
           AND i.id NOT IN (
-            SELECT r.instructora_id FROM reservas r WHERE r.fecha = ?
+            SELECT r.instructora_id FROM reservas r 
+            WHERE r.fecha = ?
               AND r.hora_inicio = ?
-              AND r.clase_id = ?
               AND r.estatus IN ('pendiente','confirmada')
           )
         ORDER BY clases_consecutivas ASC, reservas_semana ASC, i.id ASC
-        LIMIT 1
       `, [
         fecha, fecha, fecha, fecha, // para calcular semana de la reserva
         fecha, hora_inicio, hora_fin, // para detectar clases consecutivas
         clase_id,
         fecha,
         fecha,
-        hora_inicio,
-        clase_id
+        hora_inicio
       ]);
 
       if (candidatas.length > 0) {
-        instructora_id = candidatas[0].instructora_id;
-        console.log(`✅ Asignando nueva instructora al slot (sin clases consecutivas: ${candidatas[0].clases_consecutivas === 0})`);
+        // 🎲 SELECCIÓN ALEATORIA para la primera reserva del horario
+        // Filtrar instructoras sin clases consecutivas primero (prioridad)
+        const sinConsecutivas = candidatas.filter(c => c.clases_consecutivas === 0);
+        const pool = sinConsecutivas.length > 0 ? sinConsecutivas : candidatas;
+        
+        // Seleccionar aleatoriamente del pool
+        const randomIndex = Math.floor(Math.random() * pool.length);
+        const instructoraSeleccionada = pool[randomIndex];
+        
+        instructora_id = instructoraSeleccionada.instructora_id;
+        console.log(`🎲 Primera reserva del horario - Asignación ALEATORIA a ${instructoraSeleccionada.nombre} ${instructoraSeleccionada.apellido} (${randomIndex + 1}/${pool.length} disponibles, consecutivas: ${instructoraSeleccionada.clases_consecutivas})`);
       }
     }
 

@@ -22,9 +22,9 @@
 }
 
 /* Asegurar que el texto interno y metadatos también sean blancos en bloqueado */
+/* Solo forzar color blanco en fondo bloqueado para .tsc-inner, .tsc-time y .tsc-horse, pero NO en .tsc-meta */
 .tsc-card.tsc--blocked .tsc-inner,
 .tsc-card.tsc--blocked .tsc-time,
-.tsc-card.tsc--blocked .tsc-meta,
 .tsc-card.tsc--blocked .tsc-horse { color: white !important; }
 
 .tsc-card.tsc--booked {
@@ -60,11 +60,13 @@
 .tsc-horse { font-size: 24px; opacity: 0.3; }
 .tsc-horse--filled { opacity: 1; }
 
-.tsc-meta { font-size: 12px; font-weight: 500; text-align: center; }
+.tsc-meta { font-size: 12px; font-weight: 500; text-align: center; color: #6b4423; }
 .tsc-available-text { color: #9caf88; }
 
 /* Mensajes para estados */
-.tsc-card.tsc--partial .tsc-meta { color: #6b4423; }
-.tsc-card.tsc--full .tsc-meta { color: white; }
-.tsc-card.tsc--booked .tsc-meta { color: white; }
-.tsc-card.tsc--blocked .tsc-meta { color: white; }
+/* Mantener color blanco solo en estados con fondo oscuro */
+.tsc-card.tsc--full .tsc-meta,
+.tsc-card.tsc--booked .tsc-meta,
+.tsc-card.tsc--blocked .tsc-meta {
+  color: white;
+}

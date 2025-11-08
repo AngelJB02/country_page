@@ -89,8 +89,6 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
     }
   };
 
-
-
   const closeModal = () => {
     setIsModalOpen(false);
     setSelectedSlot(null);
@@ -348,7 +346,7 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
               <h3 style={{ marginBottom: 8 }}>
                 {clase.nombre.charAt(0).toUpperCase() + clase.nombre.slice(1)} ({clase.duracion_min} min)
               </h3>
-              <p style={{ marginBottom: 8 }}>{clase.observaciones}</p>
+              <p style={{ marginBottom: 8, color: '#6b4423' }}>{clase.observaciones}</p>
               <WeeklyCalendar
                 userLevel={userLevel}
                 userId={userId}

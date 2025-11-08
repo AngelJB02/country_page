@@ -9,7 +9,7 @@ export function ReservacionTabla({ userBookings = [], onCancelBooking }) {
         <p className="mc-no-bookings">No tienes reservas.</p>
       ) : (
         <ul className="mc-bookings-list">
-          {userBookings.map((b) => {
+          {userBookings.filter(b => b.estatus !== 'cancelada').map((b) => {
             let day = '', time = '', clase = '';
             if (typeof b.timeSlotId === 'string' && b.timeSlotId.includes('-')) {
               [day, time] = b.timeSlotId.split('-');
@@ -29,10 +29,7 @@ export function ReservacionTabla({ userBookings = [], onCancelBooking }) {
             // Mostrar estatus visualmente
             let statusLabel = '';
             let statusClass = '';
-            if (b.estatus === 'cancelada') {
-              statusLabel = 'Cancelada';
-              statusClass = 'mc-booking-status-cancelada';
-            } else if (b.estatus === 'completada') {
+            if (b.estatus === 'completada') {
               statusLabel = 'Completada';
               statusClass = 'mc-booking-status-completada';
             } else if (b.estatus === 'confirmada') {
