@@ -1,0 +1,154 @@
+/* Overlay semitransparente */
+.toast-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 9999;
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* Modal centrado */
+.toast-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #fff3cd;
+  border: 2px solid #ffc107;
+  border-radius: 12px;
+  padding: 0;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  z-index: 10000;
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  min-width: 320px;
+  max-width: 90%;
+  width: auto;
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+/* Icono del modal */
+.toast-icon {
+  font-size: 32px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Contenido del modal */
+.toast-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+  padding-left: 0;
+}
+
+/* Responsive para mobile */
+@media (max-width: 768px) {
+  .toast-modal {
+    min-width: 280px;
+    max-width: calc(100% - 40px);
+  }
+  
+  .toast-icon {
+    font-size: 28px;
+    padding: 14px;
+  }
+  
+  .toast-content {
+    padding: 14px;
+    padding-left: 0;
+  }
+  
+  .toast-message {
+    font-size: 14px;
+    line-height: 1.4;
+    font-weight: 500;
+  }
+  
+  .toast-close {
+    width: 24px;
+    height: 24px;
+    font-size: 20px;
+  }
+}
+
+.toast-warning {
+  background: #fff3cd;
+  border-color: #ffc107;
+  color: #856404;
+}
+
+.toast-error {
+  background: #f8d7da;
+  border-color: #dc3545;
+  color: #721c24;
+}
+
+.toast-success {
+  background: #d4edda;
+  border-color: #28a745;
+  color: #155724;
+}
+
+.toast-message {
+  flex: 1;
+  font-size: 15px;
+  line-height: 1.5;
+  font-weight: 500;
+}
+
+.toast-close {
+  background: rgba(0, 0, 0, 0.1);
+  border: none;
+  font-size: 22px;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  opacity: 0.8;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.toast-close:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.15);
+  transform: scale(1.1);
+}
+
+/* Animaciones */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalSlideIn {
+  from {
+    transform: translate(-50%, -50%) scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+}
+

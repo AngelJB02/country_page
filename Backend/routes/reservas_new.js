@@ -259,6 +259,20 @@ router.get('/admin/all', async (req, res) => {
     const { fecha, semana } = req.query;
     let whereClause = '1=1';
     let params = [];
+    const ttlMs = 30 * 1000; // 30s
+
+    // Caché en memoria (simple) por URL completa
+    const cacheKey = `admin_all:${req.originalUrl}`;
+    if (!semana) {
+      // Solo cacheamos por fecha (no por rango semanas en esta primera versión)
+      if (!router._cacheStore) {
+        router._cacheStore = new Map();
+      }
+      const cached = router._cacheStore.get(cacheKey);
+      if (cached && Date.now() < cached.expiresAt) {
+        return res.json(cached.data);
+      }
+    }
 
     if (fecha) {
       whereClause += ' AND r.fecha = ?';
@@ -305,6 +319,11 @@ router.get('/admin/all', async (req, res) => {
     `;
 
     const [rows] = await db.query(query, params);
+
+    if (!semana) {
+      router._cacheStore.set(cacheKey, { data: rows, expiresAt: Date.now() + ttlMs });
+    }
+
     res.json(rows);
   } catch (err) {
     console.error('Error obteniendo reservas:', err);
@@ -1234,9 +1253,9 @@ router.put('/instructor/:reservaId/assign-horse', async (req, res) => {
   const { reservaId } = req.params;
   const { caballo_id, instructora_id } = req.body;
 
-  if (!caballo_id || !instructora_id) {
+  if (!instructora_id) {
     return res.status(400).json({ 
-      error: 'Faltan campos requeridos: caballo_id, instructora_id' 
+      error: 'Falta campo requerido: instructora_id' 
     });
   }
 
@@ -1255,32 +1274,198 @@ router.put('/instructor/:reservaId/assign-horse', async (req, res) => {
 
     const infoReserva = reserva[0];
 
-    // Obtener tipo de clase para verificar descansos
-    const [clase] = await db.query('SELECT nombre FROM clases WHERE id = ?', [infoReserva.clase_id]);
-    const tipoClase = clase.length > 0 ? clase[0].nombre : null;
+    if (caballo_id) {
+      // Obtener tipo de clase para verificar descansos
+      const [clase] = await db.query('SELECT nombre FROM clases WHERE id = ?', [infoReserva.clase_id]);
+      const tipoClase = clase.length > 0 ? clase[0].nombre : null;
 
-    // Verificar disponibilidad del caballo
-    const disponibilidad = await verificarDisponibilidadCaballo(
-      caballo_id, 
-      infoReserva.fecha, 
-      infoReserva.hora_inicio, 
-      infoReserva.hora_fin, 
-      tipoClase
-    );
+      // Verificar disponibilidad del caballo
+      const disponibilidad = await verificarDisponibilidadCaballo(
+        caballo_id, 
+        infoReserva.fecha, 
+        infoReserva.hora_inicio, 
+        infoReserva.hora_fin, 
+        tipoClase
+      );
 
-    if (!disponibilidad.disponible) {
-      return res.status(400).json({ 
-        error: 'Caballo no disponible', 
-        razon: disponibilidad.razon 
+      if (!disponibilidad.disponible) {
+        return res.status(400).json({ 
+          error: 'Caballo no disponible', 
+          razon: disponibilidad.razon 
+        });
+      }
+
+      // Obtener cooldown de la nueva clase
+      const cooldownNuevaClase = tipoClase ? (
+        ['iniciacion', 'paseo'].includes(tipoClase.toLowerCase()) ? 0 :
+        tipoClase.toLowerCase() === 'intermedio' ? 2 :
+        ['salto', 'avanzado'].includes(tipoClase.toLowerCase()) ? 3 : 0
+      ) : 0;
+
+      // Verificar conflictos con otras clases donde el caballo ya está asignado
+      // (solapamiento directo o cooldown que choca)
+      // Normalizar fecha a formato YYYY-MM-DD
+      const fechaNormalizada = infoReserva.fecha instanceof Date 
+        ? infoReserva.fecha.toISOString().split('T')[0]
+        : typeof infoReserva.fecha === 'string' 
+          ? infoReserva.fecha.split('T')[0]
+          : infoReserva.fecha;
+
+      console.log('🔍 Verificando conflictos para:', {
+        caballo_id,
+        fecha: infoReserva.fecha,
+        fechaNormalizada,
+        reservaId,
+        hora_inicio: infoReserva.hora_inicio,
+        hora_fin: infoReserva.hora_fin,
+        tipoClase,
+        cooldownNuevaClase
       });
+
+      // Primero verificar qué reservas tiene este caballo asignado
+      const [reservasCaballo] = await db.query(`
+        SELECT r.id, r.hora_inicio, r.hora_fin, cl.nombre as tipo_clase
+        FROM reservas r
+        JOIN clases cl ON cl.id = r.clase_id
+        WHERE r.caballo_id = ?
+          AND DATE(r.fecha) = ?
+          AND r.id <> ?
+          AND r.estatus IN ('pendiente','confirmada','completada')
+      `, [caballo_id, fechaNormalizada, reservaId]);
+      console.log('🔍 Reservas encontradas con este caballo:', reservasCaballo);
+
+      // Verificar manualmente si hay conflictos para debugging
+      if (reservasCaballo.length > 0) {
+        reservasCaballo.forEach(reserva => {
+          const horaInicioReserva = reserva.hora_inicio;
+          const horaFinReserva = reserva.hora_fin;
+          const horaFinNueva = infoReserva.hora_fin;
+          const cooldownFin = `DATE_ADD('${horaFinNueva}', INTERVAL ${cooldownNuevaClase} HOUR)`;
+          
+          console.log('🔍 Verificando conflicto manualmente:', {
+            reservaId: reserva.id,
+            reservaHoraInicio: horaInicioReserva,
+            reservaHoraFin: horaFinReserva,
+            nuevaHoraFin: horaFinNueva,
+            cooldown: cooldownNuevaClase,
+            cooldownFin: cooldownFin,
+            verificacion1: `${horaInicioReserva} >= ${horaFinNueva} = ${horaInicioReserva >= horaFinNueva}`,
+            verificacion2: `${horaInicioReserva} < DATE_ADD(${horaFinNueva}, INTERVAL ${cooldownNuevaClase} HOUR)`
+          });
+        });
+      }
+
+      const [conflictos] = await db.query(`
+        SELECT 
+          r.id,
+          r.hora_inicio,
+          r.hora_fin,
+          cl.nombre as tipo_clase,
+          u.nombre as alumno_nombre,
+          u.apellido as alumno_apellido
+        FROM reservas r
+        JOIN clases cl ON cl.id = r.clase_id
+        LEFT JOIN usuarios u ON u.id = r.cliente_id
+        WHERE r.caballo_id = ?
+          AND DATE(r.fecha) = ?
+          AND r.id <> ?
+          AND r.estatus IN ('pendiente','confirmada','completada')
+          AND (
+            -- Solapamiento directo de horarios
+            (r.hora_inicio < ? AND r.hora_fin > ?)
+            OR
+            -- Cooldown de la otra clase se solapa con esta clase
+            (
+              ? >= r.hora_fin
+              AND ? < DATE_ADD(r.hora_fin, INTERVAL 
+                CASE 
+                  WHEN LOWER(cl.nombre) IN ('iniciacion', 'paseo') THEN 0
+                  WHEN LOWER(cl.nombre) = 'intermedio' THEN 2
+                  WHEN LOWER(cl.nombre) IN ('salto', 'avanzado') THEN 3
+                  ELSE 0
+                END HOUR)
+            )
+            OR
+            -- Cooldown de esta clase se solapa con la otra clase
+            -- El cooldown de esta clase va desde hora_fin hasta hora_fin + cooldown
+            -- Verificamos si la otra clase empieza o termina dentro del cooldown, o si se solapa completamente
+            -- Usamos TIME_TO_SEC para comparar correctamente
+            (
+              (TIME_TO_SEC(r.hora_inicio) >= TIME_TO_SEC(?) 
+               AND TIME_TO_SEC(r.hora_inicio) < TIME_TO_SEC(?) + (? * 3600))
+              OR
+              (TIME_TO_SEC(r.hora_fin) > TIME_TO_SEC(?) 
+               AND TIME_TO_SEC(r.hora_fin) <= TIME_TO_SEC(?) + (? * 3600))
+              OR
+              (TIME_TO_SEC(r.hora_inicio) < TIME_TO_SEC(?) 
+               AND TIME_TO_SEC(r.hora_fin) > TIME_TO_SEC(?) + (? * 3600))
+            )
+          )
+        LIMIT 1
+      `, [
+        caballo_id,
+        fechaNormalizada,
+        reservaId,
+        infoReserva.hora_fin, // para solapamiento
+        infoReserva.hora_inicio, // para solapamiento
+        infoReserva.hora_inicio, // para cooldown de otra clase
+        infoReserva.hora_fin, // para cooldown de otra clase
+        infoReserva.hora_fin, // para cooldown de esta clase - verificación 1: hora_inicio >= hora_fin
+        infoReserva.hora_fin, // para cooldown de esta clase - verificación 1: hora_inicio < hora_fin + cooldown
+        cooldownNuevaClase, // para cooldown de esta clase - verificación 1: cooldown
+        infoReserva.hora_fin, // para cooldown de esta clase - verificación 2: hora_fin > hora_fin
+        infoReserva.hora_fin, // para cooldown de esta clase - verificación 2: hora_fin <= hora_fin + cooldown
+        cooldownNuevaClase, // para cooldown de esta clase - verificación 2: cooldown
+        infoReserva.hora_fin, // para cooldown de esta clase - verificación 3: hora_inicio < hora_fin
+        infoReserva.hora_fin, // para cooldown de esta clase - verificación 3: hora_fin > hora_fin + cooldown
+        cooldownNuevaClase // para cooldown de esta clase - verificación 3: cooldown
+      ]);
+
+      console.log('🔍 Resultado de verificación de conflictos:', {
+        conflictosEncontrados: conflictos.length,
+        conflictos: conflictos
+      });
+
+      if (conflictos.length > 0) {
+        const conflicto = conflictos[0];
+        const alumno = `${conflicto.alumno_nombre || ''} ${conflicto.alumno_apellido || ''}`.trim() || 'otra clase';
+        return res.status(400).json({
+          error: 'Conflicto de horario detectado',
+          warning: true,
+          mensaje: `Este caballo ya está asignado a ${alumno} (${conflicto.tipo_clase}, ${conflicto.hora_inicio.substring(0,5)}-${conflicto.hora_fin.substring(0,5)}). El cooldown podría chocar con esta clase.`,
+          conflicto: {
+            reserva_id: conflicto.id,
+            hora: `${conflicto.hora_inicio.substring(0,5)}-${conflicto.hora_fin.substring(0,5)}`,
+            tipo: conflicto.tipo_clase
+          }
+        });
+      } else {
+        console.log('✅ No se encontraron conflictos, procediendo con la asignación');
+      }
     }
 
-    // Asignar el caballo
+    // Asignar (o remover) el caballo
     await db.query(`
       UPDATE reservas SET caballo_id = ? WHERE id = ?
-    `, [caballo_id, reservaId]);
+    `, [caballo_id || null, reservaId]);
 
-    res.json({ message: 'Caballo asignado correctamente a la reserva' });
+    // Devolver la reserva actualizada
+    const [rows] = await db.query(`
+      SELECT 
+        r.id, r.fecha AS date,
+        DATE_FORMAT(r.hora_inicio, '%H:%i') AS time,
+        r.estatus AS status,
+        u.nombre AS student, u.edad AS studentAge, u.tipo_nivel AS studentLevel,
+        cl.nombre AS type,
+        cab.nombre AS caballo_nombre
+      FROM reservas r
+      LEFT JOIN usuarios u ON u.id = r.cliente_id
+      LEFT JOIN clases cl ON cl.id = r.clase_id
+      LEFT JOIN caballos cab ON cab.id = r.caballo_id
+      WHERE r.id = ?
+    `, [reservaId]);
+
+    res.json(rows[0] || { message: 'Caballo asignado correctamente a la reserva' });
   } catch (err) {
     console.error('Error asignando caballo:', err);
     res.status(500).json({ error: 'Error al asignar caballo' });
@@ -1332,9 +1517,25 @@ router.put('/instructor/:reservaId/attendance', async (req, res) => {
       `, [nuevoEstatus, nuevasObservaciones.trim(), reservaId]);
     }
 
-    res.json({ 
+    // Devolver la reserva actualizada
+    const [rows] = await db.query(`
+      SELECT 
+        r.id, r.fecha AS date,
+        DATE_FORMAT(r.hora_inicio, '%H:%i') AS time,
+        r.estatus AS status,
+        u.nombre AS student, u.edad AS studentAge, u.tipo_nivel AS studentLevel,
+        cl.nombre AS type,
+        cab.nombre AS caballo_nombre
+      FROM reservas r
+      LEFT JOIN usuarios u ON u.id = r.cliente_id
+      LEFT JOIN clases cl ON cl.id = r.clase_id
+      LEFT JOIN caballos cab ON cab.id = r.caballo_id
+      WHERE r.id = ?
+    `, [reservaId]);
+
+    res.json(rows[0] || { 
       message: asistio ? 'Asistencia registrada correctamente' : 'Ausencia registrada correctamente y caballo liberado',
-      caballo_liberado: !asistio // Indicar si se liberó el caballo
+      caballo_liberado: !asistio
     });
   } catch (err) {
     console.error('Error registrando asistencia:', err);

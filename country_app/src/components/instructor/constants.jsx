@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react"
-import { obtenerClasesInstructora, actualizarAsistencia, obtenerUsuarioActual, obtenerCaballosPorNivel, obtenerCaballosDisponiblesParaHorario, asignarCaballo } from "./instructor-api"
+import { obtenerClasesInstructora, actualizarAsistencia, obtenerUsuarioActual, obtenerCaballosPorNivel, obtenerCaballosDisponiblesParaHorario, asignarCaballo, invalidarCacheDisponibles } from "./instructor-api"
+import Toast from "./Toast"
 
 export default function InstructorDashboard() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -16,6 +17,7 @@ export default function InstructorDashboard() {
   const [error, setError] = useState(null)
   const [instructoraInfo, setInstructoraInfo] = useState(null)
   const [caballosPorNivel, setCaballosPorNivel] = useState({}) // Cache simple por nivel
+  const [toast, setToast] = useState(null) // Toast discreto para advertencias
 
   // Obtener la fecha de hoy solo una vez
   const today = useMemo(() => {
@@ -57,20 +59,7 @@ export default function InstructorDashboard() {
         setInstructoraInfo(instructora)
         setClasses(clases)
         
-        // PRE-CARGAR caballos para niveles comunes (en background)
-        const nivelesComunes = ['Intermedio', 'Iniciación', 'Avanzado'];
-        const fechaHoy = new Date().toISOString().split('T')[0];
-        
-        console.log('🐎 Pre-cargando caballos para niveles comunes...');
-        nivelesComunes.forEach(async (nivel) => {
-          try {
-            const caballos = await obtenerCaballosPorNivel(nivel, fechaHoy);
-            setCaballosPorNivel(prev => ({ ...prev, [nivel]: caballos }));
-            console.log(`✅ Caballos ${nivel}: ${caballos.length}`);
-          } catch (err) {
-            console.warn(`Error cargando caballos ${nivel}:`, err);
-          }
-        });
+        // Quitamos el prefetch para evitar N+1 de actividades; todo vendrá de /caballos/disponibles
         
       } catch (err) {
         console.error('Error al cargar datos:', err)
@@ -215,7 +204,7 @@ export default function InstructorDashboard() {
       
       // Luego actualizar en el backend
       console.log('🔍 DEBUG - Datos a enviar:', { reservaId: id, asistencia: backendAttendance });
-      await actualizarAsistencia(id, backendAttendance)
+      await actualizarAsistencia(id, backendAttendance, instructoraInfo?.id)
       
       console.log(`✅ Asistencia actualizada correctamente`)
       
@@ -254,8 +243,23 @@ export default function InstructorDashboard() {
 
       // Si tenemos información de la clase con fecha y hora, usar filtrado por horario
       if (classItem && classItem.date && classItem.time) {
-        console.log('🗓️ Aplicando filtrado por horario para:', classItem.date, classItem.time, 'Clase ID:', classItem.id);
-        return await obtenerCaballosDisponiblesParaHorario(nivelCliente, classItem.date, classItem.time, classItem.id);
+        console.log('🗓️ Aplicando filtrado por horario para:', classItem.date, classItem.time, 'Clase ID:', classItem.id, 'Tipo:', classItem.type);
+        const baseDisponibles = await obtenerCaballosDisponiblesParaHorario(nivelCliente, classItem.date, classItem.time, null, classItem.type);
+
+        // Excluir caballos ya asignados a otras clases en el mismo horario
+        const ocupados = classes
+          .filter(c => 
+            c.id !== classItem.id &&
+            c.date === classItem.date &&
+            c.time === classItem.time &&
+            c.horse
+          )
+          .map(c => c.horse.toLowerCase());
+
+        if (ocupados.length > 0) {
+          return baseDisponibles.filter(caballo => !ocupados.includes((caballo.nombre || '').toLowerCase()));
+        }
+        return baseDisponibles;
       }
       
       // Si ya tenemos los caballos para este nivel, devolverlos INMEDIATAMENTE
@@ -280,12 +284,19 @@ export default function InstructorDashboard() {
       console.error(`Error al obtener caballos para nivel ${nivelCliente}:`, error);
       return [];
     }
-  }, [caballosPorNivel]); // Solo depende del cache de caballos, NO de classes
+  }, [caballosPorNivel, classes]);
 
   // Función para manejar el cambio de caballo
   const handleHorseChange = async (classId, caballoData) => {
     try {
       console.log(`🐎 Asignando caballo:`, caballoData, `a clase:`, classId);
+      
+      // Encontrar la clase para obtener nivel, fecha y hora
+      const claseActual = classes.find(c => c.id === classId);
+      if (!claseActual) {
+        console.warn('Clase no encontrada:', classId);
+        return;
+      }
       
       // caballoData puede ser un objeto {id, nombre} o solo el nombre
       const caballoId = caballoData.id || caballoData;
@@ -296,13 +307,57 @@ export default function InstructorDashboard() {
         prev.map(c => c.id === classId ? {...c, horse: caballoNombre} : c)
       );
       
-      // Solo asignar al backend si se proporcionó un ID válido de caballo
-      if (caballoId && caballoId !== '' && caballoId !== caballoNombre) {
-        await asignarCaballo(classId, caballoId);
-        console.log(`✅ Caballo asignado correctamente en el backend`);
-      } else if (caballoNombre === '' || caballoNombre === null) {
-        // Si se está quitando el caballo, solo actualizar localmente por ahora
-        console.log(`ℹ️ Caballo removido localmente`);
+      if (caballoNombre === '' || caballoNombre === null) {
+        console.log('ℹ️ Removiendo caballo en backend');
+        await asignarCaballo(classId, null, instructoraInfo?.id);
+      } else if (caballoId && caballoId !== '' && caballoId !== caballoNombre) {
+        try {
+          await asignarCaballo(classId, caballoId, instructoraInfo?.id);
+          console.log(`✅ Caballo asignado correctamente en el backend`);
+        } catch (error) {
+          console.log('🔍 Error capturado al asignar caballo:', error);
+          console.log('🔍 error.errorData:', error.errorData);
+          // Si es un error de conflicto (warning), mostrar toast y revertir la asignación
+          if (error.errorData && error.errorData.warning && error.errorData.mensaje) {
+            console.log('⚠️ Conflicto detectado, revirtiendo asignación y mostrando toast');
+            // Revertir el cambio local (quitar el caballo asignado)
+            setClasses(prev => 
+              prev.map(c => c.id === classId ? {...c, horse: ''} : c)
+            );
+            // Mostrar toast de advertencia
+            console.log('📢 Mostrando toast con mensaje:', error.errorData.mensaje);
+            const toastData = { message: error.errorData.mensaje, type: 'warning' };
+            console.log('📢 Datos del toast:', toastData);
+            setToast(toastData);
+            console.log('📢 Toast establecido, estado actualizado');
+            // Invalidar caché para actualizar la lista de disponibles
+            if (claseActual.studentLevel && claseActual.date && claseActual.time) {
+              invalidarCacheDisponibles(claseActual.studentLevel, claseActual.date, claseActual.time).then(() => {
+                // Forzar actualización del horsesHash para que HorseSelect recargue los caballos
+                setClasses(prev => 
+                  prev.map(c => c.id === classId ? {...c, horse: '', _refresh: Date.now()} : c)
+                );
+              }).catch(err => {
+                console.warn('Error al invalidar caché:', err);
+                // Aún así forzar actualización
+                setClasses(prev => 
+                  prev.map(c => c.id === classId ? {...c, horse: '', _refresh: Date.now()} : c)
+                );
+              });
+            }
+            return;
+          }
+          // Si es otro tipo de error, lanzarlo para que se maneje abajo
+          console.log('❌ Error no es de conflicto, lanzando error');
+          throw error;
+        }
+      }
+      
+      // Invalidar caché para que se actualice la disponibilidad inmediatamente
+      // Esto permite que otros instructores vean los cambios y que el mismo instructor
+      // vea el caballo liberado cuando lo quita
+      if (claseActual.studentLevel && claseActual.date && claseActual.time) {
+        await invalidarCacheDisponibles(claseActual.studentLevel, claseActual.date, claseActual.time);
       }
       
     } catch (error) {
@@ -311,10 +366,27 @@ export default function InstructorDashboard() {
       setClasses(prev => 
         prev.map(c => c.id === classId ? {...c, horse: c.horse} : c)
       );
-      alert(`Error al asignar caballo: ${error.message}`);
+      
+      // Intentar obtener mensaje del error
+      let errorMessage = error.message || 'Error al asignar caballo';
+      if (error.errorData) {
+        errorMessage = error.errorData.mensaje || error.errorData.error || errorMessage;
+      }
+      
+      setToast({ message: errorMessage, type: 'error' });
     }
   }
   
+  // Función helper para calcular hash de caballos asignados en el mismo horario
+  const getHorsesHashForHorario = useCallback((date, time) => {
+    const caballosEnHorario = classes
+      .filter(c => c.date === date && c.time === time && c.horse)
+      .map(c => c.horse)
+      .sort()
+      .join('|');
+    return caballosEnHorario;
+  }, [classes]);
+
   return {
     searchTerm, setSearchTerm,
     filterType, setFilterType,
@@ -331,6 +403,8 @@ export default function InstructorDashboard() {
     handleClassClickFromModal,
     obtenerCaballosParaClase, // Nueva función exportada
     handleHorseChange, // Nueva función exportada
+    getHorsesHashForHorario, // Hash de caballos en el mismo horario
+    toast, setToast, // Toast para advertencias
     loading, 
     error, 
     instructoraInfo,

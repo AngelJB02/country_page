@@ -6,6 +6,7 @@ import { AttendanceModal } from "./instructor/atendance-modal"
 import HorseSelect from "./instructor/HorseSelect"
 import useInstructorDashboard from "./instructor/constants.jsx"
 import LogoutButton from "./LogoutBoton"
+import Toast from "./instructor/Toast"
 import "./instructor/instructor.css"
 
 export default function InstructorClases() {
@@ -25,6 +26,9 @@ export default function InstructorClases() {
     handleClassClickFromModal,
     obtenerCaballosParaClase,
     handleHorseChange,
+    getHorsesHashForHorario,
+    toast,
+    setToast,
     loading,
     error,
     instructoraInfo,
@@ -250,6 +254,7 @@ export default function InstructorClases() {
                             classItem={classItem}
                             onHorseChange={handleHorseChange}
                             obtenerCaballosParaClase={obtenerCaballosParaClase}
+                            horsesHash={getHorsesHashForHorario(classItem.date, classItem.time)}
                             disabled={activeView === 'history'}
                           />
                         </td>
@@ -313,6 +318,21 @@ export default function InstructorClases() {
           onClose={() => setShowDateClasses(false)}
           onClassClick={handleClassClickFromModal}
         />
+      )}
+
+      {/* Toast discreto para advertencias */}
+      {toast && (
+        <>
+          {console.log('🎨 Renderizando Toast con:', toast)}
+          <Toast
+            message={toast.message}
+            type={toast.type}
+            onClose={() => {
+              console.log('🔴 Cerrando toast');
+              setToast(null);
+            }}
+          />
+        </>
       )}
     </>
   )
