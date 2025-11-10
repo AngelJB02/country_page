@@ -3,6 +3,62 @@ import db from '../server/db.js';
 
 const router = express.Router();
 
+// Helper para mapear nivel de alumno a especialidad de caballo
+const mapNivelToEspecialidad = (nivel) => {
+  if (!nivel) return null;
+  const n = String(nivel).toLowerCase();
+  if (n.includes('inici')) return 'iniciacion';
+  if (n.includes('inter')) return 'paseo';
+  if (n.includes('avanz')) return 'salto';
+  return null;
+};
+
+// =========================
+// Caché en memoria simple
+// =========================
+const cacheStore = new Map(); // key -> { data, expiresAt }
+const pendingPromises = new Map(); // key -> Promise compartida
+
+const getCache = (key) => {
+  const entry = cacheStore.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) {
+    cacheStore.delete(key);
+    return null;
+  }
+  return entry.data;
+};
+
+const setCache = (key, data, ttlMs) => {
+  cacheStore.set(key, { data, expiresAt: Date.now() + ttlMs });
+};
+
+// Invalidar caché por patrón (nivel, fecha, hora) - elimina todas las variantes con diferentes exclude_reserva_id
+const invalidarCachePorPatron = (nivel, fecha, hora) => {
+  if (!nivel || !fecha || !hora) {
+    // Si no se especifica, limpiar toda la caché
+    cacheStore.clear();
+    pendingPromises.clear();
+    console.log('🗑️ Caché del backend completamente invalidada');
+    return;
+  }
+  const patron = `disp:${(nivel || '').toLowerCase()}|${fecha}|${hora || ''}`;
+  let eliminados = 0;
+  // Eliminar todas las entradas que empiecen con el patrón
+  for (const key of cacheStore.keys()) {
+    if (key.startsWith(patron)) {
+      cacheStore.delete(key);
+      eliminados++;
+    }
+  }
+  for (const key of pendingPromises.keys()) {
+    if (key.startsWith(patron)) {
+      pendingPromises.delete(key);
+    }
+  }
+  console.log(`🗑️ Caché del backend invalidada para patrón "${patron}": ${eliminados} entradas eliminadas`);
+};
+
 // GET - Obtener todos los caballos
 router.get('/', async (req, res) => {
   try {
@@ -25,6 +81,173 @@ router.get('/', async (req, res) => {
   } catch (error) {
     console.error('Error al obtener caballos:', error);
     res.status(500).json({ error: 'Error al obtener la lista de caballos' });
+  }
+});
+
+// GET - Disponibilidad consolidada por nivel/fecha/hora (nuevo endpoint)
+// /api/caballos/disponibles?nivel=Intermedio&fecha=YYYY-MM-DD&hora=HH:MM&exclude_reserva_id=123
+router.get('/disponibles', async (req, res) => {
+  try {
+    const { nivel, fecha, hora, exclude_reserva_id, tipo_clase } = req.query;
+    const ttlMs = 15 * 1000; // 15s (reducido para reflejar cambios de otros instructores más rápido)
+
+    if (!fecha) {
+      return res.status(400).json({ error: 'Parámetro fecha es requerido (YYYY-MM-DD)' });
+    }
+
+    // Calcular cooldown de la clase solicitada
+    const cooldownClaseSolicitada = tipo_clase ? (
+      ['iniciacion', 'paseo'].includes(tipo_clase.toLowerCase()) ? 0 :
+      tipo_clase.toLowerCase() === 'intermedio' ? 2 :
+      ['salto', 'avanzado'].includes(tipo_clase.toLowerCase()) ? 3 : 0
+    ) : 3; // Si no se especifica, usar el peor caso (3 horas)
+
+    // Clave de caché (incluir tipo_clase para diferenciar cooldowns)
+    const cacheKey = `disp:${(nivel||'').toLowerCase()}|${fecha}|${hora||''}|${tipo_clase||''}|${exclude_reserva_id||''}`;
+    const cached = getCache(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
+
+    // Deduplicación de concurrencia
+    if (pendingPromises.has(cacheKey)) {
+      const shared = await pendingPromises.get(cacheKey);
+      return res.json(shared);
+    }
+
+    const especialidad = mapNivelToEspecialidad(nivel);
+
+    // Construir SQL parametrizado
+    // Nota: usamos LIKE por si especialidad tiene valores combinados (ej. 'mixto,iniciacion')
+    const whereEsp = especialidad ? `AND LOWER(c.especialidad) LIKE CONCAT('%', ?, '%')` : '';
+
+    const sql = `
+      SELECT c.id, c.nombre, c.especialidad
+      FROM caballos c
+      WHERE c.disponibilidad = 'disponible'
+        ${whereEsp}
+        AND NOT EXISTS (
+          SELECT 1
+          FROM caballos_descansos d
+          WHERE d.caballo_id = c.id
+            AND d.activo = 1
+            AND d.fecha_inicio <= ?
+            AND (d.fecha_fin IS NULL OR d.fecha_fin >= ?)
+        )
+        AND NOT EXISTS (
+          SELECT 1
+          FROM reservas r
+          WHERE r.caballo_id = c.id
+            AND r.fecha = ?
+            AND r.estatus IN ('pendiente','confirmada','completada')
+            ${hora ? 'AND ? >= r.hora_inicio AND ? < r.hora_fin' : ''}
+            ${exclude_reserva_id ? 'AND r.id <> ?' : ''}
+        )
+        AND (
+          SELECT COUNT(*)
+          FROM reservas r2
+          JOIN clases cl ON cl.id = r2.clase_id
+          WHERE r2.caballo_id = c.id
+            AND r2.fecha = ?
+            AND r2.estatus IN ('confirmada','completada')
+            AND cl.nombre <> 'iniciacion'
+        ) < 3
+        ${hora ? `AND NOT EXISTS (
+          SELECT 1
+          FROM reservas r3
+          JOIN clases cl3 ON cl3.id = r3.clase_id
+          WHERE r3.caballo_id = c.id
+            AND r3.fecha = ?
+            AND r3.caballo_id IS NOT NULL
+            AND r3.estatus IN ('pendiente','confirmada','completada')
+            ${exclude_reserva_id ? 'AND r3.id <> ?' : ''}
+            AND (
+              -- Verificar si la hora de la nueva clase está dentro del período de cooldown de otra clase
+              (? >= r3.hora_fin
+              AND ? < DATE_ADD(r3.hora_fin, INTERVAL 
+                CASE 
+                  WHEN LOWER(cl3.nombre) IN ('iniciacion', 'paseo') THEN 0
+                  WHEN LOWER(cl3.nombre) = 'intermedio' THEN 2
+                  WHEN LOWER(cl3.nombre) IN ('salto', 'avanzado') THEN 3
+                  ELSE 0
+                END HOUR))
+              OR
+              -- Verificar si otra clase se solapa con el cooldown de la clase solicitada
+              -- (asumiendo duración de 1 hora y cooldown según tipo de clase)
+              -- El cooldown de la clase solicitada va desde (hora + 1 hora) hasta (hora + 1 hora + cooldown)
+              -- Verificamos si la otra clase empieza o termina dentro del cooldown
+              (
+                (r3.hora_inicio >= DATE_ADD(?, INTERVAL 1 HOUR)
+                AND r3.hora_inicio < DATE_ADD(?, INTERVAL ${cooldownClaseSolicitada + 1} HOUR))
+                OR
+                (r3.hora_fin > DATE_ADD(?, INTERVAL 1 HOUR)
+                AND r3.hora_fin <= DATE_ADD(?, INTERVAL ${cooldownClaseSolicitada + 1} HOUR))
+                OR
+                (r3.hora_inicio < DATE_ADD(?, INTERVAL 1 HOUR)
+                AND r3.hora_fin > DATE_ADD(?, INTERVAL ${cooldownClaseSolicitada + 1} HOUR))
+              )
+            )
+        )` : ''}
+      ORDER BY c.nombre;
+    `;
+
+    const params = [];
+    if (especialidad) params.push(especialidad);
+    // descansos
+    params.push(fecha, fecha);
+    // reservas del día (ocupación directa)
+    params.push(fecha);
+    if (hora) {
+      const horaFormateada = hora.length === 5 ? `${hora}:00` : hora;
+      params.push(horaFormateada, horaFormateada);
+    }
+    if (exclude_reserva_id) params.push(Number(exclude_reserva_id));
+    // carga diaria
+    params.push(fecha);
+    // cooldown (solo si hay hora)
+    if (hora) {
+      const horaFormateada = hora.length === 5 ? `${hora}:00` : hora;
+      params.push(fecha); // r3.fecha
+      if (exclude_reserva_id) params.push(Number(exclude_reserva_id)); // r3.id <> ?
+      // Comparaciones de cooldown: hora >= hora_fin AND hora < hora_fin + cooldown
+      params.push(horaFormateada, horaFormateada); // 2 veces para las comparaciones del cooldown de otra clase
+      // Comparaciones del cooldown de la clase solicitada (cooldown dinámico según tipo_clase):
+      // - r3.hora_inicio >= (hora + 1 hora) AND r3.hora_inicio < (hora + 1 hora + cooldown)
+      // - r3.hora_fin > (hora + 1 hora) AND r3.hora_fin <= (hora + 1 hora + cooldown)
+      // - r3.hora_inicio < (hora + 1 hora) AND r3.hora_fin > (hora + 1 hora + cooldown)
+      params.push(horaFormateada, horaFormateada, horaFormateada, horaFormateada, horaFormateada, horaFormateada); // 6 veces para las comparaciones del cooldown de esta clase
+    }
+
+    const promise = db.query(sql, params).then(([rows]) => {
+      setCache(cacheKey, rows, ttlMs);
+      return rows;
+    }).finally(() => {
+      pendingPromises.delete(cacheKey);
+    });
+
+    pendingPromises.set(cacheKey, promise);
+    const rows = await promise;
+    return res.json(rows);
+  } catch (error) {
+    console.error('Error en /caballos/disponibles:', error);
+    return res.status(500).json({ error: 'Error al obtener caballos disponibles' });
+  }
+});
+
+// POST - Invalidar caché de caballos disponibles
+router.post('/disponibles/invalidar', async (req, res) => {
+  try {
+    const { nivel, fecha, hora } = req.body;
+    invalidarCachePorPatron(nivel, fecha, hora);
+    return res.json({ 
+      message: 'Caché invalidada exitosamente',
+      nivel,
+      fecha,
+      hora
+    });
+  } catch (error) {
+    console.error('Error al invalidar caché:', error);
+    return res.status(500).json({ error: 'Error al invalidar caché' });
   }
 });
 

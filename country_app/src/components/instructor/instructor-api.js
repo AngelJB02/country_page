@@ -33,34 +33,26 @@ export const obtenerClasesInstructora = async (usuarioId) => {
  * @param {string} asistencia - 'presente', 'ausente', 'justificado', 'pendiente'
  * @returns {Promise<Object>}
  */
-export const actualizarAsistencia = async (reservaId, asistencia) => {
+// Ahora acepta instructoraId para evitar un fetch extra
+export const actualizarAsistencia = async (reservaId, asistencia, instructoraId = null) => {
   try {
     console.log('🔍 DEBUG - Actualizando asistencia:', { reservaId, asistencia });
-    
-    // Obtener el usuario actual para obtener la instructora_id
-    const usuario = obtenerUsuarioActual();
-    if (!usuario || !usuario.id) {
-      throw new Error('No se encontró información de usuario');
+
+    // Si no viene instructoraId desde el front, recuperar desde usuario actual (fallback)
+    if (!instructoraId) {
+      const usuario = obtenerUsuarioActual();
+      if (!usuario || !usuario.id) {
+        throw new Error('No se encontró información de usuario');
+      }
+      const instructoraResponse = await fetch(`${API_BASE_URL}/instructoras/by-user/${usuario.id}`);
+      if (!instructoraResponse.ok) {
+        throw new Error(`Error obteniendo instructora: ${instructoraResponse.status}`);
+      }
+      const instructoraData = await instructoraResponse.json();
+      instructoraId = instructoraData.id || instructoraData.instructora_id;
     }
 
-    console.log('👤 Usuario del localStorage:', usuario);
-
-    // Primero obtener el instructora_id real basado en usuario_id
-    const instructoraResponse = await fetch(`${API_BASE_URL}/instructoras/clases/${usuario.id}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!instructoraResponse.ok) {
-      throw new Error(`Error obteniendo instructora: ${instructoraResponse.status}`);
-    }
-
-    const { instructora } = await instructoraResponse.json();
-    const instructoraId = instructora.id; // Usar 'id' no 'instructora_id'
-    
-    console.log('🏫 Instructora ID obtenido:', instructoraId);
+    console.log('🏫 Instructora ID a usar:', instructoraId);
 
     const response = await fetch(`${API_BASE_URL}/reservas/instructor/${reservaId}/attendance`, {
       method: 'PUT',
@@ -69,7 +61,7 @@ export const actualizarAsistencia = async (reservaId, asistencia) => {
       },
       body: JSON.stringify({ 
         asistio: asistencia === 'presente',
-        instructora_id: instructoraId, // Usar el ID correcto de la tabla instructoras
+        instructora_id: instructoraId, // Enviar instructora_id directo para evitar GET previo
         observaciones: asistencia === 'ausente' ? 'Marcado por instructora' : ''
       }),
     });
@@ -145,26 +137,23 @@ export const obtenerCaballos = async () => {
  * @param {number} caballoId - ID del caballo
  * @returns {Promise<Object>}
  */
-export const asignarCaballo = async (reservaId, caballoId) => {
+// Ahora acepta instructoraId para evitar un fetch extra
+export const asignarCaballo = async (reservaId, caballoId, instructoraId = null) => {
   try {
     console.log('🐴 Asignando caballo:', { reservaId, caballoId });
-    
-    const usuario = obtenerUsuarioActual();
-    if (!usuario || !usuario.id) {
-      throw new Error('No se encontró información de usuario');
-    }
 
-    console.log('👤 Usuario actual:', usuario);
-
-    // Primero obtener el instructor_id correspondiente al usuario
-    const instructoraResponse = await fetch(`${API_BASE_URL}/instructoras/by-user/${usuario.id}`);
-    
-    if (!instructoraResponse.ok) {
-      throw new Error('No se pudo obtener información del instructor');
+    if (!instructoraId) {
+      const usuario = obtenerUsuarioActual();
+      if (!usuario || !usuario.id) {
+        throw new Error('No se encontró información de usuario');
+      }
+      const instructoraResponse = await fetch(`${API_BASE_URL}/instructoras/by-user/${usuario.id}`);
+      if (!instructoraResponse.ok) {
+        throw new Error('No se pudo obtener información del instructor');
+      }
+      const instructoraData = await instructoraResponse.json();
+      instructoraId = instructoraData.id || instructoraData.instructora_id;
     }
-    
-    const instructoraData = await instructoraResponse.json();
-    console.log('👩‍🏫 Instructor encontrado:', instructoraData);
 
     // Ahora hacer la asignación con el instructor_id correcto usando el endpoint existente
     const response = await fetch(`${API_BASE_URL}/reservas/instructor/${reservaId}/assign-horse`, {
@@ -174,13 +163,19 @@ export const asignarCaballo = async (reservaId, caballoId) => {
       },
       body: JSON.stringify({ 
         caballo_id: caballoId,
-        instructora_id: instructoraData.instructora_id
+        instructora_id: instructoraId
       }),
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.error || 'Error al asignar caballo');
+      console.log('🔍 Error del backend al asignar caballo:', errorData);
+      // Crear un error que incluya la respuesta para que el frontend pueda acceder a errorData
+      const error = new Error(errorData.error || 'Error al asignar caballo');
+      error.response = response;
+      error.errorData = errorData;
+      console.log('🔍 Error creado con errorData:', error.errorData);
+      throw error;
     }
 
     const data = await response.json();
@@ -280,64 +275,84 @@ export const obtenerCaballosParaTodasLasClases = async (clases) => {
     return {};
   }
 };
-export const obtenerCaballosDisponiblesParaHorario = async (nivelCliente, fecha, hora, claseActualId = null) => {
-  try {
-    console.log('🔍 Filtrando caballos para:', { nivelCliente, fecha, hora, claseActualId });
-    
-    // Primero obtener todos los caballos por nivel
-    const todosCaballos = await obtenerCaballosPorNivel(nivelCliente, fecha);
-    console.log('🐎 Todos los caballos por nivel:', todosCaballos);
-    
-    // Si no hay fecha/hora, devolver todos
-    if (!fecha || !hora) {
-      return todosCaballos;
-    }
-    
-    // Obtener todas las reservas del día
-    const reservasResponse = await fetch(`${API_BASE_URL}/reservas/admin/all?fecha=${fecha}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+// Caché en memoria para deduplicar por (nivel, fecha, hora)
+const __dispCache = new Map(); // key -> { data, expiresAt }
+const __dispPending = new Map(); // key -> Promise
+const __cacheGet = (key) => {
+  const entry = __dispCache.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) {
+    __dispCache.delete(key);
+    return null;
+  }
+  return entry.data;
+};
+const __cacheSet = (key, data, ttlMs = 15000) => { // 15s (reducido para reflejar cambios de otros instructores más rápido)
+  __dispCache.set(key, { data, expiresAt: Date.now() + ttlMs });
+};
+
+// Función para invalidar caché cuando se asigna/quita un caballo
+export const invalidarCacheDisponibles = async (nivel, fecha, hora) => {
+  if (!nivel || !fecha || !hora) {
+    // Si no se especifica, limpiar toda la caché
+    __dispCache.clear();
+    __dispPending.clear();
+    // También invalidar el caché del backend (en paralelo, no esperar)
+    fetch(`${API_BASE_URL}/caballos/disponibles/invalidar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nivel: null, fecha: null, hora: null })
+    }).catch(error => {
+      console.warn('Error al invalidar caché del backend:', error);
     });
-    
-    if (!reservasResponse.ok) {
-      console.warn('No se pudieron obtener reservas, devolviendo todos los caballos');
-      return todosCaballos;
+    return;
+  }
+  const cacheKey = `${(nivel || '').toLowerCase()}|${fecha || ''}|${hora || ''}`;
+  __dispCache.delete(cacheKey);
+  __dispPending.delete(cacheKey);
+  console.log('🗑️ Caché del frontend invalidada para:', cacheKey);
+  
+  // También invalidar el caché del backend (en paralelo, no esperar para no bloquear)
+  fetch(`${API_BASE_URL}/caballos/disponibles/invalidar`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nivel, fecha, hora })
+  }).then(response => {
+    if (response.ok) {
+      console.log('🗑️ Caché del backend invalidada para:', { nivel, fecha, hora });
     }
-    
-    const reservas = await reservasResponse.json();
-    console.log('� Reservas del día:', reservas);
-    
-    // Encontrar caballos ocupados en ese horario (EXCLUYENDO la clase actual)
-    const caballosOcupados = new Set();
-    
-    for (const reserva of reservas) {
-      // IMPORTANTE: Excluir la clase actual del filtrado
-      if (claseActualId && reserva.id == claseActualId) {
-        console.log(`⏭️ Excluyendo clase actual del filtrado: ${reserva.id}`);
-        continue;
-      }
-      
-      if (reserva.caballo_nombre && 
-          reserva.estatus !== 'cancelada' &&
-          hayConflictoHorario(hora, reserva.hora_inicio, reserva.hora_fin)) {
-        
-        // Buscar el caballo por nombre en la lista de todos los caballos
-        const caballoEncontrado = todosCaballos.find(c => c.nombre === reserva.caballo_nombre);
-        if (caballoEncontrado) {
-          caballosOcupados.add(caballoEncontrado.id);
-          console.log(`❌ Caballo ocupado: ${reserva.caballo_nombre} (${reserva.hora_inicio}-${reserva.hora_fin}) en clase ${reserva.id}`);
-        }
-      }
-    }
-    
-    // Filtrar caballos disponibles
-    const caballosDisponibles = todosCaballos.filter(caballo => !caballosOcupados.has(caballo.id));
-    
-    console.log(`✅ Caballos disponibles: ${caballosDisponibles.length}/${todosCaballos.length} (excluida clase ${claseActualId})`);
-    return caballosDisponibles;
-    
+  }).catch(error => {
+    console.warn('Error al invalidar caché del backend:', error);
+  });
+};
+
+export const obtenerCaballosDisponiblesParaHorario = async (nivelCliente, fecha, hora, claseActualId = null, tipoClase = null) => {
+  try {
+    const cacheKey = `${(nivelCliente || '').toLowerCase()}|${fecha || ''}|${hora || ''}|${tipoClase || ''}`; // incluir tipo de clase en la clave
+    const cached = __cacheGet(cacheKey);
+    if (cached) return cached;
+    if (__dispPending.has(cacheKey)) return await __dispPending.get(cacheKey);
+
+    // Nuevo endpoint consolidado en backend (sin exclude para maximizar reutilización)
+    const url = new URL(`${API_BASE_URL}/caballos/disponibles`);
+    if (nivelCliente) url.searchParams.set('nivel', nivelCliente);
+    if (fecha) url.searchParams.set('fecha', fecha);
+    if (hora) url.searchParams.set('hora', hora);
+    if (tipoClase) url.searchParams.set('tipo_clase', tipoClase);
+
+    const promise = fetch(url.toString(), { method: 'GET' })
+      .then(async (resp) => {
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        __cacheSet(cacheKey, data);
+        return data;
+      })
+      .finally(() => {
+        __dispPending.delete(cacheKey);
+      });
+
+    __dispPending.set(cacheKey, promise);
+    return await promise;
   } catch (error) {
     console.error('Error al filtrar caballos por horario:', error);
     // En caso de error, devolver todos los caballos por nivel
@@ -477,4 +492,12 @@ export const obtenerUsuarioActual = () => {
     console.error('Error al obtener usuario del localStorage:', error);
     return null;
   }
+};
+
+/**
+ * Nuevo helper: caballos disponibles consolidados
+ * Wrapper explícito si quieres llamarlo directo
+ */
+export const obtenerCaballosDisponibles = async ({ nivel, fecha, hora, excludeReservaId }) => {
+  return obtenerCaballosDisponiblesParaHorario(nivel, fecha, hora, excludeReservaId || null);
 };
