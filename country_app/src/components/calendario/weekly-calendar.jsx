@@ -228,12 +228,28 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
             <div className="wc-day-grid">
               {slots.map((slot) => {
                 // Determina si el slot ya está reservado por este usuario (solo confirmada/pendiente)
-                const isBookedByUser = slot.bookings.some((b) => {
-                  if ((b.userId === userId || b.cliente_id === userId)) {
-                    // Solo considerar como reservado si está confirmada o pendiente
-                    return b.estatus === 'confirmada' || b.estatus === 'pendiente';
+                // Usar allWeekBookings en lugar de slot.bookings para tener acceso a cliente_id
+                const slotDateStr = slot.date ? format(slot.date, 'yyyy-MM-dd') : null;
+                const isBookedByUser = allWeekBookings.some((b) => {
+                  if (!b.fecha || !b.hora_inicio || !slotDateStr) return false;
+                  
+                  const reservaDateStr = b.fecha.split('T')[0];
+                  const matchesSlot = (
+                    reservaDateStr === slotDateStr &&
+                    b.hora_inicio.slice(0,5) === slot.time &&
+                    b.clase_nombre === className
+                  );
+                  
+                  if (matchesSlot) {
+                    console.log('🔍 Reserva en este slot:', {
+                      cliente_id: b.cliente_id,
+                      userId: userId,
+                      coincide: b.cliente_id === userId,
+                      estatus: b.estatus
+                    });
                   }
-                  return false;
+                  
+                  return matchesSlot && b.cliente_id === userId && (b.estatus === 'confirmada' || b.estatus === 'pendiente');
                 });
                 return (
                   <TimeSlotCard
