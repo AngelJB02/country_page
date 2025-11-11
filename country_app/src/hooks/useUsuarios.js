@@ -37,11 +37,15 @@ const useUsuarios = () => {
       const { data } = await axios.post(`${API_URL}/register`, nuevoUsuario);
       await obtenerUsuarios();
       
-      // Retornar credenciales si las hay (para usuarios sin email)
+      // Retornar toda la información del usuario creado
       return { 
         success: true, 
         message: data.message,
-        credentials: data.credentials || null
+        credentials: data.credentials || null,
+        username: data.username,
+        password: data.password,
+        id: data.id,
+        rol: data.rol
       };
     } catch (err) {
       console.error(err);
