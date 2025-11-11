@@ -4,7 +4,7 @@ import './css/tieme-slot-card.css'
 // Tarjeta de franja horaria: muestra hora, plazas y estado (disponible/reservada/bloqueada).
 // Usa clases CSS prefijadas `tsc-` y responde a click/Enter/Space para seleccionar la franja.
 
-export function TimeSlotCard({ time, capacity, bookedCount, isBookedByUser, isBlocked, userStatus, instructoraNombre, onClick }) {
+export function TimeSlotCard({ time, capacity, bookedCount, isBookedByUser, isBlocked, isWithin2Hours, hasPassed, userStatus, instructoraNombre, onClick }) {
   const isFull = bookedCount >= capacity;
   const availableSpots = capacity - bookedCount;
   const hasSomeBookings = bookedCount > 0 && bookedCount < capacity;
@@ -34,7 +34,14 @@ export function TimeSlotCard({ time, capacity, bookedCount, isBookedByUser, isBl
 
   let metaText = null;
   if (isBlocked) {
-    metaText = 'Bloqueado';
+    // Mensaje específico según el tipo de bloqueo
+    if (hasPassed) {
+      metaText = 'Clase finalizada';
+    } else if (isWithin2Hours) {
+      metaText = 'Muy pronto (2h anticipación)';
+    } else {
+      metaText = 'Bloqueado';
+    }
   } else if (isBookedByUser && userStatus === 'completada') {
     metaText = 'Ya asististe';
   } else if (isBookedByUser && userStatus === 'cancelada') {

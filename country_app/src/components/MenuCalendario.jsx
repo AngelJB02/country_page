@@ -239,12 +239,13 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
         if (b.timeSlotId && typeof b.timeSlotId === 'string') {
           return b.timeSlotId === selectedSlot.id;
         }
-        // Para reservas reales: comparar día, hora y clase
-        if (b.fecha && b.hora_inicio && selectedSlot.day && selectedSlot.time) {
-          const fechaObj = new Date(b.fecha);
-          const diaSemana = fechaObj.toLocaleDateString('es-MX', { weekday: 'long' });
-          const diaSemanaCap = diaSemana.charAt(0).toUpperCase() + diaSemana.slice(1);
-          return diaSemanaCap === selectedSlot.day && b.hora_inicio.slice(0,5) === selectedSlot.time;
+        // Para reservas reales: comparar fecha y hora exacta
+        if (b.fecha && b.hora_inicio && selectedSlot.date && selectedSlot.time) {
+          const fechaReserva = new Date(b.fecha).toISOString().split('T')[0];
+          const fechaSlot = selectedSlot.date instanceof Date
+            ? selectedSlot.date.toISOString().split('T')[0]
+            : selectedSlot.date.split('T')[0];
+          return fechaReserva === fechaSlot && b.hora_inicio.slice(0,5) === selectedSlot.time;
         }
         return false;
       })

@@ -84,7 +84,7 @@ export function BookingModal({
           {/* Warning if user already has a booking for this day */}
           {!isBookedByUser && hasBookingForDay && (
             <div className="bm-warning">
-              <p className="bm-warning-text">Ya tienes una reserva para {slot.day}. Solo puedes reservar una clase por día.</p>
+              <p className="bm-warning-text">Ya tienes una reserva. Solo puedes reservar una clase por día.</p>
             </div>
           )}
 

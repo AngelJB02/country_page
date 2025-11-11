@@ -254,3 +254,189 @@ h6 {
   cursor: pointer;
 }
 .mc-booking-cancel:hover { background: rgba(193,75,50,0.06); }
+
+.mc-booking-class {
+  color: var(--sage-green);
+  font-weight: 500;
+  font-size: 0.9em;
+}
+
+/* ========================================
+   MEDIA QUERIES - RESPONSIVIDAD
+   ======================================== */
+
+/* Móviles pequeños (< 480px) */
+@media (max-width: 480px) {
+  .mc-container {
+    padding: 16px 12px;
+  }
+
+  .mc-header {
+    margin-bottom: 1rem;
+  }
+
+  .mc-title {
+    font-size: 1.375rem;
+    margin-bottom: 0.375rem;
+  }
+
+  .mc-subtitle {
+    font-size: 0.875rem;
+  }
+
+  /* Tabla de reservaciones */
+  .mc-user-bookings {
+    margin: 1rem auto 1.5rem auto;
+    padding: 12px;
+    border-radius: 6px;
+  }
+
+  .mc-section-title {
+    font-size: 1rem;
+    margin-bottom: 12px;
+  }
+
+  .mc-bookings-list {
+    gap: 6px;
+  }
+
+  .mc-booking-item {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 10px;
+    gap: 8px;
+  }
+
+  .mc-booking-info {
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+    align-items: flex-start;
+  }
+
+  .mc-booking-day {
+    font-size: 0.9375rem;
+  }
+
+  .mc-booking-time {
+    font-size: 0.875rem;
+  }
+
+  .mc-booking-class {
+    font-size: 0.8125rem;
+  }
+
+  .mc-booking-status {
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    margin-left: 0;
+    margin-top: 4px;
+  }
+
+  .mc-booking-cancel {
+    width: 100%;
+    padding: 8px 10px;
+    font-size: 0.875rem;
+    text-align: center;
+    margin-top: 4px;
+  }
+
+  .mc-no-bookings {
+    font-size: 0.875rem;
+  }
+}
+
+/* Móviles medianos (481px - 640px) */
+@media (min-width: 481px) and (max-width: 640px) {
+  .mc-container {
+    padding: 20px 16px;
+  }
+
+  .mc-title {
+    font-size: 1.5rem;
+  }
+
+  .mc-subtitle {
+    font-size: 0.9375rem;
+  }
+
+  .mc-user-bookings {
+    padding: 14px;
+  }
+
+  .mc-booking-item {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .mc-booking-info {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .mc-booking-cancel {
+    flex-shrink: 0;
+    min-width: 90px;
+  }
+}
+
+/* Tablets (641px - 768px) */
+@media (min-width: 641px) and (max-width: 768px) {
+  .mc-container {
+    padding: 24px 20px;
+  }
+
+  .mc-title {
+    font-size: 1.625rem;
+  }
+
+  .mc-user-bookings {
+    max-width: 640px;
+  }
+
+  .mc-booking-info {
+    gap: 10px;
+  }
+}
+
+/* Tablets grandes (769px - 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .mc-container {
+    padding: 28px 24px;
+  }
+
+  .mc-title {
+    font-size: 1.675rem;
+  }
+
+  .mc-user-bookings {
+    max-width: 680px;
+  }
+}
+
+/* Desktop grande (> 1024px) */
+@media (min-width: 1025px) {
+  .mc-container {
+    padding: 32px 24px;
+  }
+
+  .mc-title {
+    font-size: 1.75rem;
+  }
+
+  .mc-user-bookings {
+    max-width: 720px;
+  }
+}
+
+/* Touch devices - mejoras de interactividad */
+@media (hover: none) and (pointer: coarse) {
+  .mc-booking-cancel {
+    min-height: 44px; /* Tamaño mínimo recomendado para touch */
+    padding: 10px 12px;
+  }
+
+  .mc-booking-item {
+    min-height: 60px;
+  }
+}

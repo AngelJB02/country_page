@@ -1,6 +1,7 @@
 // Configuración de horarios por CLASE (no por nivel de usuario)
 export const SCHEDULE_CONFIGS_BY_CLASS = {
   iniciacion: {
+    duration: 30, // minutos por clase
     weekdays: { // Lunes a Viernes
       days: ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"],
       timeSlots: ["07:30", "08:00", "08:30", "09:00", "09:30", "10:00", "15:00", "15:30", "16:00", "16:30"],
@@ -18,6 +19,7 @@ export const SCHEDULE_CONFIGS_BY_CLASS = {
     }
   },
   intermedio: {
+    duration: 60, // minutos por clase
     weekdays: { // Lunes a Viernes
       days: ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"],
       timeSlots: ["08:00", "09:00", "10:00", "17:00"],
@@ -30,6 +32,7 @@ export const SCHEDULE_CONFIGS_BY_CLASS = {
     }
   },
   paseo: {
+    duration: 60, // minutos por clase
     weekdays: { // Lun-Vie
       days: ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"],
       timeSlots: ["08:00", "09:00", "10:00", "11:00", "12:00", "16:00", "17:00"],
@@ -42,6 +45,7 @@ export const SCHEDULE_CONFIGS_BY_CLASS = {
     }
   },
   salto: {
+    duration: 60, // minutos por clase
     weekdays: { // Lunes a Viernes
       days: ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"],
       timeSlots: ["08:00", "09:00", "10:00", "17:00"],

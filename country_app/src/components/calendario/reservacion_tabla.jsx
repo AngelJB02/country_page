@@ -43,8 +43,8 @@ export function ReservacionTabla({ userBookings = [], onCancelBooking }) {
               <li key={b.id} className="mc-booking-item">
                 <div className="mc-booking-info">
                   <span className="mc-booking-day">{day}</span>
-                  <span className="mc-booking-time">{time}</span>
-                  {clase && <span className="mc-booking-class">{clase}</span>}
+                  <span className="mc-booking-time">🕐 {time}</span>
+                  {clase && <span className="mc-booking-class">📚 {clase}</span>}
                   {statusLabel && (
                     <span className={`mc-booking-status ${statusClass}`}>{statusLabel}</span>
                   )}
@@ -55,7 +55,7 @@ export function ReservacionTabla({ userBookings = [], onCancelBooking }) {
                     onClick={() => onCancelBooking && onCancelBooking(b.id)}
                     title="Cancelar reserva"
                   >
-                    Cancelar
+                    ✕ Cancelar
                   </button>
                 )}
               </li>

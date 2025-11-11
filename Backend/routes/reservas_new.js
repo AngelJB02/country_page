@@ -617,6 +617,15 @@ router.get('/my-reservations/:clienteId', async (req, res) => {
   const { clienteId } = req.params;
 
   try {
+    // Actualizar reservas pasadas a completadas automáticamente
+    await db.query(`
+      UPDATE reservas 
+      SET estatus = 'completada'
+      WHERE cliente_id = ?
+      AND estatus IN ('pendiente', 'confirmada')
+      AND CONCAT(fecha, ' ', hora_fin) < NOW()
+    `, [clienteId]);
+
     const query = `
       SELECT 
         r.id,
@@ -1010,10 +1019,21 @@ router.post('/book', async (req, res) => {
 // Obtener todas las reservas de una semana (para calcular disponibilidad)
 router.get('/week', async (req, res) => {
   try {
-    const { fecha_inicio, fecha_fin } = req.query;
+    const { fecha_inicio, fecha_fin, cliente_id } = req.query;
     
     if (!fecha_inicio || !fecha_fin) {
       return res.status(400).json({ error: 'Se requieren fecha_inicio y fecha_fin' });
+    }
+
+    // Si se proporciona cliente_id, actualizar sus reservas pasadas a completadas
+    if (cliente_id) {
+      await db.query(`
+        UPDATE reservas 
+        SET estatus = 'completada'
+        WHERE cliente_id = ?
+        AND estatus IN ('pendiente', 'confirmada')
+        AND CONCAT(fecha, ' ', hora_fin) < NOW()
+      `, [cliente_id]);
     }
 
     const query = `

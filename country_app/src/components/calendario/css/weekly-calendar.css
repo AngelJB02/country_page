@@ -3,26 +3,29 @@
     display: flex;
     flex-direction: column;
     gap: 24px;
+    padding: 0 4px; /* Margen para móviles */
 }
 
 .wc-legend {
     display: flex;
     flex-wrap: wrap;
-    gap: 16px;
+    gap: 12px;
     justify-content: center;
-    font-size: 14px;
+    font-size: 13px;
+    padding: 8px;
 }
 
 .wc-legend-item {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
 }
 
 .wc-legend-box {
-    width: 16px;
-    height: 16px;
-    border-radius: 4px;
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    flex-shrink: 0;
 }
 
 .wc-legend-box--available { background-color: white; border: 2px solid #9CAF88; }
@@ -31,23 +34,26 @@
 .wc-legend-box--partial { background-color: #fff4e6; border: 2px solid #f1c27d; }
 .wc-legend-box--blocked { background-color: #333333; border: 2px solid #2a2a2a; }
 
-.wc-legend-text { color: #6B4423; }
+.wc-legend-text { 
+    color: #6B4423; 
+    font-size: 12px;
+}
 
 .wc-grid {
     /* Mostrar cada día como una fila apilada (filas) en lugar de columnas */
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 20px;
 }
 
 .wc-day {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
 }
 
 .wc-day-title {
-    font-size: 20px;
+    font-size: 18px;
     font-family: serif;
     color: #6B4423;
     text-align: center;
@@ -58,9 +64,9 @@
 
 .wc-day-date {
     text-align: center;
-    font-size: 14px;
+    font-size: 13px;
     color: #6B4423;
-    margin-top: 6px;
+    margin-top: 4px;
     margin-bottom: 0;
 }
 
@@ -103,15 +109,18 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: 8px;
+    padding: 0 4px;
 }
 
 .wc-day-header-main {
     display: flex;
     flex-direction: column;
-    align-items: center; /* mantener título y fecha centrados como antes */
+    align-items: center;
     flex: 1;
     background-color: #E8E0D5;
+    padding: 8px;
+    border-radius: 6px;
 }
 
 
@@ -126,48 +135,158 @@
     cursor: pointer;
     font-size: 12px;
     line-height: 1;
+    flex-shrink: 0;
 }
 
-.wc-day-arrow--side { min-width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; }
+.wc-day-arrow--side { 
+    min-width: 32px; 
+    height: 32px; 
+    display: inline-flex; 
+    align-items: center; 
+    justify-content: center; 
+}
 
 .wc-day-arrow:hover {
     background: rgba(107,68,35,0.04);
 }
 
-/* En pantallas pequeñas, colocar las acciones ligeramente debajo para evitar solapado */
-@media (max-width: 640px) {
-    .wc-day-header {
-        flex-direction: column;
-        align-items: center;
-        gap: 8px;
-    }
-    .wc-day-header-main { align-items: center; }
-    .wc-day-arrow--side { min-width: 28px; height: 28px; }
+.wc-day-arrow:active {
+    transform: scale(0.95);
 }
 
 .wc-day-grid {
-    /* Mostrar las franjas del día en fila (horizontales). Permitimos scroll horizontal si sobran franjas. */
-    display: flex;
-    flex-direction: row;
-    gap: 12px;
-    overflow-x: auto;
-    padding-bottom: 4px;
-
-    /* Centrar franjas cuando hay pocas para que no queden pegadas a la izquierda */
-    justify-content: center;
-    align-items: center;
+    /* Grid responsive que se adapta al ancho disponible */
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    padding: 4px;
 }
 
+/* Media queries para diferentes tamaños de pantalla */
+
+/* Móviles pequeños (< 480px) */
+@media (max-width: 480px) {
+    .wc-root {
+        gap: 16px;
+        padding: 0 2px;
+    }
+
+    .wc-legend {
+        gap: 8px;
+        font-size: 11px;
+    }
+
+    .wc-legend-box {
+        width: 12px;
+        height: 12px;
+    }
+
+    .wc-legend-text {
+        font-size: 11px;
+    }
+
+    .wc-grid {
+        gap: 16px;
+    }
+
+    .wc-day-title {
+        font-size: 16px;
+    }
+
+    .wc-day-date {
+        font-size: 12px;
+    }
+
+    .wc-day-header {
+        flex-direction: row;
+        gap: 6px;
+        padding: 0 2px;
+    }
+
+    .wc-day-arrow--side {
+        min-width: 28px;
+        height: 28px;
+        font-size: 10px;
+    }
+
+    .wc-day-grid {
+        grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+        gap: 8px;
+    }
+
+    .wc-notes {
+        margin-top: 16px;
+        padding: 12px;
+        font-size: 12px;
+    }
+}
+
+/* Tablets y móviles medianos (481px - 768px) */
+@media (min-width: 481px) and (max-width: 768px) {
+    .wc-day-grid {
+        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+        gap: 10px;
+    }
+
+    .wc-day-header {
+        flex-direction: row;
+    }
+}
+
+/* Tablets grandes y escritorio pequeño (769px - 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .wc-day-grid {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 12px;
+    }
+}
+
+/* Escritorio grande (> 1024px) */
+@media (min-width: 1025px) {
+    .wc-root {
+        padding: 0 8px;
+    }
+
+    .wc-grid {
+        gap: 24px;
+    }
+
+    .wc-day-grid {
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 14px;
+    }
+
+    .wc-day-header-main {
+        padding: 12px;
+    }
+}
+
+/* Scroll horizontal suave para móviles si es necesario */
 .wc-day-grid::-webkit-scrollbar {
-    height: 8px;
+    height: 6px;
 }
 .wc-day-grid::-webkit-scrollbar-thumb {
     background: rgba(0,0,0,0.12);
     border-radius: 9999px;
 }
 
-.wc-notes { margin-top: 24px; padding: 16px; border-radius: 8px; }
-.wc-notes--intermedio { background-color: rgba(156, 175, 136, 0.1); border: 1px solid rgba(156, 175, 136, 0.3); }
-.wc-notes--iniciacion { background-color: rgba(193, 123, 74, 0.1); border: 1px solid rgba(193, 123, 74, 0.3); }
-.wc-note-text { font-size: 14px; color: #6B4423; margin: 0; }
+.wc-notes { 
+    margin-top: 20px; 
+    padding: 14px; 
+    border-radius: 8px; 
+}
+.wc-notes--intermedio { 
+    background-color: rgba(156, 175, 136, 0.1); 
+    border: 1px solid rgba(156, 175, 136, 0.3); 
+}
+.wc-notes--iniciacion { 
+    background-color: rgba(193, 123, 74, 0.1); 
+    border: 1px solid rgba(193, 123, 74, 0.3); 
+}
+.wc-note-text { 
+    font-size: 13px; 
+    color: #6B4423; 
+    margin: 0; 
+    line-height: 1.5;
+}
 .wc-note-strong { font-weight: 600; }

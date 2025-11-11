@@ -76,10 +76,28 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
     const slots = [];
     const timeSlots = getTimeSlotsForDay(day);
     const capacity = getCapacityForDay(day);
+    const now = new Date();
     
     timeSlots.forEach((time) => {
       const slotId = `${day}-${time}`;
       const slotDateStr = realDate ? format(realDate, 'yyyy-MM-dd') : null;
+      
+      // Calcular la hora de inicio del slot
+      const [hours, minutes] = time.split(':').map(Number);
+      const slotStartTime = new Date(realDate);
+      slotStartTime.setHours(hours, minutes, 0, 0);
+      
+      // Calcular duración de la clase (según configuración, default 60min)
+      const classDuration = classConfig.duration || 60;
+      const slotEndTime = new Date(slotStartTime);
+      slotEndTime.setMinutes(slotEndTime.getMinutes() + classDuration);
+      
+      // � FILTRO 1: Detectar si el slot ya pasó (pero SÍ mostrarlo, solo marcarlo como bloqueado)
+      const hasPassed = slotEndTime < now;
+      
+      // ⏰ FILTRO 2: Calcular si está dentro de las próximas 2 horas
+      const hoursUntilSlot = (slotStartTime - now) / (1000 * 60 * 60);
+      const isWithin2Hours = hoursUntilSlot < 2 && hoursUntilSlot > 0;
 
       // Filtrar reservas del usuario para este slot (ocupado si no está cancelada)
       const slotBookings = userBookings.filter((b) => {
@@ -134,7 +152,9 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
         capacity,
         bookings: slotBookings,
         totalBooked: totalBookingsForSlot,
-        isBlocked,
+        isBlocked: isBlocked || isWithin2Hours || hasPassed, // Bloquear si: iniciación tarde, <2h, o ya pasó
+        isWithin2Hours, // Flag específico para mensaje "muy pronto"
+        hasPassed, // Flag específico para mensaje "clase finalizada"
         userStatus, // nuevo: estatus de la reserva del usuario (si existe)
         instructoraNombre,
       });
@@ -259,6 +279,8 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
                     bookedCount={slot.totalBooked || slot.bookings.length}
                     isBookedByUser={isBookedByUser}
                     isBlocked={slot.isBlocked || false}
+                    isWithin2Hours={slot.isWithin2Hours || false}
+                    hasPassed={slot.hasPassed || false}
                     userStatus={slot.userStatus}
                     instructoraNombre={slot.instructoraNombre}
                     onClick={() => onSlotClick(slot)}

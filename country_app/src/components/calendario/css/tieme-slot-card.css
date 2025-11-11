@@ -1,12 +1,16 @@
 /* Styles for TimeSlotCard (tsc- prefix) */
 .tsc-card {
-  padding: 16px;
+  padding: 14px;
   border-radius: 8px;
   border: 2px solid #9caf88; /* default border */
   background-color: white;
   color: #6b4423;
   cursor: pointer;
   transition: all 0.2s ease;
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .tsc-card.tsc--blocked,
@@ -53,15 +57,49 @@
   transform: translateY(-2px);
 }
 
-.tsc-inner { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-.tsc-time { font-size: 18px; font-weight: 600; }
+.tsc-inner { 
+  display: flex; 
+  flex-direction: column; 
+  align-items: center; 
+  gap: 6px; 
+  width: 100%;
+}
 
-.tsc-horses { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; }
-.tsc-horse { font-size: 24px; opacity: 0.3; }
+.tsc-time { 
+  font-size: 16px; 
+  font-weight: 600; 
+}
+
+.tsc-horses { 
+  display: flex; 
+  flex-wrap: wrap; 
+  justify-content: center; 
+  gap: 3px; 
+}
+
+.tsc-horse { 
+  font-size: 20px; 
+  opacity: 0.3; 
+}
+
 .tsc-horse--filled { opacity: 1; }
 
-.tsc-meta { font-size: 12px; font-weight: 500; text-align: center; color: #6b4423; }
+.tsc-meta { 
+  font-size: 11px; 
+  font-weight: 500; 
+  text-align: center; 
+  color: #6b4423;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
 .tsc-available-text { color: #9caf88; }
+
+.tsc-instructora {
+  margin-top: 4px;
+  font-size: 10px;
+  opacity: 0.9;
+}
 
 /* Mensajes para estados */
 /* Mantener color blanco solo en estados con fondo oscuro */
@@ -69,4 +107,111 @@
 .tsc-card.tsc--booked .tsc-meta,
 .tsc-card.tsc--blocked .tsc-meta {
   color: white;
+}
+
+/* Media queries para responsividad */
+
+/* Móviles pequeños (< 480px) */
+@media (max-width: 480px) {
+  .tsc-card {
+    padding: 10px;
+    min-height: 100px;
+    border-width: 1.5px;
+  }
+
+  .tsc-inner {
+    gap: 4px;
+  }
+
+  .tsc-time {
+    font-size: 14px;
+  }
+
+  .tsc-horses {
+    gap: 2px;
+  }
+
+  .tsc-horse {
+    font-size: 16px;
+  }
+
+  .tsc-meta {
+    font-size: 10px;
+  }
+
+  .tsc-instructora {
+    font-size: 9px;
+  }
+
+  /* Reducir efecto hover en móviles */
+  .tsc-card:not(.tsc--blocked):not(.tsc--full):hover {
+    transform: translateY(-1px);
+  }
+}
+
+/* Tablets (481px - 768px) */
+@media (min-width: 481px) and (max-width: 768px) {
+  .tsc-card {
+    padding: 12px;
+    min-height: 110px;
+  }
+
+  .tsc-time {
+    font-size: 15px;
+  }
+
+  .tsc-horse {
+    font-size: 18px;
+  }
+
+  .tsc-meta {
+    font-size: 10.5px;
+  }
+}
+
+/* Tablets grandes y escritorio (> 768px) */
+@media (min-width: 769px) {
+  .tsc-card {
+    padding: 16px;
+    min-height: 130px;
+  }
+
+  .tsc-inner {
+    gap: 8px;
+  }
+
+  .tsc-time {
+    font-size: 18px;
+  }
+
+  .tsc-horse {
+    font-size: 24px;
+  }
+
+  .tsc-horses {
+    gap: 4px;
+  }
+
+  .tsc-meta {
+    font-size: 12px;
+  }
+
+  .tsc-instructora {
+    font-size: 11px;
+  }
+}
+
+/* Pantallas muy grandes (> 1200px) */
+@media (min-width: 1200px) {
+  .tsc-card {
+    min-height: 140px;
+  }
+
+  .tsc-time {
+    font-size: 20px;
+  }
+
+  .tsc-horse {
+    font-size: 26px;
+  }
 }
