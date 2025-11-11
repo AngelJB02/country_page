@@ -1244,7 +1244,6 @@ const MembershipAdminDashboard = () => {
                   >
                     <option value="iniciacion">Iniciación</option>
                     <option value="intermedio">Intermedio</option>
-                    <option value="paseo">Paseo</option>
                     <option value="avanzado">Avanzado</option>
                   </select>
                 </div>

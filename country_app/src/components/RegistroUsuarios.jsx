@@ -360,7 +360,7 @@ const FormularioUsuario = React.memo(({ onCrearUsuario, loading }) => {
   );
 
   const tiposNivel = useMemo(
-    () => ["paseo", "iniciacion", "intermedio", "avanzado"],
+    () => ["iniciacion", "intermedio", "avanzado"],
     []
   );
 
