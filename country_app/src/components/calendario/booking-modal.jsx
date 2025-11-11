@@ -22,7 +22,9 @@ export function BookingModal({
 
   if (!slot) return null
 
-  const availableSpots = slot.capacity - slot.bookings.length
+  // Usar totalBooked para mostrar ocupación real (igual que el calendario)
+  const totalBooked = slot.totalBooked !== undefined ? slot.totalBooked : slot.bookings.length;
+  const availableSpots = slot.capacity - totalBooked;
 
   const handleConfirm = async () => {
     setIsLoading(true)
@@ -73,7 +75,7 @@ export function BookingModal({
           {/* Horse icons */}
           <div className="bm-horses">
             {Array.from({ length: slot.capacity }).map((_, index) => (
-              <span key={index} className={`bm-horse ${index < slot.bookings.length ? "bm-horse--filled" : "bm-horse--empty"}`}>
+              <span key={index} className={`bm-horse ${index < totalBooked ? "bm-horse--filled" : "bm-horse--empty"}`}>
                 🐴
               </span>
             ))}
