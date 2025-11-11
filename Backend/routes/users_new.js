@@ -8,22 +8,64 @@ const router = express.Router();
 async function generateUniqueUsername(nombre, apellido) {
   console.log('🔍 Generando username único para:', { nombre, apellido });
   
-  let baseUsername = `${nombre.toLowerCase()}.${apellido.toLowerCase()}`.replace(/\s+/g, '');
-  baseUsername = baseUsername.slice(0, 20); // Limitar el username a un máximo de 20 caracteres
+  // Tomar solo el primer nombre y primer apellido
+  const primerNombre = nombre.toLowerCase().trim().split(' ')[0];
+  const primerApellido = apellido.toLowerCase().trim().split(' ')[0];
+  
+  console.log('👤 Primer nombre:', primerNombre);
+  console.log('👤 Primer apellido:', primerApellido);
+  
+  let baseUsername = `${primerNombre}.${primerApellido}`.replace(/\s+/g, '');
+  console.log('🔤 Username base generado:', baseUsername);
+  
+  // Limitar el base username dejando espacio para números (máximo 17 caracteres para dejar 3 para números)
+  const maxBaseLength = 17;
+  if (baseUsername.length > maxBaseLength) {
+    baseUsername = baseUsername.slice(0, maxBaseLength);
+    console.log('✂️ Username base truncado:', baseUsername);
+  }
+  
   let username = baseUsername;
   let counter = 1;
 
-  console.log('🔤 Base username:', baseUsername);
+  console.log('🔤 Base username final:', baseUsername);
 
   // Verificar si el username ya existe y generar uno único
   while (true) {
     console.log('🔍 Verificando si existe:', username);
     const [existingUser] = await db.query('SELECT id FROM usuarios WHERE username = ?', [username]);
     console.log('📊 Usuarios encontrados:', existingUser.length);
-    if (existingUser.length === 0) break;
-    username = `${baseUsername}${counter}`.slice(0, 20); // Asegurar que el username truncado siga siendo único
+    
+    if (existingUser.length === 0) {
+      console.log('✅ Username disponible:', username);
+      break;
+    }
+    
+    // Generar nuevo username con número
+    username = `${baseUsername}${counter}`;
+    
+    // Asegurar que el username final no exceda 20 caracteres
+    if (username.length > 20) {
+      // Si es muy largo, reducir más el base y volver a intentar
+      const newMaxBaseLength = 20 - counter.toString().length;
+      if (newMaxBaseLength < 3) {
+        // Si el contador es muy grande, usar un username más simple
+        username = `user${counter}${Math.random().toString(36).slice(-3)}`;
+      } else {
+        const shorterBase = baseUsername.slice(0, newMaxBaseLength);
+        username = `${shorterBase}${counter}`;
+      }
+    }
+    
     counter++;
     console.log('🔄 Probando nuevo username:', username);
+    
+    // Prevención de bucle infinito
+    if (counter > 1000) {
+      console.error('❌ Demasiados intentos, generando username aleatorio');
+      username = `user_${Date.now()}_${Math.random().toString(36).slice(-4)}`;
+      break;
+    }
   }
 
   console.log('✅ Username final:', username);
@@ -401,18 +443,31 @@ router.patch('/update-email/:id', async (req, res) => {
 // Actualizar contraseña del usuario
 router.patch('/update-password/:id', async (req, res) => {
   const { id } = req.params;
-  const { password } = req.body;
+  const { password, currentPassword } = req.body;
 
-  // Validar que la contraseña esté presente y cumpla con los requisitos mínimos
+  // Validar que la nueva contraseña esté presente y cumpla con los requisitos mínimos
   if (!password) {
-    return res.status(400).json({ error: 'La contraseña es requerida' });
+    return res.status(400).json({ error: 'La nueva contraseña es requerida' });
   }
 
   if (password.length < 8) {
-    return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres' });
+    return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 8 caracteres' });
   }
 
   try {
+    // Si se proporciona currentPassword, validarla primero
+    if (currentPassword) {
+      const [userCheck] = await db.query(
+        "SELECT id FROM usuarios WHERE id=? AND contrasena=?",
+        [id, currentPassword]
+      );
+
+      if (userCheck.length === 0) {
+        return res.status(400).json({ error: 'La contraseña actual es incorrecta' });
+      }
+    }
+
+    // Actualizar la contraseña
     const [result] = await db.query(
       "UPDATE usuarios SET contrasena=? WHERE id=?",
       [password, id]
