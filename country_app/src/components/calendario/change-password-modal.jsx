@@ -14,8 +14,12 @@ export function ChangePasswordModal({ isOpen, onClose }) {
   if (!isOpen) return null
 
   const handleSubmit = async () => {
-    if (newPass.length < 6) {
-      toast.error('La nueva contraseña debe tener al menos 6 caracteres')
+    if (!oldPass) {
+      toast.error('Debes ingresar tu contraseña actual')
+      return
+    }
+    if (newPass.length < 8) {
+      toast.error('La nueva contraseña debe tener al menos 8 caracteres')
       return
     }
     if (newPass !== confirmPass) {
@@ -23,14 +27,118 @@ export function ChangePasswordModal({ isOpen, onClose }) {
       return
     }
 
+    // Obtener datos del usuario desde localStorage
+    const userDataStr = localStorage.getItem('user');
+    if (!userDataStr) {
+      toast.error('No se encontró información del usuario');
+      return;
+    }
+
+    let userData;
+    try {
+      userData = JSON.parse(userDataStr);
+    } catch (error) {
+      toast.error('Error al leer datos del usuario');
+      return;
+    }
+
     setLoading(true)
-    await new Promise((r) => setTimeout(r, 800))
-    setLoading(false)
-    toast.success('Contraseña actualizada')
-    onClose()
-    setOldPass('')
-    setNewPass('')
-    setConfirmPass('')
+    
+    try {
+      // Actualizar contraseña enviando la contraseña actual para validación
+      const updateResponse = await fetch(`http://localhost:3001/api/users/update-password/${userData.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          password: newPass,
+          currentPassword: oldPass
+        })
+      });
+
+      if (!updateResponse.ok) {
+        const errorData = await updateResponse.json();
+        throw new Error(errorData.error || 'Error al actualizar la contraseña');
+      }
+
+      // Obtener información completa del usuario para el email
+      const userInfoResponse = await fetch(`http://localhost:3001/api/users/${userData.id}`);
+      let userEmail = null;
+      let userName = userData.nombre;
+      let username = localStorage.getItem('username');
+
+      if (userInfoResponse.ok) {
+        const userInfo = await userInfoResponse.json();
+        console.log('🔍 Información del usuario obtenida:', userInfo);
+        userEmail = userInfo.usuario?.correo;
+        userName = userInfo.usuario?.nombre || userData.nombre;
+        username = userInfo.usuario?.username || username;
+        console.log('📧 Email del usuario:', userEmail);
+        console.log('👤 Nombre del usuario:', userName);
+        console.log('🔤 Username:', username);
+      } else {
+        console.error('❌ Error al obtener información del usuario:', userInfoResponse.status);
+      }
+
+      // Enviar email con nueva contraseña si el usuario tiene email
+      console.log('🔍 Verificando si enviar email...');
+      console.log('📧 userEmail:', userEmail);
+      console.log('✅ ¿Tiene email válido?', !!(userEmail && userEmail.trim()));
+      
+      if (userEmail && userEmail.trim()) {
+        console.log('📨 Intentando enviar email con datos:', {
+          email: userEmail,
+          nombre: userName,
+          username: username,
+          newPassword: newPass
+        });
+        
+        try {
+          const emailResponse = await fetch('http://localhost:3001/api/email/send-updated-credentials', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              email: userEmail,
+              nombre: userName,
+              username: username,
+              newPassword: newPass
+            })
+          });
+
+          console.log('📧 Respuesta del email:', emailResponse.status);
+          
+          if (emailResponse.ok) {
+            const emailResult = await emailResponse.json();
+            console.log('✅ Email enviado exitosamente:', emailResult);
+            toast.success('Contraseña actualizada y enviada por email');
+          } else {
+            const emailError = await emailResponse.json();
+            console.error('❌ Error en respuesta del email:', emailError);
+            throw new Error('Error al enviar email');
+          }
+        } catch (emailError) {
+          console.error('❌ Error enviando email:', emailError);
+          toast.success('Contraseña actualizada correctamente (no se pudo enviar por email)');
+        }
+      } else {
+        console.log('⚠️ Usuario sin email registrado, no se enviará email');
+        toast.success('Contraseña actualizada correctamente');
+      }
+
+      // Limpiar el formulario y cerrar
+      setOldPass('');
+      setNewPass('');
+      setConfirmPass('');
+      onClose();
+
+    } catch (error) {
+      toast.error(error.message || 'Error al cambiar la contraseña');
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (

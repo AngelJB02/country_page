@@ -454,7 +454,10 @@ function MenuCalendario() {
         onLogout={handleLogout}
         onChangePassword={() => setIsChangeOpen(true)}
       />
-      <ChangePasswordModal isOpen={isChangeOpen} onClose={() => setIsChangeOpen(false)} />
+      <ChangePasswordModal 
+        isOpen={isChangeOpen} 
+        onClose={() => setIsChangeOpen(false)} 
+      />
       <ToastContainer />
     </div>
   );

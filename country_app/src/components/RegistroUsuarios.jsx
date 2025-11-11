@@ -495,6 +495,7 @@ const FormularioUsuario = React.memo(({ onCrearUsuario, loading }) => {
 
       const dataToSend = {
         ...formData,
+        correo: formData.email, // Mapear email a correo para el backend
         withoutEmail: isWithoutEmail,
         ...(finalCredentials?.password && {
           customPassword: finalCredentials.password,
@@ -506,6 +507,11 @@ const FormularioUsuario = React.memo(({ onCrearUsuario, loading }) => {
           tipo_nivel: null,
         }),
       };
+
+      // Si es sin email, no enviar correo al backend
+      if (isWithoutEmail) {
+        delete dataToSend.correo;
+      }
 
       const resultado = await onCrearUsuario(dataToSend);
       if (resultado.success) {
