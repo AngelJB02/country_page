@@ -620,6 +620,9 @@ router.get('/my-reservations/:clienteId', async (req, res) => {
     const query = `
       SELECT 
         r.id,
+        r.caballo_id,
+        r.instructora_id,
+        r.clase_id,
         r.fecha,
         r.hora_inicio,
         r.hora_fin,
@@ -1007,14 +1010,10 @@ router.post('/book', async (req, res) => {
 // Obtener todas las reservas de una semana (para calcular disponibilidad)
 router.get('/week', async (req, res) => {
   try {
-    const { fecha_inicio, fecha_fin, cliente_id } = req.query;
+    const { fecha_inicio, fecha_fin } = req.query;
     
     if (!fecha_inicio || !fecha_fin) {
       return res.status(400).json({ error: 'Se requieren fecha_inicio y fecha_fin' });
-    }
-
-    if (!cliente_id) {
-      return res.status(400).json({ error: 'Se requiere cliente_id' });
     }
 
     const query = `
@@ -1022,20 +1021,26 @@ router.get('/week', async (req, res) => {
         r.id,
         r.cliente_id,
         r.clase_id,
+        r.caballo_id,
         r.fecha,
         r.hora_inicio,
         r.hora_fin,
         r.estatus,
+        c.nombre as caballo_nombre,
+        i.nombre as instructora_nombre,
+        i.apellido as instructora_apellido,
         cl.nombre as clase_nombre,
         cl.cupo_max
       FROM reservas r
       LEFT JOIN clases cl ON r.clase_id = cl.id
+      LEFT JOIN caballos c ON r.caballo_id = c.id
+      LEFT JOIN instructoras inst ON r.instructora_id = inst.id
+      LEFT JOIN usuarios i ON inst.usuario_id = i.id
       WHERE r.fecha BETWEEN ? AND ?
-        AND r.cliente_id = ?
       ORDER BY r.fecha, r.hora_inicio
     `;
 
-    const [rows] = await db.query(query, [formatDateForMySQL(fecha_inicio), formatDateForMySQL(fecha_fin), cliente_id]);
+    const [rows] = await db.query(query, [formatDateForMySQL(fecha_inicio), formatDateForMySQL(fecha_fin)]);
     res.json(rows);
   } catch (err) {
     console.error('Error obteniendo reservas de la semana:', err);

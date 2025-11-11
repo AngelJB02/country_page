@@ -252,26 +252,27 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
 
   // Determina si el usuario ya tiene reserva ese día (solo confirmada/pendiente)
   // Excepto para propietario, renta y media_renta que pueden tener múltiples reservas por día
-  const hasBookingForDay = selectedSlot && userType !== 'propietario' && userType !== 'renta' && userType !== 'media_renta'
-    ? userBookings.some(b => {
-        // Excluir reservas canceladas o completadas
-        if (b.estatus === 'cancelada' || b.estatus === 'completada') {
+  // Para clientes tipo general: si tiene cualquier reserva pendiente o confirmada, deshabilitar todos los slots
+  const hasBookingForDay = userType === 'general'
+    ? userBookings.some(b => b.estatus === 'pendiente' || b.estatus === 'confirmada')
+    : selectedSlot && userType !== 'propietario' && userType !== 'renta' && userType !== 'media_renta'
+      ? userBookings.some(b => {
+          if (b.estatus === 'cancelada' || b.estatus === 'completada') {
+            return false;
+          }
+          if (b.timeSlotId && typeof b.timeSlotId === 'string') {
+            return b.timeSlotId.split('-')[0] === selectedSlot.id.split('-')[0];
+          }
+          if (b.fecha && selectedSlot.date) {
+            const fechaReserva = new Date(b.fecha).toISOString().split('T')[0];
+            const fechaSlot = selectedSlot.date instanceof Date
+              ? selectedSlot.date.toISOString().split('T')[0]
+              : selectedSlot.date.split('T')[0];
+            return fechaReserva === fechaSlot;
+          }
           return false;
-        }
-        // Para reservas dummy
-        if (b.timeSlotId && typeof b.timeSlotId === 'string') {
-          return b.timeSlotId.startsWith(selectedSlot.day);
-        }
-        // Para reservas reales
-        if (b.fecha && selectedSlot.day) {
-          const fechaObj = new Date(b.fecha);
-          const diaSemana = fechaObj.toLocaleDateString('es-MX', { weekday: 'long' });
-          const diaSemanaCap = diaSemana.charAt(0).toUpperCase() + diaSemana.slice(1);
-          return diaSemanaCap === selectedSlot.day;
-        }
-        return false;
-      })
-    : false;
+        })
+      : false;
 
   // Simula la regla de 24h (debería venir del backend)
   const hasBookingWithin24h = false;

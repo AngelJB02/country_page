@@ -94,23 +94,6 @@ export function BookingModal({
               <p className="bm-warning-text">Podrás reservar dentro de 24 horas.</p>
             </div>
           )}
-
-          {/* Current bookings list */}
-          {slot.bookings.length > 0 && (
-            <div className="bm-bookings">
-              <p className="bm-bookings-title">Alumnos inscritos:</p>
-              <div className="bm-bookings-list">
-                <ul className="bm-bookings-ul">
-                  {slot.bookings.map((booking) => (
-                    <li key={booking.id} className="bm-booking-item">
-                      <span className="bm-booking-icon">🐴</span>
-                      {booking.userName}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          )}
         </div>
 
         <div className="bm-actions">
