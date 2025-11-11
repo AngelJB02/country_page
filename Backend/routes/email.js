@@ -16,9 +16,9 @@ router.post("/send-credentials", async (req, res) => {
     }
 
     const response = await resend.emails.send({
-      from: "EL REFUGIO <noreply@elrefugiocountryclub.com>",
+      from: "Acme <onboarding@resend.dev>",
       to: usuarioData.email,
-      subject: "Tus credenciales de acceso - EL REFUGIO",
+      subject: "Tus credenciales de acceso - EL REFUGIO (DESARROLLO)",
       html: `<!DOCTYPE html>
 <html>
 <head>
@@ -158,9 +158,9 @@ router.post("/send-updated-credentials", async (req, res) => {
     }
 
     const response = await resend.emails.send({
-      from: "EL REFUGIO <noreply@elrefugiocountryclub.com>",
+      from: "Acme <onboarding@resend.dev>",
       to: email,
-      subject: "Contraseña actualizada - EL REFUGIO",
+      subject: "Contraseña actualizada - EL REFUGIO (DESARROLLO)",
       html: `<!DOCTYPE html>
 <html>
 <head>
