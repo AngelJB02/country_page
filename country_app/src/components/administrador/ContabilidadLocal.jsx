@@ -609,6 +609,7 @@ const MembershipAdminDashboardLocal = () => {
           monthlyFee: u.monto || 0,
           paymentDate: "",
           lastPaymentDate: u.fecha_pago || "",
+          proximaFecha: u.proxima_fecha || "",
           rol: u.rol || "",
         }))
         setMembers(mapped)
@@ -891,7 +892,7 @@ const MembershipAdminDashboardLocal = () => {
                           fontWeight: expired ? "600" : "500",
                         }}
                       >
-                        {formatDate(member.paymentDate)}
+                        {formatDate(member.proximaFecha) || "-"}
                       </td>
                       <td>
                         <button

@@ -6,70 +6,90 @@ const router = express.Router();
 
 // Función compartida para generar username único
 async function generateUniqueUsername(nombre, apellido) {
-  console.log('🔍 Generando username único para:', { nombre, apellido });
-  
-  // Tomar solo el primer nombre y primer apellido
-  const primerNombre = nombre.toLowerCase().trim().split(' ')[0];
-  const primerApellido = apellido.toLowerCase().trim().split(' ')[0];
-  
-  console.log('👤 Primer nombre:', primerNombre);
-  console.log('👤 Primer apellido:', primerApellido);
-  
-  let baseUsername = `${primerNombre}.${primerApellido}`.replace(/\s+/g, '');
-  console.log('🔤 Username base generado:', baseUsername);
-  
-  // Limitar el base username dejando espacio para números (máximo 17 caracteres para dejar 3 para números)
-  const maxBaseLength = 17;
-  if (baseUsername.length > maxBaseLength) {
-    baseUsername = baseUsername.slice(0, maxBaseLength);
-    console.log('✂️ Username base truncado:', baseUsername);
-  }
-  
-  let username = baseUsername;
-  let counter = 1;
-
-  console.log('🔤 Base username final:', baseUsername);
-
-  // Verificar si el username ya existe y generar uno único
-  while (true) {
-    console.log('🔍 Verificando si existe:', username);
-    const [existingUser] = await db.query('SELECT id FROM usuarios WHERE username = ?', [username]);
-    console.log('📊 Usuarios encontrados:', existingUser.length);
+  try {
+    console.log('🔍 Generando username único para:', { nombre, apellido });
     
-    if (existingUser.length === 0) {
-      console.log('✅ Username disponible:', username);
-      break;
+    // Validar que nombre y apellido no estén vacíos
+    if (!nombre || !apellido || nombre.trim() === '' || apellido.trim() === '') {
+      throw new Error('Nombre y apellido no pueden estar vacíos');
     }
     
-    // Generar nuevo username con número
-    username = `${baseUsername}${counter}`;
+    // Tomar solo el primer nombre y primer apellido
+    const primerNombre = nombre.toLowerCase().trim().split(' ')[0];
+    const primerApellido = apellido.toLowerCase().trim().split(' ')[0];
     
-    // Asegurar que el username final no exceda 20 caracteres
-    if (username.length > 20) {
-      // Si es muy largo, reducir más el base y volver a intentar
-      const newMaxBaseLength = 20 - counter.toString().length;
-      if (newMaxBaseLength < 3) {
-        // Si el contador es muy grande, usar un username más simple
-        username = `user${counter}${Math.random().toString(36).slice(-3)}`;
-      } else {
-        const shorterBase = baseUsername.slice(0, newMaxBaseLength);
-        username = `${shorterBase}${counter}`;
+    if (!primerNombre || !primerApellido) {
+      throw new Error('No se pudo extraer nombre o apellido válido');
+    }
+    
+    console.log('👤 Primer nombre:', primerNombre);
+    console.log('👤 Primer apellido:', primerApellido);
+    
+    let baseUsername = `${primerNombre}.${primerApellido}`.replace(/\s+/g, '');
+    console.log('🔤 Username base generado:', baseUsername);
+    
+    // Limitar el base username dejando espacio para números (máximo 17 caracteres para dejar 3 para números)
+    const maxBaseLength = 17;
+    if (baseUsername.length > maxBaseLength) {
+      baseUsername = baseUsername.slice(0, maxBaseLength);
+      console.log('✂️ Username base truncado:', baseUsername);
+    }
+    
+    let username = baseUsername;
+    let counter = 1;
+
+    console.log('🔤 Base username final:', baseUsername);
+
+    // Verificar si el username ya existe y generar uno único
+    while (true) {
+      console.log('🔍 Verificando si existe:', username);
+      
+      try {
+        const [existingUser] = await db.query('SELECT id FROM usuarios WHERE username = ?', [username]);
+        console.log('📊 Usuarios encontrados:', existingUser.length);
+        
+        if (existingUser.length === 0) {
+          console.log('✅ Username disponible:', username);
+          break;
+        }
+      } catch (dbError) {
+        console.error('❌ Error al consultar base de datos:', dbError);
+        throw new Error(`Error de base de datos: ${dbError.message}`);
+      }
+      
+      // Generar nuevo username con número
+      username = `${baseUsername}${counter}`;
+      
+      // Asegurar que el username final no exceda 20 caracteres
+      if (username.length > 20) {
+        // Si es muy largo, reducir más el base y volver a intentar
+        const newMaxBaseLength = 20 - counter.toString().length;
+        if (newMaxBaseLength < 3) {
+          // Si el contador es muy grande, usar un username más simple
+          username = `user${counter}${Math.random().toString(36).slice(-3)}`;
+        } else {
+          const shorterBase = baseUsername.slice(0, newMaxBaseLength);
+          username = `${shorterBase}${counter}`;
+        }
+      }
+      
+      counter++;
+      console.log('🔄 Probando nuevo username:', username);
+      
+      // Prevención de bucle infinito
+      if (counter > 1000) {
+        console.error('❌ Demasiados intentos, generando username aleatorio');
+        username = `user_${Date.now()}_${Math.random().toString(36).slice(-4)}`;
+        break;
       }
     }
-    
-    counter++;
-    console.log('🔄 Probando nuevo username:', username);
-    
-    // Prevención de bucle infinito
-    if (counter > 1000) {
-      console.error('❌ Demasiados intentos, generando username aleatorio');
-      username = `user_${Date.now()}_${Math.random().toString(36).slice(-4)}`;
-      break;
-    }
-  }
 
-  console.log('✅ Username final:', username);
-  return username;
+    console.log('✅ Username final:', username);
+    return username;
+  } catch (error) {
+    console.error('❌ Error en generateUniqueUsername:', error);
+    throw error;
+  }
 }
 
 // Función helper para formatear fechas para MySQL
@@ -140,11 +160,26 @@ router.get('/users-with-payments', async (req, res) => {
 
     const [rows] = await db.query(query);
 
-    // Formatear las fechas para mostrar
-    const formattedRows = rows.map(row => ({
-      ...row,
-      fecha_pago: row.fecha_pago ? formatDateForDisplay(row.fecha_pago) : null
-    }));
+    // Formatear las fechas para mostrar y calcular próxima fecha de pago
+    const formattedRows = rows.map(row => {
+      let proxima_fecha = null;
+      
+      // Calcular próxima fecha de pago: última fecha + 1 mes (30 días)
+      if (row.fecha_pago) {
+        const fechaPago = new Date(row.fecha_pago);
+        if (!isNaN(fechaPago.getTime())) {
+          // Agregar 30 días a la fecha de pago
+          fechaPago.setDate(fechaPago.getDate() + 30);
+          proxima_fecha = formatDateForDisplay(fechaPago.toISOString());
+        }
+      }
+      
+      return {
+        ...row,
+        fecha_pago: row.fecha_pago ? formatDateForDisplay(row.fecha_pago) : null,
+        proxima_fecha: proxima_fecha
+      };
+    });
 
     res.json(formattedRows);
   } catch (err) {
@@ -277,9 +312,14 @@ router.post('/preview-credentials', async (req, res) => {
     return res.status(400).json({ error: 'Nombre y apellido son requeridos' });
   }
 
+  // Validar que nombre y apellido sean strings no vacíos
+  if (typeof nombre !== 'string' || typeof apellido !== 'string' || nombre.trim() === '' || apellido.trim() === '') {
+    return res.status(400).json({ error: 'Nombre y apellido deben ser strings no vacíos' });
+  }
+
   try {
     // Usar la función compartida para generar username único
-    const username = await generateUniqueUsername(nombre, apellido);
+    const username = await generateUniqueUsername(nombre.trim(), apellido.trim());
 
     // Generar contraseña (usar personalizada si se proporciona)
     const password = customPassword || Math.random().toString(36).slice(-8);
@@ -291,8 +331,11 @@ router.post('/preview-credentials', async (req, res) => {
       }
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Error al generar credenciales' });
+    console.error('Error en preview-credentials:', err);
+    res.status(500).json({ 
+      error: 'Error al generar credenciales',
+      details: err.message 
+    });
   }
 });
 
@@ -379,7 +422,7 @@ router.post('/register-cliente', async (req, res) => {
         id: userResult.insertId,
         nombre,
         apellido,
-        email: placeholderEmail,
+        email: userEmail,
         username: credentials.username,
         password: credentials.password,
         edad,

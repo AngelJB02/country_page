@@ -92,6 +92,9 @@
   padding: var(--spacing-lg) var(--spacing-md);
   border-radius: 16px;
   animation: fadeIn 0.6s ease-out;
+  overflow-x: hidden;
+  overflow-y: visible;
+  position: relative;
 }
 
 /* HEADER */
@@ -269,6 +272,7 @@
   margin-bottom: var(--spacing-xl);
   box-shadow: var(--medium-shadow);
   border: 2px solid rgba(255, 255, 255, 0.3);
+  overflow: visible;
 }
 
 .controls-inner {
@@ -288,6 +292,7 @@
   box-shadow: 0 4px 20px rgba(107, 68, 35, 0.06), 0 1px 4px rgba(107, 68, 35, 0.04);
   border: 1px solid rgba(193, 123, 74, 0.08);
   animation: slideIn 0.8s ease-out 0.4s both;
+  overflow: visible;
 }
 
 .enhanced-search-filter {
@@ -425,14 +430,30 @@
 }
 
 /* TABLA */
+.table-container {
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(107, 68, 35, 0.08), 0 2px 8px rgba(107, 68, 35, 0.04);
+  background: rgba(255, 255, 255, 0.9);
+  overflow: visible;
+  position: relative;
+}
+
+.table-wrapper {
+  overflow: visible;
+}
+
 .members-table {
   width: 100%;
-  border-collapse: collapse;
-  background: rgba(255, 255, 255, 0.9);
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 8px 32px rgba(107, 68, 35, 0.08), 0 2px 8px rgba(107, 68, 35, 0.04);
+  border-collapse: separate;
+  border-spacing: 0;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
   animation: fadeIn 0.8s ease-out 0.6s both;
+}
+
+.members-table thead {
+  display: table-header-group;
 }
 
 .members-table thead tr {
@@ -449,7 +470,9 @@
   letter-spacing: 0.5px;
   text-transform: uppercase;
   border: none;
+  background: linear-gradient(135deg, var(--primary-brown) 0%, var(--secondary-brown) 100%);
 }
+
 
 .members-table td {
   padding: 1.25rem;
@@ -704,6 +727,11 @@ body.no-scroll {
     min-width: auto;
   }
 
+  .table-container {
+    border-radius: 12px;
+    overflow: visible;
+  }
+
   .members-table {
     font-size: 0.9rem;
   }
@@ -711,6 +739,13 @@ body.no-scroll {
   .members-table th,
   .members-table td {
     padding: 0.75rem 0.5rem;
+  }
+
+  .members-table th {
+    font-size: 0.85rem;
+    position: sticky;
+    top: 0;
+    z-index: 100;
   }
 
   .modal-content {

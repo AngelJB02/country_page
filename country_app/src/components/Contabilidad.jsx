@@ -99,6 +99,33 @@ const MembershipAdminDashboard = () => {
     return isNaN(date.getTime()) ? "" : date.toISOString().split("T")[0]
   }
 
+  // Función auxiliar para copiar texto al portapapeles (fallback)
+  const fallbackCopyTextToClipboard = (text) => {
+    return new Promise((resolve, reject) => {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-999999px";
+      textArea.style.top = "-999999px";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      
+      try {
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textArea);
+        if (successful) {
+          resolve();
+        } else {
+          reject(new Error('Fallback: Copy command failed'));
+        }
+      } catch (err) {
+        document.body.removeChild(textArea);
+        reject(err);
+      }
+    });
+  }
+
   // Funciones para generar credenciales en frontend (solo para vista previa)
   const generateSecurePassword = () => {
     const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -693,6 +720,7 @@ const MembershipAdminDashboard = () => {
           monthlyFee: u.monto || 0,
           paymentDate: "",
           lastPaymentDate: u.fecha_pago || "",
+          proximaFecha: u.proxima_fecha || "",
           rol: u.rol || "",
         }))
         setMembers(mapped)
@@ -888,7 +916,7 @@ const MembershipAdminDashboard = () => {
 
       {/* CONTENIDO DE CLIENTES */}
       {activeTab === "clientes" && (
-        <div style={{ marginTop: "2rem" }}>
+        <div style={{ marginTop: "2rem", overflow: "visible" }}>
           {/* CONTROLES */}
           <div className="controls-container enhanced-controls">
             <div className="controls-inner">
@@ -948,19 +976,20 @@ const MembershipAdminDashboard = () => {
             </div>
           ) : (
             <div className="table-container">
-              <table className="members-table">
-                <thead>
-                  <tr>
-                    <th>Nombre</th>
-                    <th>Email</th>
-                    <th>Estado</th>
-                    <th>Mensualidad</th>
-                    <th>Último Pago</th>
-                    <th>Próximo Pago</th>
-                    <th>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <div className="table-wrapper">
+                <table className="members-table">
+                  <thead>
+                    <tr>
+                      <th>Nombre</th>
+                      <th>Email</th>
+                      <th>Estado</th>
+                      <th>Mensualidad</th>
+                      <th>Último Pago</th>
+                      <th>Próximo Pago</th>
+                      <th>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
                   {filteredMembers.length === 0 ? (
                     <tr>
                       <td
@@ -1069,7 +1098,7 @@ const MembershipAdminDashboard = () => {
                               fontWeight: expired ? "600" : "500",
                             }}
                           >
-                            {formatDate(member.paymentDate)}
+                            {formatDate(member.proximaFecha) || "-"}
                           </td>
                           <td>
                             <button
@@ -1109,7 +1138,8 @@ const MembershipAdminDashboard = () => {
                     })
                   )}
                 </tbody>
-              </table>
+                </table>
+              </div>
             </div>
           )}
         </div>
@@ -1377,15 +1407,35 @@ const MembershipAdminDashboard = () => {
                     <button
                       type="button"
                       onClick={async () => {
-                        const realCreds = await getRealCredentials(
-                          newClient.nombre, 
-                          newClient.apellido, 
-                          previewCredentials.password
-                        );
-                        const credentialsText = `Username: ${realCreds?.username || previewCredentials.username}\nContraseña: ${realCreds?.password || previewCredentials.password}`;
-                        navigator.clipboard.writeText(credentialsText);
-                        setCopyMessage("Credenciales copiadas");
-                        setTimeout(() => setCopyMessage(""), 2000);
+                        try {
+                          const realCreds = await getRealCredentials(
+                            newClient.nombre, 
+                            newClient.apellido, 
+                            previewCredentials.password
+                          );
+                          const credentialsText = `Username: ${realCreds?.username || previewCredentials.username}\nContraseña: ${realCreds?.password || previewCredentials.password}`;
+                          
+                          // Intentar usar Clipboard API moderno
+                          if (navigator.clipboard && navigator.clipboard.writeText) {
+                            try {
+                              await navigator.clipboard.writeText(credentialsText);
+                              setCopyMessage("Credenciales copiadas");
+                            } catch (clipboardError) {
+                              // Fallback a método alternativo si Clipboard API falla
+                              await fallbackCopyTextToClipboard(credentialsText);
+                              setCopyMessage("Credenciales copiadas");
+                            }
+                          } else {
+                            // Fallback para navegadores que no soportan Clipboard API
+                            await fallbackCopyTextToClipboard(credentialsText);
+                            setCopyMessage("Credenciales copiadas");
+                          }
+                          setTimeout(() => setCopyMessage(""), 2000);
+                        } catch (error) {
+                          console.error("Error al copiar credenciales:", error);
+                          setCopyMessage("Error al copiar");
+                          setTimeout(() => setCopyMessage(""), 2000);
+                        }
                       }}
                       style={{
                         padding: '6px 12px',
