@@ -56,6 +56,19 @@ export const SCHEDULE_CONFIGS_BY_CLASS = {
       timeSlots: ["08:00", "09:00", "10:00"],
       capacity: 6,
     }
+  },
+  avanzado: {
+    duration: 60, // minutos por clase
+    weekdays: { // Lunes a Viernes
+      days: ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"],
+      timeSlots: ["08:00", "09:00", "10:00", "17:00"],
+      capacity: 6,
+    },
+    weekend: { // Sábados y Domingos
+      days: ["Sábado", "Domingo"],
+      timeSlots: ["08:00", "09:00", "10:00"],
+      capacity: 6,
+    }
   }
 };
 

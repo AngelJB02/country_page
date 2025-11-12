@@ -1196,19 +1196,13 @@ const MembershipAdminDashboard = () => {
                 </div>
                 <div className="modal-field">
                   <label>Rol:</label>
-                  <select
-                    value={newClient.rol || "cliente"}
-                    onChange={(e) => setNewClient({ ...newClient, rol: e.target.value })}
+                  <input
+                    type="text"
+                    value="Cliente"
+                    readOnly
                     name="newclient-rol"
-                  >
-                    <option value="cliente">Cliente</option>
-                    <option value="propietario">Propietario</option>
-                    <option value="renta">Renta</option>
-                    <option value="media_renta">Media Renta</option>
-                    <option value="administrador">Administrador</option>
-                    <option value="instructora">Instructora</option>
-                    <option value="creadorcuentas">Creador de cuentas</option>
-                  </select>
+                    style={{ backgroundColor: '#f5f5f5', color: '#888', cursor: 'not-allowed' }}
+                  />
                 </div>
                 <div className="modal-field">
                   <label>Tipo de Cliente:</label>

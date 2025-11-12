@@ -1,24 +1,70 @@
 import { TimeSlotCard } from './time-slot-card';
-import { SCHEDULE_CONFIGS_BY_CLASS } from './lib/schedule-config';
 // import { useBookings } from './lib/booking-context';
 import { getCurrentWeek, formatDayLabel } from './utils/week';
 import { format, addDays, isBefore, startOfDay } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import './css/weekly-calendar.css'
 
 
 export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userBookings = [], allWeekBookings = [], className, claseCupoMax }) {
-  // Obtener configuración por clase específica
-  const classConfig = SCHEDULE_CONFIGS_BY_CLASS[className];
+  // ⚠️ IMPORTANTE: Todos los hooks deben estar al inicio, antes de cualquier return condicional
   
-  if (!classConfig) {
-    console.warn(`No se encontró configuración para la clase: ${className}`);
-    return <div>No hay horarios disponibles para esta clase</div>;
-  }
+  // Estados para horarios dinámicos desde la base de datos
+  const [dynamicSchedule, setDynamicSchedule] = useState(null);
+  const [loadingSchedule, setLoadingSchedule] = useState(true);
+  const [scheduleError, setScheduleError] = useState(null);
   
   // fecha base para la semana mostrada (permite navegar semanas)
-  const [currentDate, setCurrentDate] = useState(new Date())
+  const [currentDate, setCurrentDate] = useState(new Date());
+  
+  // Cargar horarios desde la base de datos
+  useEffect(() => {
+    const fetchSchedule = async () => {
+      if (!className) {
+        setScheduleError('No se especificó clase');
+        setLoadingSchedule(false);
+        return;
+      }
+      
+      try {
+        setLoadingSchedule(true);
+        const response = await fetch(`http://localhost:3001/api/horarios/clase/${className}`);
+        if (!response.ok) {
+          throw new Error('Error al cargar horarios desde la base de datos');
+        }
+        const data = await response.json();
+        setDynamicSchedule(data);
+        setScheduleError(null);
+      } catch (error) {
+        console.error('Error cargando horarios:', error);
+        setScheduleError(error.message);
+        setDynamicSchedule(null);
+      } finally {
+        setLoadingSchedule(false);
+      }
+    };
+    
+    fetchSchedule();
+  }, [className]);
+  
+  // Renders condicionales DESPUÉS de todos los hooks
+  if (loadingSchedule) {
+    return (
+      <div style={{ textAlign: 'center', padding: '2rem' }}>
+        <div>Cargando horarios...</div>
+      </div>
+    );
+  }
+  
+  if (!dynamicSchedule || !dynamicSchedule.horarios) {
+    return (
+      <div style={{ textAlign: 'center', padding: '2rem', color: '#d32f2f' }}>
+        <div>No se pudieron cargar los horarios desde la base de datos.</div>
+        {scheduleError && <div style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>{scheduleError}</div>}
+      </div>
+    );
+  }
 
   // mapear los días configurados a las fechas reales de la semana actualmente seleccionada
   const weekDates = getCurrentWeek(currentDate, 1) // semana empezando el lunes
@@ -30,44 +76,34 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
     dayNameToDate[cap] = d
   })
   
-  // Función para obtener los timeSlots correctos según el día
+  // Función para obtener los timeSlots correctos según el día (desde DB)
   const getTimeSlotsForDay = (dayName) => {
     const date = dayNameToDate[dayName];
     if (!date) return [];
     
-    const dayOfWeek = date.getDay(); // 0 = domingo, 6 = sábado
-    
-    // Determinar qué configuración usar según el día
-    if (classConfig.weekdays && dayOfWeek >= 1 && dayOfWeek <= 5) {
-      return classConfig.weekdays.timeSlots;
-    } else if (classConfig.saturday && dayOfWeek === 6) {
-      return classConfig.saturday.timeSlots;
-    } else if (classConfig.sunday && dayOfWeek === 0) {
-      return classConfig.sunday.timeSlots;
-    } else if (classConfig.weekend && (dayOfWeek === 0 || dayOfWeek === 6)) {
-      return classConfig.weekend.timeSlots;
+    // Obtener horarios desde la BD
+    const horariosDelDia = dynamicSchedule.horarios[dayName];
+    if (horariosDelDia && Array.isArray(horariosDelDia)) {
+      return horariosDelDia.map(h => h.hora_inicio);
     }
     
     return [];
   };
   
-  // Función para obtener la capacidad correcta según el día
-  const getCapacityForDay = (dayName) => {
-    const date = dayNameToDate[dayName];
-    if (!date) return claseCupoMax || 6;
+  // Función para obtener la capacidad correcta según el día y hora específica (desde DB)
+  const getCapacityForSlot = (dayName, time) => {
+    if (!dayNameToDate[dayName]) return claseCupoMax || 6;
     
-    const dayOfWeek = date.getDay();
-    
-    if (classConfig.weekdays && dayOfWeek >= 1 && dayOfWeek <= 5) {
-      return claseCupoMax || classConfig.weekdays.capacity;
-    } else if (classConfig.saturday && dayOfWeek === 6) {
-      return claseCupoMax || classConfig.saturday.capacity;
-    } else if (classConfig.sunday && dayOfWeek === 0) {
-      return claseCupoMax || classConfig.sunday.capacity;
-    } else if (classConfig.weekend && (dayOfWeek === 0 || dayOfWeek === 6)) {
-      return claseCupoMax || classConfig.weekend.capacity;
+    // Obtener capacidad desde la BD (PRIORIDAD)
+    const horariosDelDia = dynamicSchedule.horarios[dayName];
+    if (horariosDelDia && Array.isArray(horariosDelDia)) {
+      const horario = horariosDelDia.find(h => h.hora_inicio === time);
+      if (horario && horario.capacidad) {
+        return horario.capacidad; // Usar capacidad específica del horario
+      }
     }
     
+    // Fallback a cupo máximo de la clase o 6
     return claseCupoMax || 6;
   };
   
@@ -75,20 +111,22 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
   const generateTimeSlots = (day, realDate) => {
     const slots = [];
     const timeSlots = getTimeSlotsForDay(day);
-    const capacity = getCapacityForDay(day);
     const now = new Date();
     
     timeSlots.forEach((time) => {
       const slotId = `${day}-${time}`;
       const slotDateStr = realDate ? format(realDate, 'yyyy-MM-dd') : null;
       
+      // Obtener capacidad específica para este slot
+      const capacity = getCapacityForSlot(day, time);
+      
       // Calcular la hora de inicio del slot
       const [hours, minutes] = time.split(':').map(Number);
       const slotStartTime = new Date(realDate);
       slotStartTime.setHours(hours, minutes, 0, 0);
       
-      // Calcular duración de la clase (según configuración, default 60min)
-      const classDuration = classConfig.duration || 60;
+      // Calcular duración de la clase (desde BD)
+      const classDuration = dynamicSchedule.duracion || 60;
       const slotEndTime = new Date(slotStartTime);
       slotEndTime.setMinutes(slotEndTime.getMinutes() + classDuration);
       
@@ -162,14 +200,12 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
     return slots;
   };
 
-  // Obtener todos los días únicos de todas las configuraciones de la clase
+  // Obtener todos los días únicos desde la BD
   const getAllDaysForClass = () => {
-    const allDays = new Set();
-    if (classConfig.weekdays) classConfig.weekdays.days.forEach(d => allDays.add(d));
-    if (classConfig.weekend) classConfig.weekend.days.forEach(d => allDays.add(d));
-    if (classConfig.saturday) classConfig.saturday.days.forEach(d => allDays.add(d));
-    if (classConfig.sunday) classConfig.sunday.days.forEach(d => allDays.add(d));
-    return Array.from(allDays);
+    if (dynamicSchedule && dynamicSchedule.horarios) {
+      return Object.keys(dynamicSchedule.horarios);
+    }
+    return [];
   };
 
   const slotsByDay = getAllDaysForClass().map((day) => {

@@ -16,7 +16,7 @@ const InstructorasAdmin = () => {
     apellido: "",
     correo: "",
     telefono: "",
-    especialidad: "iniciacion"
+    especialidad: ""
   });
   const [creatingInstructor, setCreatingInstructor] = useState(false);
   const [updatingInstructor, setUpdatingInstructor] = useState(false);
@@ -108,7 +108,7 @@ const InstructorasAdmin = () => {
       apellido: "",
       correo: "",
       telefono: "",
-      especialidad: "iniciacion"
+      especialidad: ""
     });
     setAddInstructorModalOpen(true);
   };
@@ -120,7 +120,7 @@ const InstructorasAdmin = () => {
       apellido: "",
       correo: "",
       telefono: "",
-      especialidad: "iniciacion"
+      especialidad: ""
     });
   };
 
@@ -719,17 +719,34 @@ const InstructorasAdmin = () => {
                 </div>
                 <div className="modal-field">
                   <label>Especialidad *:</label>
-                  <select
-                    value={editingInstructor.especialidad}
-                    onChange={e => setEditingInstructor({ ...editingInstructor, especialidad: e.target.value })}
-                    name="editinstructor-especialidad"
-                  >
-                    <option value="iniciacion">Iniciación</option>
-                    <option value="intermedio">Intermedio</option>
-                    <option value="paseo">Paseo</option>
-                    <option value="salto">Salto</option>
-                    <option value="mixto">Mixto</option>
-                  </select>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '8px 0' }}>
+                    {['iniciacion', 'intermedio', 'paseo', 'avanzado'].map(esp => {
+                      const selectedEspecialidades = editingInstructor.especialidad ? editingInstructor.especialidad.split(',') : [];
+                      const isChecked = selectedEspecialidades.includes(esp);
+                      
+                      return (
+                        <label key={esp} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              let newEspecialidades = [...selectedEspecialidades];
+                              if (e.target.checked) {
+                                if (!newEspecialidades.includes(esp)) {
+                                  newEspecialidades.push(esp);
+                                }
+                              } else {
+                                newEspecialidades = newEspecialidades.filter(item => item !== esp);
+                              }
+                              setEditingInstructor({ ...editingInstructor, especialidad: newEspecialidades.join(',') });
+                            }}
+                            style={{ cursor: 'pointer', width: '18px', height: '18px' }}
+                          />
+                          <span style={{ textTransform: 'capitalize' }}>{esp}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
               <div className="modal-actions">
@@ -798,17 +815,34 @@ const InstructorasAdmin = () => {
                 </div>
                 <div className="modal-field">
                   <label>Especialidad *:</label>
-                  <select
-                    value={newInstructor.especialidad}
-                    onChange={e => setNewInstructor({ ...newInstructor, especialidad: e.target.value })}
-                    name="newinstructor-especialidad"
-                  >
-                    <option value="iniciacion">Iniciación</option>
-                    <option value="intermedio">Intermedio</option>
-                    <option value="paseo">Paseo</option>
-                    <option value="salto">Salto</option>
-                    <option value="mixto">Mixto</option>
-                  </select>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '8px 0' }}>
+                    {['iniciacion', 'intermedio', 'paseo', 'avanzado'].map(esp => {
+                      const selectedEspecialidades = newInstructor.especialidad ? newInstructor.especialidad.split(',') : [];
+                      const isChecked = selectedEspecialidades.includes(esp);
+                      
+                      return (
+                        <label key={esp} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              let newEspecialidades = [...selectedEspecialidades];
+                              if (e.target.checked) {
+                                if (!newEspecialidades.includes(esp)) {
+                                  newEspecialidades.push(esp);
+                                }
+                              } else {
+                                newEspecialidades = newEspecialidades.filter(item => item !== esp);
+                              }
+                              setNewInstructor({ ...newInstructor, especialidad: newEspecialidades.join(',') });
+                            }}
+                            style={{ cursor: 'pointer', width: '18px', height: '18px' }}
+                          />
+                          <span style={{ textTransform: 'capitalize' }}>{esp}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
               <div className="modal-actions">

@@ -303,7 +303,8 @@ router.post('/', async (req, res) => {
     correo, 
     telefono, 
     disponibilidad,
-    customPassword 
+    customPassword,
+    especialidad 
   } = req.body;
   
   // Validar campos requeridos
@@ -347,22 +348,48 @@ router.post('/', async (req, res) => {
     
     // 4. Crear registro en tabla instructoras
     const [instructorResult] = await connection.query(
-      `INSERT INTO instructoras (usuario_id, nombre, apellido, num_contacto, disponibilidad, fecha_registro) 
-       VALUES (?, ?, ?, ?, ?, NOW())`,
-      [usuarioId, nombre, apellido, telefono, disponibilidad || 'disponible']
+      `INSERT INTO instructoras (usuario_id, nombre, apellido, num_contacto, especialidad, disponibilidad, fecha_registro) 
+       VALUES (?, ?, ?, ?, ?, ?, NOW())`,
+      [usuarioId, nombre, apellido, telefono, especialidad || '', disponibilidad || 'disponible']
     );
+    
+    const instructoraId = instructorResult.insertId;
+    
+    // 5. Sincronizar tabla instructora_clase si hay especialidades
+    if (especialidad && especialidad.trim() !== '') {
+      const especialidades = especialidad.split(',').map(e => e.trim());
+      const claseMapping = {
+        'iniciacion': 1,
+        'intermedio': 2,
+        'paseo': 3,
+        'avanzado': 4
+      };
+      
+      for (const esp of especialidades) {
+        const claseId = claseMapping[esp.toLowerCase()];
+        if (claseId) {
+          await connection.query(
+            `INSERT INTO instructora_clase (instructora_id, clase_id, activo) 
+             VALUES (?, ?, 1)
+             ON DUPLICATE KEY UPDATE activo = 1`,
+            [instructoraId, claseId]
+          );
+        }
+      }
+    }
     
     await connection.commit();
     
     res.json({
       message: 'Instructora creada correctamente',
       instructora: {
-        id: instructorResult.insertId,
+        id: instructoraId,
         usuario_id: usuarioId,
         nombre,
         apellido,
         num_contacto: telefono,
         correo,
+        especialidad: especialidad || '',
         disponibilidad: disponibilidad || 'disponible',
         username,
         password
@@ -473,6 +500,39 @@ router.put('/:id', async (req, res) => {
         `UPDATE usuarios SET ${updateFieldsUsuario.join(', ')} WHERE id = ?`,
         updateValuesUsuario
       );
+    }
+    
+    // Sincronizar tabla instructora_clase si se actualizó especialidad
+    if (especialidad !== undefined) {
+      const claseMapping = {
+        'iniciacion': 1,
+        'intermedio': 2,
+        'paseo': 3,
+        'avanzado': 4
+      };
+      
+      // 1. Desactivar todas las clases actuales
+      await connection.query(
+        'UPDATE instructora_clase SET activo = 0 WHERE instructora_id = ?',
+        [id]
+      );
+      
+      // 2. Activar/insertar las clases seleccionadas
+      if (especialidad && especialidad.trim() !== '') {
+        const especialidades = especialidad.split(',').map(e => e.trim());
+        
+        for (const esp of especialidades) {
+          const claseId = claseMapping[esp.toLowerCase()];
+          if (claseId) {
+            await connection.query(
+              `INSERT INTO instructora_clase (instructora_id, clase_id, activo) 
+               VALUES (?, ?, 1)
+               ON DUPLICATE KEY UPDATE activo = 1`,
+              [id, claseId]
+            );
+          }
+        }
+      }
     }
     
     await connection.commit();

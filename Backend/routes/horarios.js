@@ -2,6 +2,68 @@ import express from 'express';
 const router = express.Router();
 import db from '../server/db.js';
 
+// GET /api/horarios/clase/:nombreClase - Obtener horarios por clase desde horarios_clase
+router.get('/clase/:nombreClase', async (req, res) => {
+  const { nombreClase } = req.params;
+  
+  try {
+    // Obtener horarios agrupados por día de la semana
+    const [rows] = await db.execute(
+      `SELECT 
+        hc.id,
+        hc.dia_semana,
+        hc.hora_inicio,
+        hc.hora_fin,
+        hc.capacidad,
+        c.nombre as clase_nombre,
+        c.duracion_min
+       FROM horarios_clase hc
+       INNER JOIN clases c ON hc.clase_id = c.id
+       WHERE c.nombre = ? AND hc.activo = 1
+       ORDER BY 
+         FIELD(hc.dia_semana, 'L', 'M', 'X', 'J', 'V', 'S', 'D'),
+         hc.hora_inicio ASC`,
+      [nombreClase.toLowerCase()]
+    );
+    
+    // Mapear día de semana a nombre completo
+    const dayMap = {
+      'L': 'Lunes',
+      'M': 'Martes',
+      'X': 'Miércoles',
+      'J': 'Jueves',
+      'V': 'Viernes',
+      'S': 'Sábado',
+      'D': 'Domingo'
+    };
+    
+    // Agrupar horarios por día y formatear
+    const horariosPorDia = rows.reduce((acc, row) => {
+      const dia = dayMap[row.dia_semana];
+      if (!acc[dia]) {
+        acc[dia] = [];
+      }
+      acc[dia].push({
+        id: row.id,
+        hora_inicio: row.hora_inicio.substring(0, 5), // HH:MM
+        hora_fin: row.hora_fin.substring(0, 5),
+        capacidad: row.capacidad,
+        duracion_min: row.duracion_min
+      });
+      return acc;
+    }, {});
+    
+    res.json({
+      clase: nombreClase.toLowerCase(),
+      duracion: rows[0]?.duracion_min || 60,
+      horarios: horariosPorDia
+    });
+  } catch (err) {
+    console.error('Error obteniendo horarios de clase:', err);
+    res.status(500).json({ error: "Error obteniendo horarios de clase" });
+  }
+});
+
 // GET /api/horarios - Obtener horarios dinámicamente desde la base de datos
 router.get('/', async (req, res) => {
   const { dia_semana } = req.query;

@@ -98,7 +98,7 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
   const nivelToClase = {
     'iniciacion': ['iniciacion'],
     'intermedio': ['intermedio'],
-    'avanzado': ['salto', 'intermedio', 'paseo'],
+    'avanzado': ['avanzado'], // Solo clase de salto para usuarios avanzados
     'paseo': ['paseo'],
   };
 
