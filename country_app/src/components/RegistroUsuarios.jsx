@@ -360,7 +360,7 @@ const FormularioUsuario = React.memo(({ onCrearUsuario, loading }) => {
   );
 
   const tiposNivel = useMemo(
-    () => ["iniciacion", "intermedio", "avanzado"],
+    () => ["iniciacion", "paseo", "intermedio", "avanzado"],
     []
   );
 
@@ -934,7 +934,7 @@ const FormularioUsuario = React.memo(({ onCrearUsuario, loading }) => {
               </div>
             </div>
 
-            <div className="form-row-three">
+            <div className="form-row">
               {/* CAMPO "TIPO DE CLIENTE" */}
               <div className="form-group">
                 <label htmlFor="tipo_cliente">Tipo de Cliente</label>
@@ -957,21 +957,6 @@ const FormularioUsuario = React.memo(({ onCrearUsuario, loading }) => {
                     </option>
                   ))}
                 </select>
-              </div>
-
-              {/* CAMPO "DISCIPLINA" */}
-              <div className="form-group">
-                <label htmlFor="nivel">Disciplina (Nivel)</label>
-                <input
-                  type="text"
-                  id="nivel"
-                  name="nivel"
-                  value={formData.nivel}
-                  onChange={handleChange}
-                  className="form-input"
-                  placeholder="Ej: Equitación, Salto"
-                  disabled={loading}
-                />
               </div>
 
               {/* CAMPO "NIVEL (TIPO NIVEL)" */}
