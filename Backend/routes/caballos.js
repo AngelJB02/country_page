@@ -8,7 +8,8 @@ const mapNivelToEspecialidad = (nivel) => {
   if (!nivel) return null;
   const n = String(nivel).toLowerCase();
   if (n.includes('inici')) return 'iniciacion';
-  if (n.includes('inter')) return 'paseo';
+  if (n.includes('inter')) return 'intermedio';
+  if (n.includes('paseo')) return 'paseo';
   if (n.includes('avanz')) return 'salto';
   return null;
 };
@@ -326,7 +327,7 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Estatus inválido' });
     }
 
-    const especialidadesValidas = ['iniciacion', 'paseo', 'salto'];
+    const especialidadesValidas = ['iniciacion', 'paseo', 'intermedio', 'salto'];
     
     // Validar especialidades (puede ser string o array)
     let especialidadFinal = especialidad;
@@ -449,7 +450,7 @@ router.put('/:id', async (req, res) => {
     }
 
     if (especialidad) {
-      const especialidadesValidas = ['iniciacion', 'paseo', 'salto'];
+      const especialidadesValidas = ['iniciacion', 'paseo', 'intermedio', 'salto'];
       
       // Validar especialidades (puede ser string o array)
       let especialidadFinal = especialidad;

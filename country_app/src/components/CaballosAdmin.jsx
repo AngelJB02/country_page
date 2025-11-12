@@ -33,7 +33,7 @@ const CaballosAdmin = () => {
   };
 
   // Funciones para manejar especialidades múltiples
-  const especialidadesDisponibles = ['iniciacion', 'paseo', 'salto'];
+  const especialidadesDisponibles = ['iniciacion', 'paseo', 'intermedio', 'salto'];
   
   const parseEspecialidades = (especialidadString) => {
     if (!especialidadString) return [];

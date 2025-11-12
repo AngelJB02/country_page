@@ -414,7 +414,8 @@ export const obtenerCaballosPorNivel = async (nivelCliente, fecha = null) => {
     const mapeoEspecialidad = {
       'iniciación': 'iniciacion',
       'iniciacion': 'iniciacion',
-      'intermedio': 'paseo', 
+      'intermedio': 'intermedio',
+      'paseo': 'paseo',
       'avanzado': 'salto'
     };
 
