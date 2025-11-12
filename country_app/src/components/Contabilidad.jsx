@@ -1219,17 +1219,6 @@ const MembershipAdminDashboard = () => {
                   </select>
                 </div>
                 <div className="modal-field">
-                  <label>Nivel:</label>
-                  <input
-                    type="text"
-                    value={newClient.nivel || ""}
-                    onChange={(e) => setNewClient({ ...newClient, nivel: e.target.value })}
-                    placeholder="Nivel"
-                    autoComplete="off"
-                    name="newclient-nivel"
-                  />
-                </div>
-                <div className="modal-field">
                   <label>Tipo de Nivel:</label>
                   <select
                     value={newClient.tipo_nivel || "iniciacion"}
@@ -1237,6 +1226,7 @@ const MembershipAdminDashboard = () => {
                     name="newclient-tipo-nivel"
                   >
                     <option value="iniciacion">Iniciación</option>
+                    <option value="paseo">Paseo</option>
                     <option value="intermedio">Intermedio</option>
                     <option value="avanzado">Avanzado</option>
                   </select>
