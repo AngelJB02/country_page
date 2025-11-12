@@ -22,8 +22,9 @@ const MembershipAdminDashboardLocal = () => {
   const [newPayment, setNewPayment] = useState({
     monto: "",
     fecha_pago: "",
-    proxima_fecha: "",
-    metodo_pago: "efectivo",
+    concepto: "",
+    estatus_pago: "pagado",
+    observaciones: "",
   })
   const [loading, setLoading] = useState(true)
   const [currentUser, setCurrentUser] = useState(null)
@@ -349,8 +350,9 @@ const MembershipAdminDashboardLocal = () => {
     setNewPayment({
       monto: "",
       fecha_pago: "",
-      proxima_fecha: "",
-      metodo_pago: "efectivo",
+      concepto: "",
+      estatus_pago: "pagado",
+      observaciones: "",
     })
     
     // Cargar historial de pagos
@@ -377,8 +379,9 @@ const MembershipAdminDashboardLocal = () => {
     setNewPayment({
       monto: "",
       fecha_pago: "",
-      proxima_fecha: "",
-      metodo_pago: "efectivo",
+      concepto: "",
+      estatus_pago: "pagado",
+      observaciones: "",
     })
   }
 
@@ -386,8 +389,7 @@ const MembershipAdminDashboardLocal = () => {
   const openEditPaymentModal = (payment) => {
     setEditingPayment({
       ...payment,
-      fecha_pago: formatDate(payment.fecha_pago),
-      proxima_fecha: formatDate(payment.proxima_fecha)
+      fecha_pago: formatDate(payment.fecha_pago)
     })
     setEditPaymentModalOpen(true)
   }
@@ -399,17 +401,8 @@ const MembershipAdminDashboardLocal = () => {
 
   const updatePayment = async () => {
     try {
-      if (!editingPayment.monto || !editingPayment.fecha_pago || !editingPayment.proxima_fecha) {
-        showNotification("Por favor completa todos los campos", "error")
-        return
-      }
-
-      // Validar que la fecha de próximo pago no sea anterior a la fecha de pago
-      const fechaPago = new Date(editingPayment.fecha_pago)
-      const proximaFecha = new Date(editingPayment.proxima_fecha)
-      
-      if (proximaFecha < fechaPago) {
-        showNotification("La fecha de próximo pago no puede ser anterior a la fecha de pago", "error")
+      if (!editingPayment.monto || !editingPayment.fecha_pago || !editingPayment.concepto) {
+        showNotification("Por favor completa todos los campos requeridos", "error")
         return
       }
 
@@ -421,8 +414,9 @@ const MembershipAdminDashboardLocal = () => {
         body: JSON.stringify({
           monto: editingPayment.monto,
           fecha_pago: editingPayment.fecha_pago,
-          proxima_fecha: editingPayment.proxima_fecha,
-          metodo_pago: editingPayment.metodo_pago,
+          concepto: editingPayment.concepto,
+          estatus_pago: editingPayment.estatus_pago || "pagado",
+          observaciones: editingPayment.observaciones || null,
         }),
       })
 
@@ -449,26 +443,18 @@ const MembershipAdminDashboardLocal = () => {
 
   const addNewPayment = async () => {
     try {
-      if (!newPayment.monto || !newPayment.fecha_pago || !newPayment.proxima_fecha) {
-        showNotification("Por favor completa todos los campos del pago", "error")
-        return
-      }
-
-      // Validar que la fecha de próximo pago no sea anterior a la fecha de pago
-      const fechaPago = new Date(newPayment.fecha_pago)
-      const proximaFecha = new Date(newPayment.proxima_fecha)
-      
-      if (proximaFecha < fechaPago) {
-        showNotification("La fecha de próximo pago no puede ser anterior a la fecha de pago", "error")
+      if (!newPayment.monto || !newPayment.fecha_pago || !newPayment.concepto) {
+        showNotification("Por favor completa todos los campos requeridos del pago", "error")
         return
       }
 
       const paymentData = {
-        id_usuario: selectedMember.id,
+        cliente_id: selectedMember.id,
         monto: parseFloat(newPayment.monto),
         fecha_pago: newPayment.fecha_pago,
-        proxima_fecha: newPayment.proxima_fecha,
-        metodo_pago: newPayment.metodo_pago
+        concepto: newPayment.concepto,
+        estatus_pago: newPayment.estatus_pago || "pagado",
+        observaciones: newPayment.observaciones || null
       }
 
       const response = await fetch("http://localhost:3001/api/users/add-payment", {
@@ -618,10 +604,10 @@ const MembershipAdminDashboardLocal = () => {
         const mapped = data.map((u) => ({
           id: u.id,
           name: u.nombre + (u.apellido ? " " + u.apellido : ""),
-          email: u.email,
-          status: capitalizeStatus(u.estado),
+          email: u.email || "",
+          status: capitalizeStatus(u.estatus),
           monthlyFee: u.monto || 0,
-          paymentDate: u.proxima_fecha || "",
+          paymentDate: "",
           lastPaymentDate: u.fecha_pago || "",
           rol: u.rol || "",
         }))
@@ -651,14 +637,7 @@ const MembershipAdminDashboardLocal = () => {
         changes.fecha_pago = selectedMember.lastPaymentDate
         hasChanges = true
       }
-      if (selectedMember.paymentDate !== originalMember.paymentDate) {
-        if (!selectedMember.paymentDate) {
-          showNotification("Por favor completa la fecha de próximo pago", "error")
-          return
-        }
-        changes.proxima_fecha = selectedMember.paymentDate
-        hasChanges = true
-      }
+      // Nota: proxima_fecha no existe en la tabla contabilidad, se maneja a través del historial de pagos
 
       if (!hasChanges) {
         closeModal()
@@ -829,7 +808,28 @@ const MembershipAdminDashboardLocal = () => {
                   return (
                     <tr key={member.id}>
                       <td style={{ fontWeight: "600" }}>{member.name}</td>
-                      <td style={{ color: "var(--stone-gray)" }}>{member.email}</td>
+                      <td>
+                        {member.email ? (
+                          <span style={{ color: "var(--stone-gray)" }}>{member.email}</span>
+                        ) : (
+                          <span
+                            style={{
+                              color: "#dc3545",
+                              fontWeight: "bold",
+                              fontSize: "13px",
+                              fontStyle: "italic",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.5px",
+                              backgroundColor: "#f8d7da",
+                              padding: "4px 8px",
+                              borderRadius: "4px",
+                              display: "inline-block",
+                            }}
+                          >
+                            Sin correo registrado
+                          </span>
+                        )}
+                      </td>
                       <td>
                         <select
                           className="status-badge"
@@ -1332,11 +1332,14 @@ const MembershipAdminDashboardLocal = () => {
                       <div key={index} className="payment-item">
                         <div className="payment-info">
                           <div className="payment-amount">${formatCurrency(payment.monto)}</div>
-                          <div className="payment-method">Método: {payment.metodo_pago}</div>
+                          <div className="payment-concept">Concepto: {payment.concepto || "N/A"}</div>
+                          <div className="payment-status">Estado: {payment.estatus_pago || "N/A"}</div>
                           <div className="payment-dates">
-                            <span>Pago: {formatDate(payment.fecha_pago)}</span>
-                            <span>Próximo: {formatDate(payment.proxima_fecha)}</span>
+                            <span>Fecha de Pago: {formatDate(payment.fecha_pago)}</span>
                           </div>
+                          {payment.observaciones && (
+                            <div className="payment-observations">Observaciones: {payment.observaciones}</div>
+                          )}
                         </div>
                         <button
                           type="button"
@@ -1388,29 +1391,43 @@ const MembershipAdminDashboardLocal = () => {
                   />
                 </div>
                 <div className="modal-field">
-                  <label>Próximo Pago *:</label>
+                  <label>Concepto *:</label>
                   <input
-                    type="date"
-                    value={newPayment.proxima_fecha}
-                    onChange={(e) => setNewPayment({ ...newPayment, proxima_fecha: e.target.value })}
+                    type="text"
+                    value={newPayment.concepto}
+                    onChange={(e) => setNewPayment({ ...newPayment, concepto: e.target.value })}
+                    placeholder="Ej: Mensualidad, Pago inicial, etc."
                     autoComplete="off"
                     data-lpignore="true"
                     data-form-type="other"
                   />
                 </div>
                 <div className="modal-field">
-                  <label>Método de Pago *:</label>
+                  <label>Estado del Pago *:</label>
                   <select
-                    value={newPayment.metodo_pago}
-                    onChange={(e) => setNewPayment({ ...newPayment, metodo_pago: e.target.value })}
+                    value={newPayment.estatus_pago}
+                    onChange={(e) => setNewPayment({ ...newPayment, estatus_pago: e.target.value })}
                     className="status-filter"
                     data-lpignore="true"
                     data-form-type="other"
                   >
-                    <option value="efectivo">Efectivo</option>
-                    <option value="transferencia">Transferencia</option>
-                    <option value="link">Link de Pago</option>
+                    <option value="pagado">Pagado</option>
+                    <option value="pendiente">Pendiente</option>
+                    <option value="vencido">Vencido</option>
+                    <option value="bloqueado">Bloqueado</option>
                   </select>
+                </div>
+                <div className="modal-field">
+                  <label>Observaciones:</label>
+                  <textarea
+                    value={newPayment.observaciones}
+                    onChange={(e) => setNewPayment({ ...newPayment, observaciones: e.target.value })}
+                    placeholder="Observaciones adicionales (opcional)"
+                    rows="3"
+                    autoComplete="off"
+                    data-lpignore="true"
+                    data-form-type="other"
+                  />
                 </div>
               </div>
 
@@ -1459,24 +1476,36 @@ const MembershipAdminDashboardLocal = () => {
                 </div>
 
                 <div className="modal-field">
-                  <label>Próxima Fecha de Pago *:</label>
+                  <label>Concepto *:</label>
                   <input
-                    type="date"
-                    value={editingPayment?.proxima_fecha || ""}
-                    onChange={(e) => setEditingPayment({...editingPayment, proxima_fecha: e.target.value})}
+                    type="text"
+                    value={editingPayment?.concepto || ""}
+                    onChange={(e) => setEditingPayment({...editingPayment, concepto: e.target.value})}
+                    placeholder="Ej: Mensualidad, Pago inicial, etc."
                   />
                 </div>
 
                 <div className="modal-field">
-                  <label>Método de Pago:</label>
+                  <label>Estado del Pago *:</label>
                   <select
-                    value={editingPayment?.metodo_pago || "efectivo"}
-                    onChange={(e) => setEditingPayment({...editingPayment, metodo_pago: e.target.value})}
+                    value={editingPayment?.estatus_pago || "pagado"}
+                    onChange={(e) => setEditingPayment({...editingPayment, estatus_pago: e.target.value})}
                   >
-                    <option value="efectivo">Efectivo</option>
-                    <option value="transferencia">Transferencia</option>
-                    <option value="link">Link de Pago</option>
+                    <option value="pagado">Pagado</option>
+                    <option value="pendiente">Pendiente</option>
+                    <option value="vencido">Vencido</option>
+                    <option value="bloqueado">Bloqueado</option>
                   </select>
+                </div>
+
+                <div className="modal-field">
+                  <label>Observaciones:</label>
+                  <textarea
+                    value={editingPayment?.observaciones || ""}
+                    onChange={(e) => setEditingPayment({...editingPayment, observaciones: e.target.value})}
+                    placeholder="Observaciones adicionales (opcional)"
+                    rows="3"
+                  />
                 </div>
 
                 {/* Botones integrados dentro del contenido */}

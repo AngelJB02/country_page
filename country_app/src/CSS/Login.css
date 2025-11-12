@@ -321,6 +321,39 @@
   background: linear-gradient(135deg, var(--sage-green) 0%, var(--terracotta) 100%);
 }
 
+.login-button-small {
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--dark-brown);
+  border: 2px solid rgba(107, 68, 35, 0.2);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  font-size: 0.9rem;
+  font-weight: 500;
+  font-family: 'Roboto Flex', sans-serif;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: var(--spacing-md);
+  text-transform: none;
+  letter-spacing: normal;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.login-button-small:hover {
+  background: rgba(255, 255, 255, 1);
+  border-color: var(--terracotta);
+  color: var(--primary-brown);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(107, 68, 35, 0.15);
+}
+
+.login-button-small:active {
+  transform: translateY(0);
+}
+
 .divider {
   display: flex;
   align-items: center;
@@ -403,14 +436,31 @@
 }
 
 .success-message {
-  background: #ffffff; /* Blanco */
-  color: #ffffff;; /* Verde del éxito */
+  background: linear-gradient(135deg, rgba(135, 169, 107, 0.15) 0%, rgba(135, 169, 107, 0.25) 100%);
+  color: #2d5016;
   padding: var(--spacing-md);
   border-radius: var(--radius-md);
-  border: 2px solid var(--sage-white);
+  border: 2px solid var(--sage-green);
   margin-bottom: var(--spacing-lg);
   text-align: center;
-  font-weight: 700;
+  font-weight: 600;
+  font-size: 0.95rem;
+  box-shadow: 0 2px 8px rgba(135, 169, 107, 0.2);
+  animation: slideInUp 0.4s ease;
+}
+
+.estado-message {
+  background: linear-gradient(135deg, rgba(193, 123, 74, 0.15) 0%, rgba(193, 123, 74, 0.25) 100%);
+  color: #8b4a2a;
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  border: 2px solid var(--terracotta);
+  margin-bottom: var(--spacing-lg);
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.95rem;
+  box-shadow: 0 2px 8px rgba(193, 123, 74, 0.2);
+  animation: slideInUp 0.4s ease;
 }
 
 .general-error {

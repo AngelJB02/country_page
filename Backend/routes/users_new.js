@@ -119,7 +119,7 @@ router.get('/users-with-payments', async (req, res) => {
         u.id,
         u.nombre,
         u.apellido,
-        u.correo,
+        u.correo AS email,
         u.rol,
         u.estatus,
         u.fecha_registro,
@@ -319,7 +319,7 @@ router.post('/preview-credentials', async (req, res) => {
 //   "observaciones": "Pago inicial del cliente"
 // }
 router.post('/register-cliente', async (req, res) => {
-  const { nombre, apellido, email, monto, fecha_pago, concepto, withoutEmail, customPassword, edad, telefono, tipo_cliente, nivel, tipo_nivel, observaciones } = req.body;
+  const { nombre, apellido, email, monto, fecha_pago, concepto, estatus_pago, withoutEmail, customPassword, edad, telefono, tipo_cliente, nivel, tipo_nivel, estatus, observaciones } = req.body;
 
   // Validar campos requeridos del usuario
   if (!nombre || !apellido) {
@@ -332,8 +332,8 @@ router.post('/register-cliente', async (req, res) => {
   }
 
   // Validar campos requeridos de pago
-  if ((monto === null || monto === undefined || monto === "") || !fecha_pago) {
-    return res.status(400).json({ error: 'Faltan datos de pago: monto y fecha_pago son requeridos' });
+  if ((monto === null || monto === undefined || monto === "") || !fecha_pago || !concepto) {
+    return res.status(400).json({ error: 'Faltan datos de pago: monto, fecha_pago y concepto son requeridos' });
   }
 
   try {
@@ -359,16 +359,16 @@ router.post('/register-cliente', async (req, res) => {
     await connection.beginTransaction();
 
     // Crear el usuario con rol 'cliente'
-    const placeholderEmail = withoutEmail ? `sin-email-${credentials.username}@local.placeholder` : email;
+    const userEmail = withoutEmail ? null : email;
     const [userResult] = await connection.query(
-      "INSERT INTO usuarios(nombre, apellido, correo, contrasena, rol, estatus, fecha_registro, username, edad, telefono, tipo_cliente, nivel, tipo_nivel) VALUES(?,?,?,?,'cliente','activo',NOW(),?,?,?,?,?,?)",
-      [nombre, apellido, placeholderEmail, credentials.password, credentials.username, edad, telefono, tipo_cliente, nivel, tipo_nivel]
+      "INSERT INTO usuarios(nombre, apellido, correo, contrasena, rol, estatus, fecha_registro, username, edad, telefono, tipo_cliente, nivel, tipo_nivel) VALUES(?,?,?,?,'cliente',?,NOW(),?,?,?,?,?,?)",
+      [nombre, apellido, userEmail, credentials.password, estatus || 'activo', credentials.username, edad, telefono, tipo_cliente, nivel, tipo_nivel]
     );
 
     // Registrar información de pago
     await connection.query(
       "INSERT INTO contabilidad(cliente_id, monto, fecha_pago, concepto, estatus_pago, observaciones) VALUES(?,?,?,?,?,?)",
-      [userResult.insertId, monto, fecha_pago, 'Pago inicial', 'pagado', observaciones]
+      [userResult.insertId, monto, fecha_pago, concepto || 'Pago inicial', estatus_pago || 'pagado', observaciones || null]
     );
 
     await connection.commit();
@@ -694,10 +694,6 @@ router.get('/payment-history/:id', async (req, res) => {
       WHERE p.cliente_id = ?
       ORDER BY p.fecha_pago DESC
     `, [id]);
-
-    if (rows.length === 0) {
-      return res.status(404).json({ error: 'No se encontraron pagos para este usuario' });
-    }
 
     const formattedRows = rows.map(row => ({
       ...row,

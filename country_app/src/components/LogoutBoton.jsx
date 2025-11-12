@@ -38,9 +38,16 @@ const LogoutButton = ({
 
   return (
     <>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: '1rem',
+        flexWrap: 'nowrap'
+      }}>
         {showUserName && (
-          <span className="logoutbar-user">{userName}</span>
+          <span className="logoutbar-user">
+            {userName}
+          </span>
         )}
 
         <button
@@ -54,12 +61,14 @@ const LogoutButton = ({
             boxShadow: 'var(--medium-shadow)',
             display: 'flex',
             alignItems: 'center',
+            justifyContent: 'center',
             gap: '0.5rem',
             cursor: 'pointer',
             fontSize: '0.9rem',
             fontWeight: '600',
             transition: 'all 0.2s ease',
-            fontFamily: 'var(--font-primary)'
+            fontFamily: 'var(--font-primary)',
+            whiteSpace: 'nowrap'
           }}
           onMouseEnter={(e) => {
             e.target.style.background = 'rgba(255,255,255,0.6)';

@@ -1,16 +1,25 @@
 .logoutbar-user {
   font-size: 1rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--primary-brown);
   font-family: var(--font-primary);
-  letter-spacing: 0.01em;
-  padding: 0.2em 0.7em;
+  letter-spacing: 0.02em;
+  padding: 0.6rem 1.2rem;
   border-radius: 8px;
-  background: rgba(255, 245, 230, 0.7);
-  box-shadow: 0 1px 4px rgba(90,59,46,0.06);
-  margin-right: 0.5rem;
-  transition: background 0.2s;
+  background: rgba(255, 245, 230, 0.8);
+  box-shadow: 0 2px 6px rgba(90,59,46,0.08);
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: fit-content;
+  white-space: nowrap;
+  text-transform: capitalize;
+  line-height: 1.2;
+  margin: 0;
 }
 .logoutbar-user:hover {
-  background: var(--cream-overlay);
+  background: rgba(255, 245, 230, 1);
+  box-shadow: 0 3px 8px rgba(90,59,46,0.12);
+  transform: translateY(-1px);
 }

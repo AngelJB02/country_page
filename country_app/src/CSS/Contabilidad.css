@@ -117,7 +117,7 @@
 }
 
 /* Enhanced header (used when .enhanced-header is present) */
-.enhanced-header .header-bg {
+.dashboard-header.enhanced-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -131,7 +131,7 @@
   overflow: hidden;
 }
 
-.enhanced-header .header-bg::before {
+.dashboard-header.enhanced-header::before {
   content: "";
   position: absolute;
   top: 0;
@@ -167,7 +167,10 @@
 
 .header-actions {
   display: flex;
+  align-items: center;
+  justify-content: flex-end;
   gap: 1rem;
+  flex-shrink: 0;
 }
 
 .add-client-btn {
@@ -659,7 +662,7 @@ body.no-scroll {
     padding: 1rem 0.75rem;
   }
 
-  .dashboard-header.enhanced-header .header-bg {
+  .dashboard-header.enhanced-header {
     padding: 1.5rem;
     flex-direction: column;
     text-align: center;

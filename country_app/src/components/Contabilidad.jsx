@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react"
 import ReactDOM from "react-dom"
 import "../CSS/Contabilidad.css"
 import LogoutButton from './LogoutBoton'
-import { UserPlus, Eye, XCircle, CheckCircle, Loader, Search, History, AlertTriangle, Clock, AlertCircle, Edit } from "lucide-react"
+import { UserPlus, Eye, XCircle, CheckCircle, Loader, Search, History, AlertTriangle, Clock, AlertCircle, Edit, Copy } from "lucide-react"
 import useRoleGuard from '../hooks/useRoleGuard';
 import CaballosAdmin from "./CaballosAdmin";
 import InstructorasAdmin from "./InstructorasAdmin";
@@ -25,8 +25,9 @@ const MembershipAdminDashboard = () => {
   const [newPayment, setNewPayment] = useState({
     monto: "",
     fecha_pago: "",
-    proxima_fecha: "",
-    metodo_pago: "efectivo",
+    concepto: "",
+    estatus_pago: "pagado",
+    observaciones: "",
   })
   const [loading, setLoading] = useState(true)
   const [currentUser, setCurrentUser] = useState(null)
@@ -43,11 +44,18 @@ const MembershipAdminDashboard = () => {
     nombre: "",
     apellido: "",
     email: "",
+    edad: "",
+    telefono: "",
+    tipo_cliente: "",
+    tipo_nivel: "",
+    estatus: "activo",
     monto: "",
     fecha_pago: "",
-    proxima_fecha: "",
-    metodo_pago: "efectivo",
+    concepto: "",
+    estatus_pago: "pagado",
+    observaciones: "",
   })
+  const [previewEdited, setPreviewEdited] = useState(false)
   const [activeTab, setActiveTab] = useState("clientes")
 
   // Refs para controlar foco y autofill
@@ -232,27 +240,39 @@ const MembershipAdminDashboard = () => {
   // Generar credenciales de vista previa cuando cambian nombre/apellido
   useEffect(() => {
     if (withoutEmail && newClient.nombre && newClient.apellido) {
-      // Usar credenciales reales del servidor
-      const updateRealCredentials = async () => {
-        try {
-          const password = previewCredentials.password || generateSecurePassword();
-          const realCredentials = await getRealCredentials(newClient.nombre, newClient.apellido, password);
-          if (realCredentials) {
-            setPreviewCredentials(realCredentials);
+      // Solo generar credenciales automáticamente si el usuario NO ha editado manualmente la contraseña
+      if (!previewEdited) {
+        const updateRealCredentials = async () => {
+          try {
+            const password = previewCredentials.password || generateSecurePassword();
+            const realCredentials = await getRealCredentials(newClient.nombre, newClient.apellido, password);
+            if (realCredentials) {
+              setPreviewCredentials(realCredentials);
+              setPreviewEdited(false);
+            } else {
+              // Fallback a credenciales de vista previa
+              const username = generatePreviewUsername(newClient.nombre, newClient.apellido);
+              setPreviewCredentials({ username, password });
+              setPreviewEdited(false);
+            }
+          } catch (error) {
+            console.error('Error al obtener credenciales reales:', error);
+            // Fallback a credenciales de vista previa
+            const username = generatePreviewUsername(newClient.nombre, newClient.apellido);
+            const password = previewCredentials.password || generateSecurePassword();
+            setPreviewCredentials({ username, password });
+            setPreviewEdited(false);
           }
-        } catch (error) {
-          console.error('Error al obtener credenciales reales:', error);
-          // Fallback a credenciales de vista previa
-          const username = generatePreviewUsername(newClient.nombre, newClient.apellido);
-          const password = previewCredentials.password || generateSecurePassword();
-          setPreviewCredentials({ username, password });
-        }
-      };
-      updateRealCredentials();
+        };
+        // Debounce para evitar actualizaciones constantes
+        const timeoutId = setTimeout(updateRealCredentials, 500);
+        return () => clearTimeout(timeoutId);
+      }
     } else if (!withoutEmail) {
       setPreviewCredentials({ username: "", password: "" });
+      setPreviewEdited(false);
     }
-  }, [withoutEmail, newClient.nombre, newClient.apellido]);
+  }, [withoutEmail, newClient.nombre, newClient.apellido, previewEdited]);
 
   // Obtener usuario actual del localStorage
   useEffect(() => {
@@ -319,14 +339,22 @@ const MembershipAdminDashboard = () => {
       nombre: "",
       apellido: "",
       email: "",
+      edad: "",
+      telefono: "",
+      tipo_cliente: "",
+      tipo_nivel: "",
+      estatus: "activo",
       monto: "",
       fecha_pago: "",
-      proxima_fecha: "",
-      metodo_pago: "efectivo",
+      concepto: "",
+      estatus_pago: "pagado",
+      observaciones: "",
     })
     setWithoutEmail(false)
     setPreviewCredentials({ username: "", password: "" })
+    setPreviewEdited(false)
     setUserCreatedSuccessfully(false)
+    setCopyMessage("")
     searchRef.current?.blur() // Quitar foco del buscador
     setAddClientModalOpen(true)
     setTimeout(() => addFirstInputRef.current?.focus(), 0)
@@ -336,15 +364,23 @@ const MembershipAdminDashboard = () => {
     setAddClientModalOpen(false)
     setWithoutEmail(false)
     setPreviewCredentials({ username: "", password: "" })
+    setPreviewEdited(false)
     setUserCreatedSuccessfully(false)
+    setCopyMessage("")
     setNewClient({
       nombre: "",
       apellido: "",
       email: "",
+      edad: "",
+      telefono: "",
+      tipo_cliente: "",
+      tipo_nivel: "",
+      estatus: "activo",
       monto: "",
       fecha_pago: "",
-      proxima_fecha: "",
-      metodo_pago: "efectivo",
+      concepto: "",
+      estatus_pago: "pagado",
+      observaciones: "",
     })
   }
 
@@ -353,8 +389,9 @@ const MembershipAdminDashboard = () => {
     setNewPayment({
       monto: "",
       fecha_pago: "",
-      proxima_fecha: "",
-      metodo_pago: "efectivo",
+      concepto: "",
+      estatus_pago: "pagado",
+      observaciones: "",
     })
     
     // Cargar historial de pagos
@@ -381,8 +418,9 @@ const MembershipAdminDashboard = () => {
     setNewPayment({
       monto: "",
       fecha_pago: "",
-      proxima_fecha: "",
-      metodo_pago: "efectivo",
+      concepto: "",
+      estatus_pago: "pagado",
+      observaciones: "",
     })
   }
 
@@ -390,8 +428,7 @@ const MembershipAdminDashboard = () => {
   const openEditPaymentModal = (payment) => {
     setEditingPayment({
       ...payment,
-      fecha_pago: formatDate(payment.fecha_pago),
-      proxima_fecha: formatDate(payment.proxima_fecha)
+      fecha_pago: formatDate(payment.fecha_pago)
     })
     setEditPaymentModalOpen(true)
   }
@@ -403,17 +440,8 @@ const MembershipAdminDashboard = () => {
 
   const updatePayment = async () => {
     try {
-      if (!editingPayment.monto || !editingPayment.fecha_pago || !editingPayment.proxima_fecha) {
-        showNotification("Por favor completa todos los campos", "error")
-        return
-      }
-
-      // Validar que la fecha de próximo pago no sea anterior a la fecha de pago
-      const fechaPago = new Date(editingPayment.fecha_pago)
-      const proximaFecha = new Date(editingPayment.proxima_fecha)
-      
-      if (proximaFecha < fechaPago) {
-        showNotification("La fecha de próximo pago no puede ser anterior a la fecha de pago", "error")
+      if (!editingPayment.monto || !editingPayment.fecha_pago || !editingPayment.concepto) {
+        showNotification("Por favor completa todos los campos requeridos", "error")
         return
       }
 
@@ -425,8 +453,9 @@ const MembershipAdminDashboard = () => {
         body: JSON.stringify({
           monto: editingPayment.monto,
           fecha_pago: editingPayment.fecha_pago,
-          proxima_fecha: editingPayment.proxima_fecha,
-          metodo_pago: editingPayment.metodo_pago,
+          concepto: editingPayment.concepto,
+          estatus_pago: editingPayment.estatus_pago || "pagado",
+          observaciones: editingPayment.observaciones || null,
         }),
       })
 
@@ -453,26 +482,18 @@ const MembershipAdminDashboard = () => {
 
   const addNewPayment = async () => {
     try {
-      if (!newPayment.monto || !newPayment.fecha_pago || !newPayment.proxima_fecha) {
-        showNotification("Por favor completa todos los campos del pago", "error")
-        return
-      }
-
-      // Validar que la fecha de próximo pago no sea anterior a la fecha de pago
-      const fechaPago = new Date(newPayment.fecha_pago)
-      const proximaFecha = new Date(newPayment.proxima_fecha)
-      
-      if (proximaFecha < fechaPago) {
-        showNotification("La fecha de próximo pago no puede ser anterior a la fecha de pago", "error")
+      if (!newPayment.monto || !newPayment.fecha_pago || !newPayment.concepto) {
+        showNotification("Por favor completa todos los campos requeridos del pago", "error")
         return
       }
 
       const paymentData = {
-        id_usuario: selectedMember.id,
+        cliente_id: selectedMember.id,
         monto: parseFloat(newPayment.monto),
         fecha_pago: newPayment.fecha_pago,
-        proxima_fecha: newPayment.proxima_fecha,
-        metodo_pago: newPayment.metodo_pago
+        concepto: newPayment.concepto,
+        estatus_pago: newPayment.estatus_pago || "pagado",
+        observaciones: newPayment.observaciones || null
       }
 
       const response = await fetch("http://localhost:3001/api/users/add-payment", {
@@ -537,32 +558,53 @@ const MembershipAdminDashboard = () => {
       
       // Validación de contraseña para usuarios sin email
       if (withoutEmail) {
-        if (!previewCredentials.password || previewCredentials.password.length < 5) {
-          showNotification("La contraseña debe tener al menos 5 caracteres", "error")
+        if (!previewCredentials.password || previewCredentials.password.length < 8) {
+          showNotification("La contraseña debe tener al menos 8 caracteres", "error")
           return;
         }
       }
       
-      if (newClient.monto === "" || newClient.monto === null || newClient.monto === undefined || !newClient.fecha_pago || !newClient.proxima_fecha) {
-        showNotification("Por favor completa toda la información de pagos", "error")
+      // Validación de información de pagos
+      if (!newClient.monto || !newClient.fecha_pago || !newClient.concepto) {
+        showNotification("Por favor completa toda la información de pagos (monto, fecha de pago y concepto)", "error")
         return;
       }
-      
-      // Validar que la fecha de próximo pago no sea anterior a la fecha de pago
-      const fechaPago = new Date(newClient.fecha_pago)
-      const proximaFecha = new Date(newClient.proxima_fecha)
-      if (proximaFecha < fechaPago) {
-        showNotification("La fecha de próximo pago no puede ser anterior a la fecha de pago", "error")
-        return;
+
+      // Obtener credenciales reales antes de crear
+      let finalCredentials = null;
+      if (withoutEmail && newClient.nombre && newClient.apellido) {
+        finalCredentials = await getRealCredentials(
+          newClient.nombre,
+          newClient.apellido,
+          previewCredentials.password
+        );
+        if (finalCredentials) {
+          setPreviewCredentials(finalCredentials);
+          setPreviewEdited(false);
+        }
       }
 
       // Preparar datos del cliente
       const clientData = {
-        ...newClient,
+        nombre: newClient.nombre,
+        apellido: newClient.apellido,
+        correo: withoutEmail ? undefined : newClient.email,
+        edad: newClient.edad || null,
+        telefono: newClient.telefono || null,
+        tipo_cliente: newClient.tipo_cliente || null,
+        tipo_nivel: newClient.tipo_nivel || null,
+        estatus: newClient.estatus || "activo",
+        rol: "cliente",
         withoutEmail: withoutEmail,
-        ...(withoutEmail && previewCredentials.password && {
-          customPassword: previewCredentials.password
-        })
+        ...(finalCredentials?.password && {
+          customPassword: finalCredentials.password,
+        }),
+        // Información de pago
+        monto: parseFloat(newClient.monto),
+        fecha_pago: newClient.fecha_pago,
+        concepto: newClient.concepto,
+        estatus_pago: newClient.estatus_pago || "pagado",
+        observaciones: newClient.observaciones || null,
       }
 
       const response = await fetch("http://localhost:3001/api/users/register-cliente", {
@@ -577,37 +619,61 @@ const MembershipAdminDashboard = () => {
         loadPaymentCounts()
         loadPaymentStatus()
         
-        // Si es usuario sin email, cerrar modal inmediatamente después de crear
-        if (withoutEmail && result.credentials) {
-          // Actualizar las credenciales con las reales del servidor (incluyendo numeración si existe)
+        // Si el usuario tiene email y NO es sin email, enviar credenciales por correo
+        if (newClient.email && !withoutEmail && result.username && result.password) {
+          try {
+            const emailResponse = await fetch("http://localhost:3001/api/email/send-credentials", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                email: newClient.email,
+                nombre: newClient.nombre,
+                username: result.username,
+                password: result.password,
+                rol: "cliente"
+              })
+            });
+
+            if (emailResponse.ok) {
+              showNotification(
+                `✅ Cliente creado exitosamente. Credenciales enviadas por email a ${newClient.email}`, 
+                "success"
+              );
+            } else {
+              throw new Error("Error al enviar email");
+            }
+          } catch (emailError) {
+            console.error("Error al enviar email:", emailError);
+            showNotification(
+              `⚠️ Cliente creado pero falló el envío de email. Usuario: ${result.username}, Contraseña: ${result.password}`, 
+              "error"
+            );
+          }
+        } else if (withoutEmail && result.credentials) {
+          // Actualizar las credenciales con las reales del servidor
           setPreviewCredentials({
             username: result.credentials.username,
             password: result.credentials.password
           })
           setUserCreatedSuccessfully(true)
           
-          // Mostrar notificación y cerrar modal inmediatamente
           showNotification(
-            `✅ Usuario creado: ${result.credentials.username}`, 
+            `🔒 Cliente creado. Las credenciales NO se enviarán por correo. Debes copiarlas y entregarlas personalmente.`, 
             "success"
           )
-          
-          closeAddClientModal()
-          return; // No continuar con el flujo normal
+        } else {
+          showNotification("Cliente registrado correctamente", "success")
         }
         
         closeAddClientModal()
-        showNotification(
-          withoutEmail 
-            ? "Cliente registrado correctamente. Las credenciales están listas para distribución manual." 
-            : "Cliente registrado correctamente. Las credenciales se han enviado por email.", 
-          "success"
-        )
       } else {
         const error = await response.json()
         showNotification("Error al crear cliente: " + (error?.error ?? "Error desconocido"), "error")
       }
     } catch (error) {
+      console.error("Error al crear cliente:", error)
       showNotification("Error de conexión. Inténtalo de nuevo.", "error")
     } finally {
       setCreatingClient(false);
@@ -622,10 +688,10 @@ const MembershipAdminDashboard = () => {
         const mapped = data.map((u) => ({
           id: u.id,
           name: u.nombre + (u.apellido ? " " + u.apellido : ""),
-          email: u.email,
-          status: capitalizeStatus(u.estado),
+          email: u.email || "",
+          status: capitalizeStatus(u.estatus),
           monthlyFee: u.monto || 0,
-          paymentDate: u.proxima_fecha || "",
+          paymentDate: "",
           lastPaymentDate: u.fecha_pago || "",
           rol: u.rol || "",
         }))
@@ -655,14 +721,7 @@ const MembershipAdminDashboard = () => {
         changes.fecha_pago = selectedMember.lastPaymentDate
         hasChanges = true
       }
-      if (selectedMember.paymentDate !== originalMember.paymentDate) {
-        if (!selectedMember.paymentDate) {
-          showNotification("Por favor completa la fecha de próximo pago", "error")
-          return
-        }
-        changes.proxima_fecha = selectedMember.paymentDate
-        hasChanges = true
-      }
+      // Nota: proxima_fecha no existe en la tabla contabilidad, se maneja a través del historial de pagos
 
       if (!hasChanges) {
         closeModal()
@@ -712,22 +771,20 @@ const MembershipAdminDashboard = () => {
     <div className="dashboard-container">
       {/* HEADER */}
       <div className="dashboard-header enhanced-header">
-        <div className="header-bg">
-          <div className="header-texts">
-            <h1 className="header-title">Panel de Administrador</h1>
-            <p className="header-subtitle">Gestiona usuarios y membresías de tu plataforma</p>
-          </div>
-          <div className="header-actions">
-            {currentUser && (
-              <LogoutButton 
-                userName={currentUser.nombre || 'Admin'} 
-                showUserName={true}
-              />
-            )}
-            <button className="add-client-btn" onClick={openAddClientModal} type="button">
-              <UserPlus size={20} /> Nuevo Cliente
-            </button>
-          </div>
+        <div className="header-texts">
+          <h1 className="header-title">Panel de Administrador</h1>
+          <p className="header-subtitle">Gestiona usuarios y membresías de tu plataforma</p>
+        </div>
+        <div className="header-actions">
+          {currentUser && (
+            <LogoutButton 
+              userName={currentUser.nombre || 'Admin'} 
+              showUserName={true}
+            />
+          )}
+          <button className="add-client-btn" onClick={openAddClientModal} type="button">
+            <UserPlus size={20} /> Nuevo Cliente
+          </button>
         </div>
       </div>
 
@@ -929,7 +986,28 @@ const MembershipAdminDashboard = () => {
                       return (
                         <tr key={member.id}>
                           <td style={{ fontWeight: "600" }}>{member.name}</td>
-                          <td style={{ color: "var(--stone-gray)" }}>{member.email}</td>
+                          <td>
+                            {member.email ? (
+                              <span style={{ color: "var(--stone-gray)" }}>{member.email}</span>
+                            ) : (
+                              <span
+                                style={{
+                                  color: "#dc3545",
+                                  fontWeight: "bold",
+                                  fontSize: "13px",
+                                  fontStyle: "italic",
+                                  textTransform: "uppercase",
+                                  letterSpacing: "0.5px",
+                                  backgroundColor: "#f8d7da",
+                                  padding: "4px 8px",
+                                  borderRadius: "4px",
+                                  display: "inline-block",
+                                }}
+                              >
+                                Sin correo registrado
+                              </span>
+                            )}
+                          </td>
                           <td>
                             <select
                               className="status-badge"
@@ -1122,114 +1200,152 @@ const MembershipAdminDashboard = () => {
       {addClientModalOpen &&
         renderPortal(
           <div className="modal-overlay" onClick={closeAddClientModal}>
-            <div className="modal-content add-client-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-content add-client-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "800px", maxHeight: "90vh", overflowY: "auto" }}>
               <h2>Agregar Nuevo Cliente</h2>
+              
+              {/* Información sobre credenciales */}
+              <div style={{
+                background: "rgba(139, 111, 78, 0.1)",
+                border: "1px solid rgba(139, 111, 78, 0.3)",
+                borderRadius: "8px",
+                padding: "12px",
+                marginBottom: "20px",
+                fontSize: "14px",
+                color: "#8b6f4e",
+              }}>
+                🔑 <strong>Credenciales automáticas:</strong> Las credenciales se generan automáticamente. Puedes elegir enviarlas por email o copiarlas para entregarlas manualmente.
+              </div>
+
               <div className="modal-section">
                 <h3>Información Personal</h3>
-                <div className="modal-field">
-                  <label>Nombre *:</label>
-                  <input
-                    type="text"
-                    value={newClient.nombre}
-                    onChange={(e) => setNewClient({ ...newClient, nombre: e.target.value })}
-                    placeholder="Ingresa el nombre"
-                    ref={addFirstInputRef}
-                    autoComplete="off"
-                    name="newclient-name"
-                  />
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px", marginBottom: "15px" }}>
+                  <div className="modal-field">
+                    <label>Nombre *:</label>
+                    <input
+                      type="text"
+                      value={newClient.nombre}
+                      onChange={(e) => setNewClient({ ...newClient, nombre: e.target.value })}
+                      placeholder="Ingresa el nombre"
+                      ref={addFirstInputRef}
+                      autoComplete="off"
+                      name="newclient-name"
+                    />
+                  </div>
+                  <div className="modal-field">
+                    <label>Apellido *:</label>
+                    <input
+                      type="text"
+                      value={newClient.apellido}
+                      onChange={(e) => setNewClient({ ...newClient, apellido: e.target.value })}
+                      placeholder="Ingresa el apellido"
+                      autoComplete="off"
+                      name="newclient-lastname"
+                    />
+                  </div>
                 </div>
-                <div className="modal-field">
-                  <label>Apellido *:</label>
-                  <input
-                    type="text"
-                    value={newClient.apellido}
-                    onChange={(e) => setNewClient({ ...newClient, apellido: e.target.value })}
-                    placeholder="Ingresa el apellido"
-                    autoComplete="off"
-                    name="newclient-lastname"
-                  />
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "15px", marginBottom: "15px" }}>
+                  <div className="modal-field">
+                    <label>Edad:</label>
+                    <input
+                      type="number"
+                      value={newClient.edad || ""}
+                      onChange={(e) => setNewClient({ ...newClient, edad: e.target.value })}
+                      placeholder="Ej: 25"
+                      min="0"
+                      autoComplete="off"
+                      name="newclient-age"
+                    />
+                  </div>
+                  <div className="modal-field">
+                    <label>Teléfono:</label>
+                    <input
+                      type="text"
+                      value={newClient.telefono || ""}
+                      onChange={(e) => setNewClient({ ...newClient, telefono: e.target.value })}
+                      placeholder="Ej: 999123456"
+                      autoComplete="off"
+                      name="newclient-phone"
+                    />
+                  </div>
+                  <div className="modal-field" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{color: withoutEmail ? '#999' : 'inherit'}}>
+                      Email {!withoutEmail && '*'}:
+                    </label>
+                    <input
+                      type="email"
+                      value={withoutEmail ? '' : newClient.email}
+                      onChange={(e) => !withoutEmail && setNewClient({ ...newClient, email: e.target.value })}
+                      placeholder={withoutEmail ? "Email deshabilitado" : "ejemplo@email.com"}
+                      autoComplete="off"
+                      name="newclient-email"
+                      disabled={withoutEmail}
+                      style={{
+                        backgroundColor: withoutEmail ? '#f5f5f5' : 'white',
+                        color: withoutEmail ? '#999' : 'inherit',
+                        cursor: withoutEmail ? 'not-allowed' : 'text'
+                      }}
+                    />
+                    <label style={{
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '8px', 
+                      cursor: 'pointer', 
+                      fontSize: '14px', 
+                      fontWeight: '500', 
+                      color: '#495057',
+                      marginTop: '4px'
+                    }} onClick={() => setWithoutEmail(!withoutEmail)}>
+                      <input
+                        type="checkbox"
+                        checked={withoutEmail}
+                        onChange={(e) => {
+                          setWithoutEmail(e.target.checked);
+                          if (!e.target.checked) {
+                            setPreviewCredentials({ username: "", password: "" });
+                            setPreviewEdited(false);
+                          }
+                        }}
+                        style={{width: '16px', height: '16px'}}
+                      />
+                      Usuario sin correo electrónico
+                    </label>
+                    {withoutEmail && (
+                      <div style={{fontSize: '12px', color: '#666', marginTop: '4px'}}>
+                        Las credenciales se mostrarán para distribución manual
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="modal-field">
-                  <label>Edad:</label>
-                  <input
-                    type="number"
-                    value={newClient.edad || ""}
-                    onChange={(e) => setNewClient({ ...newClient, edad: e.target.value })}
-                    placeholder="Edad"
-                    min="0"
-                    autoComplete="off"
-                    name="newclient-age"
-                  />
-                </div>
-                <div className="modal-field">
-                  <label>Email:</label>
-                  <input
-                    type="email"
-                    value={newClient.email}
-                    onChange={(e) => setNewClient({ ...newClient, email: e.target.value })}
-                    placeholder="ejemplo@email.com"
-                    autoComplete="off"
-                    name="newclient-email"
-                  />
-                </div>
-                <div className="modal-field">
-                  <label>Teléfono:</label>
-                  <input
-                    type="text"
-                    value={newClient.telefono || ""}
-                    onChange={(e) => setNewClient({ ...newClient, telefono: e.target.value })}
-                    placeholder="Teléfono"
-                    autoComplete="off"
-                    name="newclient-phone"
-                  />
-                </div>
-                <div className="modal-field">
-                  <label>Contraseña:</label>
-                  <input
-                    type="text"
-                    value={newClient.contrasena || ""}
-                    onChange={(e) => setNewClient({ ...newClient, contrasena: e.target.value })}
-                    placeholder="Contraseña"
-                    autoComplete="off"
-                    name="newclient-password"
-                  />
-                </div>
-                <div className="modal-field">
-                  <label>Rol:</label>
-                  <input
-                    type="text"
-                    value="Cliente"
-                    readOnly
-                    name="newclient-rol"
-                    style={{ backgroundColor: '#f5f5f5', color: '#888', cursor: 'not-allowed' }}
-                  />
-                </div>
-                <div className="modal-field">
-                  <label>Tipo de Cliente:</label>
-                  <select
-                    value={newClient.tipo_cliente || "general"}
-                    onChange={(e) => setNewClient({ ...newClient, tipo_cliente: e.target.value })}
-                    name="newclient-tipo-cliente"
-                  >
-                    <option value="general">General</option>
-                    <option value="propietario">Propietario</option>
-                    <option value="demo">Demo</option>
-                    <option value="renta">Renta</option>
-                    <option value="media_renta">Media Renta</option>
-                  </select>
-                </div>
-                <div className="modal-field">
-                  <label>Tipo de Nivel:</label>
-                  <select
-                    value={newClient.tipo_nivel || "iniciacion"}
-                    onChange={(e) => setNewClient({ ...newClient, tipo_nivel: e.target.value })}
-                    name="newclient-tipo-nivel"
-                  >
-                    <option value="iniciacion">Iniciación</option>
-                    <option value="paseo">Paseo</option>
-                    <option value="intermedio">Intermedio</option>
-                    <option value="avanzado">Avanzado</option>
-                  </select>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px", marginBottom: "15px" }}>
+                  <div className="modal-field">
+                    <label>Tipo de Cliente:</label>
+                    <select
+                      value={newClient.tipo_cliente || ""}
+                      onChange={(e) => setNewClient({ ...newClient, tipo_cliente: e.target.value })}
+                      name="newclient-tipo-cliente"
+                    >
+                      <option value="">Seleccione un tipo</option>
+                      <option value="general">General</option>
+                      <option value="propietario">Propietario</option>
+                      <option value="demo">Demo</option>
+                      <option value="renta">Renta</option>
+                      <option value="media_renta">Media Renta</option>
+                    </select>
+                  </div>
+                  <div className="modal-field">
+                    <label>Tipo de Nivel:</label>
+                    <select
+                      value={newClient.tipo_nivel || ""}
+                      onChange={(e) => setNewClient({ ...newClient, tipo_nivel: e.target.value })}
+                      name="newclient-tipo-nivel"
+                    >
+                      <option value="">Seleccione un nivel</option>
+                      <option value="iniciacion">Iniciación</option>
+                      <option value="paseo">Paseo</option>
+                      <option value="intermedio">Intermedio</option>
+                      <option value="avanzado">Avanzado</option>
+                    </select>
+                  </div>
                 </div>
                 <div className="modal-field">
                   <label>Estatus:</label>
@@ -1244,70 +1360,244 @@ const MembershipAdminDashboard = () => {
                   </select>
                 </div>
               </div>
+
+              {/* Vista previa de credenciales (solo si es sin email) */}
+              {withoutEmail && previewCredentials.username && (
+                <div className="modal-section" style={{
+                  background: userCreatedSuccessfully ? '#d4edda' : '#fff3cd', 
+                  border: `1px solid ${userCreatedSuccessfully ? '#c3e6cb' : '#ffeaa7'}`, 
+                  borderRadius: '6px', 
+                  padding: '15px', 
+                  marginBottom: '15px'
+                }}>
+                  <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px'}}>
+                    <h4 style={{margin: 0, color: userCreatedSuccessfully ? '#155724' : '#856404', fontSize: '14px'}}>
+                      {userCreatedSuccessfully ? '🎉 ¡Usuario creado exitosamente!' : '⚠️ Credenciales a crear:'}
+                    </h4>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const realCreds = await getRealCredentials(
+                          newClient.nombre, 
+                          newClient.apellido, 
+                          previewCredentials.password
+                        );
+                        const credentialsText = `Username: ${realCreds?.username || previewCredentials.username}\nContraseña: ${realCreds?.password || previewCredentials.password}`;
+                        navigator.clipboard.writeText(credentialsText);
+                        setCopyMessage("Credenciales copiadas");
+                        setTimeout(() => setCopyMessage(""), 2000);
+                      }}
+                      style={{
+                        padding: '6px 12px',
+                        backgroundColor: userCreatedSuccessfully ? '#28a745' : '#f0ad4e',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                      title="Copiar ambas credenciales"
+                    >
+                      📋 Copiar todo
+                    </button>
+                  </div>
+                  
+                  {copyMessage && (
+                    <div style={{
+                      background: '#d4edda',
+                      color: '#155724',
+                      border: '1px solid #c3e6cb',
+                      borderRadius: '4px',
+                      padding: '8px',
+                      marginBottom: '10px',
+                      fontSize: '12px',
+                      textAlign: 'center'
+                    }}>
+                      ✅ {copyMessage}
+                    </div>
+                  )}
+
+                  {!userCreatedSuccessfully && (
+                    <div style={{
+                      background: '#fcf8e3',
+                      color: '#8a6d3b',
+                      border: '1px solid #faebcc',
+                      borderRadius: '4px',
+                      padding: '10px',
+                      marginBottom: '12px',
+                      fontSize: '13px',
+                      fontWeight: '500'
+                    }}>
+                      💡 <strong>RECOMENDACIÓN:</strong> Copia estas credenciales ANTES de crear la cuenta. Una vez creada, el modal se cerrará automáticamente.
+                    </div>
+                  )}
+                  
+                  <div style={{marginBottom: '10px'}}>
+                    <label style={{fontSize: '12px', color: '#6c757d', fontWeight: 'bold'}}>Username:</label>
+                    <div style={{
+                      background: 'white', 
+                      border: '1px solid #ced4da', 
+                      borderRadius: '4px', 
+                      padding: '8px', 
+                      fontFamily: 'monospace', 
+                      fontSize: '14px'
+                    }}>
+                      {previewCredentials.username}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label style={{fontSize: '12px', color: '#6c757d', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px'}}>
+                      Contraseña:
+                      {!userCreatedSuccessfully && (
+                        <span style={{fontSize: '11px', color: '#8b6f4e', fontWeight: 'normal'}}>✏️ (editable)</span>
+                      )}
+                    </label>
+                    <input
+                      type="text"
+                      value={previewCredentials.password}
+                      onChange={(e) => {
+                        if (!userCreatedSuccessfully) {
+                          setPreviewCredentials({...previewCredentials, password: e.target.value});
+                          setPreviewEdited(true);
+                        }
+                      }}
+                      disabled={userCreatedSuccessfully}
+                      style={{
+                        width: '100%',
+                        border: `2px solid ${
+                          userCreatedSuccessfully 
+                            ? '#28a745' 
+                            : previewCredentials.password.length > 0 && previewCredentials.password.length < 8
+                              ? '#dc3545'
+                              : '#8b6f4e'
+                        }`, 
+                        borderRadius: '4px', 
+                        padding: '8px', 
+                        fontFamily: 'monospace', 
+                        fontSize: '14px',
+                        backgroundColor: userCreatedSuccessfully ? '#f8fff9' : '#fafafa',
+                        cursor: userCreatedSuccessfully ? 'default' : 'text'
+                      }}
+                      placeholder={userCreatedSuccessfully ? "Contraseña final" : "Mínimo 8 caracteres"}
+                    />
+                    {!userCreatedSuccessfully && previewCredentials.password.length > 0 && previewCredentials.password.length < 8 && (
+                      <div style={{ fontSize: '11px', color: '#dc3545', marginTop: '4px', fontWeight: '500' }}>
+                        ⚠️ Contraseña muy corta ({previewCredentials.password.length}/8 caracteres)
+                      </div>
+                    )}
+                    {!userCreatedSuccessfully && previewCredentials.password.length >= 8 && (
+                      <div style={{ fontSize: '11px', color: '#28a745', marginTop: '4px', fontWeight: '500' }}>
+                        ✓ Contraseña válida ({previewCredentials.password.length} caracteres)
+                      </div>
+                    )}
+                  </div>
+                  
+                  <p style={{color:'#b05a00',fontWeight:600, marginTop: '12px', marginBottom:0, fontSize: '13px'}}>
+                    <span style={{display:'flex',alignItems:'center'}}>
+                      <span role="img" aria-label="candado" style={{marginRight:4}}>🔒</span>
+                      Estas credenciales <b>NO</b> se enviarán por correo.
+                    </span>
+                    <span style={{fontWeight:400, fontSize:'1em', marginLeft:24, display:'block', marginTop:2}}>
+                      Debes copiarlas y entregarlas personalmente.
+                    </span>
+                  </p>
+                </div>
+              )}
+
               <div className="modal-section">
                 <h3>Información de Pagos</h3>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px", marginBottom: "15px" }}>
+                  <div className="modal-field">
+                    <label>Monto Mensualidad *:</label>
+                    <input
+                      type="number"
+                      value={newClient.monto === "" ? "" : newClient.monto}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setNewClient({
+                          ...newClient,
+                          monto: val === "" ? "" : Number.parseFloat(val)
+                        });
+                      }}
+                      placeholder="Ej: 200.00"
+                      step="0.01"
+                      min="0"
+                      autoComplete="off"
+                      inputMode="decimal"
+                      data-lpignore="true"
+                      data-form-type="other"
+                    />
+                  </div>
+                  <div className="modal-field">
+                    <label>Fecha de Pago *:</label>
+                    <input
+                      type="date"
+                      value={newClient.fecha_pago}
+                      onChange={(e) => setNewClient({ ...newClient, fecha_pago: e.target.value })}
+                      autoComplete="off"
+                      data-lpignore="true"
+                      data-form-type="other"
+                    />
+                  </div>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px", marginBottom: "15px" }}>
+                  <div className="modal-field">
+                    <label>Concepto *:</label>
+                    <input
+                      type="text"
+                      value={newClient.concepto}
+                      onChange={(e) => setNewClient({ ...newClient, concepto: e.target.value })}
+                      placeholder="Ej: Mensualidad, Pago inicial, etc."
+                      autoComplete="off"
+                      data-lpignore="true"
+                      data-form-type="other"
+                    />
+                  </div>
+                  <div className="modal-field">
+                    <label>Estado del Pago *:</label>
+                    <select
+                      value={newClient.estatus_pago}
+                      onChange={(e) => setNewClient({ ...newClient, estatus_pago: e.target.value })}
+                      className="status-filter"
+                      data-lpignore="true"
+                      data-form-type="other"
+                    >
+                      <option value="pagado">Pagado</option>
+                      <option value="pendiente">Pendiente</option>
+                      <option value="vencido">Vencido</option>
+                      <option value="bloqueado">Bloqueado</option>
+                    </select>
+                  </div>
+                </div>
                 <div className="modal-field">
-                  <label>Monto Mensualidad *:</label>
-                  <input
-                    type="number"
-                    value={newClient.monto === "" ? "" : newClient.monto}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setNewClient({
-                        ...newClient,
-                        monto: val === "" ? "" : Number.parseFloat(val)
-                      });
-                    }}
-                    placeholder="Ej: 200.00"
-                    step="0.01"
-                    min="0"
+                  <label>Observaciones:</label>
+                  <textarea
+                    value={newClient.observaciones}
+                    onChange={(e) => setNewClient({ ...newClient, observaciones: e.target.value })}
+                    placeholder="Observaciones adicionales (opcional)"
+                    rows="3"
                     autoComplete="off"
-                    inputMode="decimal"
                     data-lpignore="true"
                     data-form-type="other"
                   />
-                </div>
-                <div className="modal-field">
-                  <label>Fecha Último Pago *:</label>
-                  <input
-                    type="date"
-                    value={newClient.fecha_pago}
-                    onChange={(e) => setNewClient({ ...newClient, fecha_pago: e.target.value })}
-                    autoComplete="off"
-                    data-lpignore="true"
-                    data-form-type="other"
-                  />
-                </div>
-                <div className="modal-field">
-                  <label>Fecha Próximo Pago *:</label>
-                  <input
-                    type="date"
-                    value={newClient.proxima_fecha}
-                    onChange={(e) => setNewClient({ ...newClient, proxima_fecha: e.target.value })}
-                    autoComplete="off"
-                    data-lpignore="true"
-                    data-form-type="other"
-                  />
-                </div>
-                <div className="modal-field">
-                  <label>Método de Pago *:</label>
-                  <select
-                    value={newClient.metodo_pago}
-                    onChange={(e) => setNewClient({ ...newClient, metodo_pago: e.target.value })}
-                    className="status-filter"
-                    data-lpignore="true"
-                    data-form-type="other"
-                  >
-                    <option value="efectivo">Efectivo</option>
-                    <option value="transferencia">Transferencia</option>
-                    <option value="link">Link de Pago</option>
-                  </select>
                 </div>
               </div>
 
               <div className="modal-actions">
                 <button className="btn btn-primary" onClick={createNewClient} type="button" disabled={creatingClient}>
-                  <UserPlus size={16} /> {creatingClient ? "Creando..." : "Crear Cliente"}
+                  {creatingClient ? (
+                    <>
+                      <Loader size={16} className="spin" /> Verificando credenciales y registrando...
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus size={16} /> Crear Cliente
+                    </>
+                  )}
                 </button>
                 <button className="btn btn-secondary" onClick={closeAddClientModal} type="button">
                   Cancelar
@@ -1338,11 +1628,14 @@ const MembershipAdminDashboard = () => {
                       <div key={index} className="payment-item">
                         <div className="payment-info">
                           <div className="payment-amount">${formatCurrency(payment.monto)}</div>
-                          <div className="payment-method">Método: {payment.metodo_pago}</div>
+                          <div className="payment-concept">Concepto: {payment.concepto || "N/A"}</div>
+                          <div className="payment-status">Estado: {payment.estatus_pago || "N/A"}</div>
                           <div className="payment-dates">
-                            <span>Pago: {formatDate(payment.fecha_pago)}</span>
-                            <span>Próximo: {formatDate(payment.proxima_fecha)}</span>
+                            <span>Fecha de Pago: {formatDate(payment.fecha_pago)}</span>
                           </div>
+                          {payment.observaciones && (
+                            <div className="payment-observations">Observaciones: {payment.observaciones}</div>
+                          )}
                         </div>
                         <button
                           type="button"
@@ -1394,29 +1687,43 @@ const MembershipAdminDashboard = () => {
                   />
                 </div>
                 <div className="modal-field">
-                  <label>Próximo Pago *:</label>
+                  <label>Concepto *:</label>
                   <input
-                    type="date"
-                    value={newPayment.proxima_fecha}
-                    onChange={(e) => setNewPayment({ ...newPayment, proxima_fecha: e.target.value })}
+                    type="text"
+                    value={newPayment.concepto}
+                    onChange={(e) => setNewPayment({ ...newPayment, concepto: e.target.value })}
+                    placeholder="Ej: Mensualidad, Pago inicial, etc."
                     autoComplete="off"
                     data-lpignore="true"
                     data-form-type="other"
                   />
                 </div>
                 <div className="modal-field">
-                  <label>Método de Pago *:</label>
+                  <label>Estado del Pago *:</label>
                   <select
-                    value={newPayment.metodo_pago}
-                    onChange={(e) => setNewPayment({ ...newPayment, metodo_pago: e.target.value })}
+                    value={newPayment.estatus_pago}
+                    onChange={(e) => setNewPayment({ ...newPayment, estatus_pago: e.target.value })}
                     className="status-filter"
                     data-lpignore="true"
                     data-form-type="other"
                   >
-                    <option value="efectivo">Efectivo</option>
-                    <option value="transferencia">Transferencia</option>
-                    <option value="link">Link de Pago</option>
+                    <option value="pagado">Pagado</option>
+                    <option value="pendiente">Pendiente</option>
+                    <option value="vencido">Vencido</option>
+                    <option value="bloqueado">Bloqueado</option>
                   </select>
+                </div>
+                <div className="modal-field">
+                  <label>Observaciones:</label>
+                  <textarea
+                    value={newPayment.observaciones}
+                    onChange={(e) => setNewPayment({ ...newPayment, observaciones: e.target.value })}
+                    placeholder="Observaciones adicionales (opcional)"
+                    rows="3"
+                    autoComplete="off"
+                    data-lpignore="true"
+                    data-form-type="other"
+                  />
                 </div>
               </div>
 
@@ -1465,24 +1772,36 @@ const MembershipAdminDashboard = () => {
                 </div>
 
                 <div className="modal-field">
-                  <label>Próxima Fecha de Pago *:</label>
+                  <label>Concepto *:</label>
                   <input
-                    type="date"
-                    value={editingPayment?.proxima_fecha || ""}
-                    onChange={(e) => setEditingPayment({...editingPayment, proxima_fecha: e.target.value})}
+                    type="text"
+                    value={editingPayment?.concepto || ""}
+                    onChange={(e) => setEditingPayment({...editingPayment, concepto: e.target.value})}
+                    placeholder="Ej: Mensualidad, Pago inicial, etc."
                   />
                 </div>
 
                 <div className="modal-field">
-                  <label>Método de Pago:</label>
+                  <label>Estado del Pago *:</label>
                   <select
-                    value={editingPayment?.metodo_pago || "efectivo"}
-                    onChange={(e) => setEditingPayment({...editingPayment, metodo_pago: e.target.value})}
+                    value={editingPayment?.estatus_pago || "pagado"}
+                    onChange={(e) => setEditingPayment({...editingPayment, estatus_pago: e.target.value})}
                   >
-                    <option value="efectivo">Efectivo</option>
-                    <option value="transferencia">Transferencia</option>
-                    <option value="link">Link de Pago</option>
+                    <option value="pagado">Pagado</option>
+                    <option value="pendiente">Pendiente</option>
+                    <option value="vencido">Vencido</option>
+                    <option value="bloqueado">Bloqueado</option>
                   </select>
+                </div>
+
+                <div className="modal-field">
+                  <label>Observaciones:</label>
+                  <textarea
+                    value={editingPayment?.observaciones || ""}
+                    onChange={(e) => setEditingPayment({...editingPayment, observaciones: e.target.value})}
+                    placeholder="Observaciones adicionales (opcional)"
+                    rows="3"
+                  />
                 </div>
 
                 {/* Botones integrados dentro del contenido */}
