@@ -90,6 +90,30 @@ const ReservasAdmin = () => {
     }
   };
 
+  const getAsistenciaBadgeColor = (asistencia) => {
+    switch(asistencia) {
+      case "presente":
+        return { border: "#9caf88", color: "#9caf88", text: "Asistió" };
+      case "ausente":
+        return { border: "#c17b4a", color: "#c17b4a", text: "Faltó" };
+      case "justificado":
+        return { border: "#d4a574", color: "#d4a574", text: "Justificado" };
+      default:
+        return { border: "#e0e0e0", color: "#999", text: "Pendiente" };
+    }
+  };
+
+  const formatNivel = (nivel) => {
+    if (!nivel) return "-";
+    const niveles = {
+      'paseo': 'Paseo',
+      'iniciacion': 'Iniciación',
+      'intermedio': 'Intermedio',
+      'avanzado': 'Avanzado'
+    };
+    return niveles[nivel] || nivel;
+  };
+
   const getRangoSemana = () => {
     const fechaBase = new Date(fechaSeleccionada);
     const inicioSemana = new Date(fechaBase);

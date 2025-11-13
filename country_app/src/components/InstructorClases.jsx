@@ -219,8 +219,33 @@ export default function InstructorClases() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredClasses.map((classItem) => (
-                      <tr key={classItem.id}>
+                    {filteredClasses.map((classItem, index) => {
+                      // Función para obtener colores del estado (colores más saturados para mejor visibilidad)
+                      const getEstadoBadgeColor = (estado) => {
+                        switch(estado) {
+                          case "confirmada":
+                            return { border: "#7a9d6a", color: "#7a9d6a" }; // Verde más oscuro
+                          case "pendiente":
+                            return { border: "#c8965a", color: "#c8965a" }; // Beige más oscuro/naranja
+                          case "cancelada":
+                            return { border: "#6b4423", color: "#6b4423" }; // Marrón más oscuro
+                          case "completada":
+                            return { border: "#7a9d6a", color: "#7a9d6a" }; // Verde más oscuro
+                          default:
+                            return { border: "#b8653a", color: "#b8653a" }; // Terracotta más oscuro
+                        }
+                      };
+                      
+                      const estadoColor = getEstadoBadgeColor(classItem.status);
+                      const isEven = index % 2 === 0;
+                      
+                      return (
+                      <tr 
+                        key={classItem.id}
+                        style={{
+                          backgroundColor: isEven ? 'white' : '#f5f1e8'
+                        }}
+                      >
                         {activeView !== 'today' && (
                           <td>
                             <span style={{ fontWeight: '600' }}>
@@ -255,12 +280,24 @@ export default function InstructorClases() {
                             onHorseChange={handleHorseChange}
                             obtenerCaballosParaClase={obtenerCaballosParaClase}
                             horsesHash={getHorsesHashForHorario(classItem.date, classItem.time)}
-                            disabled={activeView === 'history'}
+                            disabled={activeView === 'history' || classItem.attendance === 'asistió' || classItem.status === 'completada'}
                           />
                         </td>
                         <td>
-                          <span className={`status-badge status-${classItem.status}`}>
-                            {classItem.status}
+                          <span
+                            className="status-badge"
+                            style={{
+                              borderColor: estadoColor.border,
+                              color: estadoColor.color,
+                              padding: "0.4rem 0.8rem",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              cursor: "default",
+                              textAlign: "center"
+                            }}
+                          >
+                            {classItem.status.charAt(0).toUpperCase() + classItem.status.slice(1)}
                           </span>
                         </td>
                         <td>
@@ -293,7 +330,8 @@ export default function InstructorClases() {
                           </button>
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

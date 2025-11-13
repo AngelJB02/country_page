@@ -163,10 +163,22 @@ const HorseSelect = ({
   // Si la clase está cancelada, no permitir selección
   const isClassCancelled = classItem.status === 'cancelada'
   
+  // Si la asistencia está marcada como "asistió" o el estatus es "completada", no permitir editar el caballo
+  const isAttendanceMarked = classItem.attendance === 'asistió'
+  const isClassCompleted = classItem.status === 'completada'
+  
   if (isClassCancelled) {
     return (
       <select className="horse-select" disabled style={{ backgroundColor: '#f8f9fa', color: '#6c757d' }}>
         <option>Clase cancelada</option>
+      </select>
+    )
+  }
+  
+  if (isAttendanceMarked || isClassCompleted) {
+    return (
+      <select className="horse-select" disabled style={{ backgroundColor: '#f8f9fa', color: '#6c757d' }}>
+        <option>{classItem.horse || 'Sin asignar caballo'}</option>
       </select>
     )
   }

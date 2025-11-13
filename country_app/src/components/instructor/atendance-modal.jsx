@@ -3,6 +3,7 @@ import { useState } from "react"
 
 function AttendanceModal({ classData, onClose, onAttendanceChange }) {
   const [nuevoNivel, setNuevoNivel] = useState(classData.studentLevel || 'intermedio')
+  const [errorMessage, setErrorMessage] = useState('')
   
   const nivelesDisponibles = [
     { value: 'paseo', label: 'Paseo' },
@@ -12,6 +13,22 @@ function AttendanceModal({ classData, onClose, onAttendanceChange }) {
   ]
 
   const handleAttendanceClick = (attendance) => {
+    // Validar que haya un caballo asignado si se marca como "asistió"
+    if (attendance === 'asistió') {
+      const tieneCaballo = classData.horse && 
+                          classData.horse.trim() !== '' && 
+                          classData.horse.toLowerCase() !== 'sin asignar' &&
+                          classData.horse.toLowerCase() !== 'sin asignar caballo'
+      
+      if (!tieneCaballo) {
+        setErrorMessage('Debes asignar un caballo antes de marcar la asistencia')
+        return
+      }
+    }
+    
+    // Limpiar mensaje de error si pasa la validación
+    setErrorMessage('')
+    
     // Si el nivel cambió, enviar el nuevo nivel junto con la asistencia
     const nivelCambiado = nuevoNivel !== classData.studentLevel
     onAttendanceChange(classData.id, attendance, nivelCambiado ? nuevoNivel : null)
@@ -121,6 +138,22 @@ function AttendanceModal({ classData, onClose, onAttendanceChange }) {
             </p>
           )}
         </div>
+
+        {/* Mensaje de error si no hay caballo asignado */}
+        {errorMessage && (
+          <div style={{
+            padding: '12px',
+            backgroundColor: '#fee',
+            border: '1px solid #fcc',
+            borderRadius: '8px',
+            marginBottom: '16px',
+            color: '#c33',
+            fontSize: '14px',
+            fontWeight: '500'
+          }}>
+            {errorMessage}
+          </div>
+        )}
 
         <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
           <button

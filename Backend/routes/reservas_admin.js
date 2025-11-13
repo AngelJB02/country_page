@@ -21,18 +21,22 @@ router.get('/', async (req, res) => {
         c.id as cliente_id,
         c.nombre as cliente_nombre,
         c.apellido as cliente_apellido,
+        c.tipo_nivel as cliente_nivel_actual,
         cab.id as caballo_id,
         cab.nombre as caballo_nombre,
         i.id as instructora_id,
         i.nombre as instructora_nombre,
         i.apellido as instructora_apellido,
         cl.id as clase_id,
-        cl.nombre as clase_nombre
+        cl.nombre as clase_nombre,
+        a.asistio as asistencia,
+        a.nivel_clase as nivel_clase
       FROM reservas r
       LEFT JOIN usuarios c ON r.cliente_id = c.id
       LEFT JOIN caballos cab ON r.caballo_id = cab.id
       LEFT JOIN instructoras i ON r.instructora_id = i.id
       LEFT JOIN clases cl ON r.clase_id = cl.id
+      LEFT JOIN asistencias a ON r.id = a.reserva_id
     `;
     
     const conditions = [];
