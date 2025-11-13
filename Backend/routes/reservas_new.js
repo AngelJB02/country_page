@@ -1518,7 +1518,7 @@ router.put('/instructor/:reservaId/assign-horse', async (req, res) => {
 // Marcar asistencia
 router.put('/instructor/:reservaId/attendance', async (req, res) => {
   const { reservaId } = req.params;
-  const { asistio, observaciones, instructora_id } = req.body;
+  const { asistio, observaciones, instructora_id, nivel_clase, nuevo_nivel } = req.body;
 
   if (asistio === undefined || !instructora_id) {
     return res.status(400).json({ 
@@ -1527,9 +1527,9 @@ router.put('/instructor/:reservaId/attendance', async (req, res) => {
   }
 
   try {
-    // Verificar que la reserva pertenece a la instructora
+    // Verificar que la reserva pertenece a la instructora y obtener información del cliente
     const [reserva] = await db.query(`
-      SELECT id FROM reservas 
+      SELECT id, cliente_id FROM reservas 
       WHERE id = ? AND instructora_id = ?
     `, [reservaId, instructora_id]);
 
@@ -1538,6 +1538,8 @@ router.put('/instructor/:reservaId/attendance', async (req, res) => {
         error: 'Reserva no encontrada o no tienes permisos para modificarla' 
       });
     }
+
+    const clienteId = reserva[0].cliente_id;
 
     // Actualizar estatus y observaciones
     const nuevoEstatus = asistio ? 'completada' : 'cancelada';
@@ -1560,6 +1562,62 @@ router.put('/instructor/:reservaId/attendance', async (req, res) => {
       `, [nuevoEstatus, nuevasObservaciones.trim(), reservaId]);
     }
 
+    // Si asistió, guardar/actualizar en la tabla asistencias con el nivel de la clase
+    if (asistio) {
+      const asistenciaValue = 'presente';
+      
+      // Verificar si ya existe un registro de asistencia para esta reserva
+      const [existingAsistencia] = await db.query(
+        "SELECT * FROM asistencias WHERE reserva_id = ?", 
+        [reservaId]
+      );
+
+      if (existingAsistencia.length > 0) {
+        // Actualizar registro existente con el nivel de la clase
+        if (nivel_clase) {
+          await db.query(
+            "UPDATE asistencias SET asistio = ?, nivel_clase = ?, registrado_en = NOW() WHERE reserva_id = ?",
+            [asistenciaValue, nivel_clase, reservaId]
+          );
+        } else {
+          await db.query(
+            "UPDATE asistencias SET asistio = ?, registrado_en = NOW() WHERE reserva_id = ?",
+            [asistenciaValue, reservaId]
+          );
+        }
+        console.log(`✅ Asistencia actualizada para reserva ${reservaId} con nivel: ${nivel_clase || 'sin nivel'}`);
+      } else {
+        // Crear nuevo registro de asistencia con el nivel de la clase
+        if (nivel_clase) {
+          await db.query(
+            "INSERT INTO asistencias (reserva_id, instructora_id, asistio, nivel_clase, registrado_en) VALUES (?, ?, ?, ?, NOW())",
+            [reservaId, instructora_id, asistenciaValue, nivel_clase]
+          );
+        } else {
+          await db.query(
+            "INSERT INTO asistencias (reserva_id, instructora_id, asistio, registrado_en) VALUES (?, ?, ?, NOW())",
+            [reservaId, instructora_id, asistenciaValue]
+          );
+        }
+        console.log(`✅ Nueva asistencia creada para reserva ${reservaId} con nivel: ${nivel_clase || 'sin nivel'}`);
+      }
+    }
+
+    // Si se proporcionó un nuevo nivel, actualizar el nivel del cliente
+    if (nuevo_nivel && clienteId) {
+      // Validar que el nuevo nivel sea válido
+      const nivelesValidos = ['paseo', 'iniciacion', 'intermedio', 'avanzado'];
+      if (nivelesValidos.includes(nuevo_nivel)) {
+        await db.query(
+          "UPDATE usuarios SET tipo_nivel = ? WHERE id = ?",
+          [nuevo_nivel, clienteId]
+        );
+        console.log(`✅ Nivel del cliente ${clienteId} actualizado a: ${nuevo_nivel}`);
+      } else {
+        console.warn(`⚠️ Nivel no válido: ${nuevo_nivel}`);
+      }
+    }
+
     // Devolver la reserva actualizada
     const [rows] = await db.query(`
       SELECT 
@@ -1578,7 +1636,8 @@ router.put('/instructor/:reservaId/attendance', async (req, res) => {
 
     res.json(rows[0] || { 
       message: asistio ? 'Asistencia registrada correctamente' : 'Ausencia registrada correctamente y caballo liberado',
-      caballo_liberado: !asistio
+      caballo_liberado: !asistio,
+      nivel_actualizado: nuevo_nivel || false
     });
   } catch (err) {
     console.error('Error registrando asistencia:', err);

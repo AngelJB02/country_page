@@ -1,6 +1,22 @@
 import { Check, X } from "lucide-react"
+import { useState } from "react"
 
 function AttendanceModal({ classData, onClose, onAttendanceChange }) {
+  const [nuevoNivel, setNuevoNivel] = useState(classData.studentLevel || 'intermedio')
+  
+  const nivelesDisponibles = [
+    { value: 'paseo', label: 'Paseo' },
+    { value: 'iniciacion', label: 'Iniciación' },
+    { value: 'intermedio', label: 'Intermedio' },
+    { value: 'avanzado', label: 'Avanzado' }
+  ]
+
+  const handleAttendanceClick = (attendance) => {
+    // Si el nivel cambió, enviar el nuevo nivel junto con la asistencia
+    const nivelCambiado = nuevoNivel !== classData.studentLevel
+    onAttendanceChange(classData.id, attendance, nivelCambiado ? nuevoNivel : null)
+  }
+
   return (
     <div style={{
       position: 'fixed',
@@ -52,14 +68,63 @@ function AttendanceModal({ classData, onClose, onAttendanceChange }) {
           <p style={{ color: 'var(--charcoal)', marginBottom: '8px' }}>
             <strong>Hora:</strong> {classData.time}
           </p>
-          <p style={{ color: 'var(--charcoal)' }}>
-            <strong>Caballo:</strong> {classData.horse}
+          <p style={{ color: 'var(--charcoal)', marginBottom: '8px' }}>
+            <strong>Caballo:</strong> {classData.horse || 'Sin asignar'}
           </p>
+          <p style={{ color: 'var(--charcoal)', marginBottom: '16px' }}>
+            <strong>Nivel actual:</strong> {nivelesDisponibles.find(n => n.value === classData.studentLevel)?.label || classData.studentLevel || 'Intermedio'}
+          </p>
+        </div>
+
+        {/* Selector para cambiar el nivel */}
+        <div style={{ marginBottom: '24px' }}>
+          <label style={{ 
+            display: 'block', 
+            color: 'var(--charcoal)', 
+            fontWeight: '600', 
+            marginBottom: '8px',
+            fontSize: '14px'
+          }}>
+            Cambiar nivel del cliente:
+          </label>
+          <select
+            value={nuevoNivel}
+            onChange={(e) => setNuevoNivel(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '10px',
+              borderRadius: '8px',
+              border: '1.5px solid var(--stone-gray)',
+              fontSize: '16px',
+              color: 'var(--charcoal)',
+              backgroundColor: 'white',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+            onFocus={(e) => e.target.style.borderColor = 'var(--primary-brown)'}
+            onBlur={(e) => e.target.style.borderColor = 'var(--stone-gray)'}
+          >
+            {nivelesDisponibles.map((nivel) => (
+              <option key={nivel.value} value={nivel.value}>
+                {nivel.label}
+              </option>
+            ))}
+          </select>
+          {nuevoNivel !== classData.studentLevel && (
+            <p style={{ 
+              marginTop: '8px', 
+              fontSize: '13px', 
+              color: 'var(--sage-green)',
+              fontStyle: 'italic'
+            }}>
+              El nivel se cambiará después de registrar la asistencia
+            </p>
+          )}
         </div>
 
         <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
           <button
-            onClick={() => onAttendanceChange(classData.id, 'asistió')}
+            onClick={() => handleAttendanceClick('asistió')}
             style={{
               flex: 1,
               padding: '14px',
@@ -84,7 +149,7 @@ function AttendanceModal({ classData, onClose, onAttendanceChange }) {
           </button>
           
           <button
-            onClick={() => onAttendanceChange(classData.id, 'faltó')}
+            onClick={() => handleAttendanceClick('faltó')}
             style={{
               flex: 1,
               padding: '14px',

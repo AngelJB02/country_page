@@ -169,9 +169,9 @@ export default function InstructorDashboard() {
   
   console.log(`✅ Clases filtradas finales (${activeView}):`, filteredClasses.length);
 
-  const handleAttendanceChange = async (id, attendance) => {
+  const handleAttendanceChange = async (id, attendance, nuevoNivel = null) => {
     try {
-      console.log(`🎯 Actualizando asistencia: ${attendance} para reserva ${id}`)
+      console.log(`🎯 Actualizando asistencia: ${attendance} para reserva ${id}`, nuevoNivel ? `con cambio de nivel a: ${nuevoNivel}` : '')
       
       // Mapear los valores del frontend al backend
       const attendanceMap = {
@@ -182,12 +182,22 @@ export default function InstructorDashboard() {
       
       const backendAttendance = attendanceMap[attendance] || attendance;
       
+      // Obtener la clase actual para guardar el nivel con el que se tomó
+      const claseActual = classes.find(c => c.id === id);
+      const nivelClase = claseActual?.studentLevel || 'intermedio'; // Nivel con el que se tomó la clase
+      
       // Primero actualizar el estado local para respuesta inmediata
       const updatedClass = { 
         ...{}, 
         attendance, 
         status: attendance === 'faltó' ? 'cancelada' : 'completada'
       };
+      
+      // Si se cambió el nivel, actualizar también en el estado local
+      if (nuevoNivel) {
+        updatedClass.studentLevel = nuevoNivel;
+        updatedClass.level = nuevoNivel; // Mantener compatibilidad
+      }
       
       // Si faltó, también quitar el caballo
       if (attendance === 'faltó') {
@@ -203,8 +213,13 @@ export default function InstructorDashboard() {
       setShowAttendanceModal(false)
       
       // Luego actualizar en el backend
-      console.log('🔍 DEBUG - Datos a enviar:', { reservaId: id, asistencia: backendAttendance });
-      await actualizarAsistencia(id, backendAttendance, instructoraInfo?.id)
+      console.log('🔍 DEBUG - Datos a enviar:', { 
+        reservaId: id, 
+        asistencia: backendAttendance, 
+        nivelClase, 
+        nuevoNivel 
+      });
+      await actualizarAsistencia(id, backendAttendance, instructoraInfo?.id, nivelClase, nuevoNivel)
       
       console.log(`✅ Asistencia actualizada correctamente`)
       

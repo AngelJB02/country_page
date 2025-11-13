@@ -31,12 +31,15 @@ export const obtenerClasesInstructora = async (usuarioId) => {
  * Actualiza la asistencia de una reserva
  * @param {number} reservaId - ID de la reserva
  * @param {string} asistencia - 'presente', 'ausente', 'justificado', 'pendiente'
+ * @param {number} instructoraId - ID de la instructora (opcional)
+ * @param {string} nivelClase - Nivel con el que se tomó la clase (para historial)
+ * @param {string} nuevoNivel - Nuevo nivel del cliente (si se cambió)
  * @returns {Promise<Object>}
  */
 // Ahora acepta instructoraId para evitar un fetch extra
-export const actualizarAsistencia = async (reservaId, asistencia, instructoraId = null) => {
+export const actualizarAsistencia = async (reservaId, asistencia, instructoraId = null, nivelClase = null, nuevoNivel = null) => {
   try {
-    console.log('🔍 DEBUG - Actualizando asistencia:', { reservaId, asistencia });
+    console.log('🔍 DEBUG - Actualizando asistencia:', { reservaId, asistencia, nivelClase, nuevoNivel });
 
     // Si no viene instructoraId desde el front, recuperar desde usuario actual (fallback)
     if (!instructoraId) {
@@ -54,16 +57,28 @@ export const actualizarAsistencia = async (reservaId, asistencia, instructoraId 
 
     console.log('🏫 Instructora ID a usar:', instructoraId);
 
+    const bodyData = { 
+      asistio: asistencia === 'presente',
+      instructora_id: instructoraId, // Enviar instructora_id directo para evitar GET previo
+      observaciones: asistencia === 'ausente' ? 'Marcado por instructora' : ''
+    };
+
+    // Agregar nivel de la clase si se proporciona
+    if (nivelClase) {
+      bodyData.nivel_clase = nivelClase;
+    }
+
+    // Agregar nuevo nivel si se cambió
+    if (nuevoNivel) {
+      bodyData.nuevo_nivel = nuevoNivel;
+    }
+
     const response = await fetch(`${API_BASE_URL}/reservas/instructor/${reservaId}/attendance`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ 
-        asistio: asistencia === 'presente',
-        instructora_id: instructoraId, // Enviar instructora_id directo para evitar GET previo
-        observaciones: asistencia === 'ausente' ? 'Marcado por instructora' : ''
-      }),
+      body: JSON.stringify(bodyData),
     });
 
     if (!response.ok) {

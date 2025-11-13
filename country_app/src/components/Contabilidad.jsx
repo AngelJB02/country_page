@@ -27,6 +27,7 @@ const MembershipAdminDashboard = () => {
     fecha_pago: "",
     concepto: "",
     estatus_pago: "pagado",
+    metodo_pago: "efectivo",
     observaciones: "",
   })
   const [loading, setLoading] = useState(true)
@@ -53,6 +54,7 @@ const MembershipAdminDashboard = () => {
     fecha_pago: "",
     concepto: "",
     estatus_pago: "pagado",
+    metodo_pago: "efectivo",
     observaciones: "",
   })
   const [previewEdited, setPreviewEdited] = useState(false)
@@ -210,6 +212,31 @@ const MembershipAdminDashboard = () => {
       minimumFractionDigits: 0,
       maximumFractionDigits: 2
     })
+  }
+
+  // Función para formatear número con separadores de miles para input
+  const formatNumberInput = (value) => {
+    if (!value) return ""
+    // Remover todo excepto números y punto decimal
+    const numericValue = value.toString().replace(/[^\d.]/g, '')
+    if (!numericValue) return ""
+    // Convertir a número y formatear
+    const num = parseFloat(numericValue)
+    if (isNaN(num)) return ""
+    // Formatear con separadores de miles
+    return num.toLocaleString('en-US', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2
+    })
+  }
+
+  // Función para parsear valor formateado a número
+  const parseFormattedNumber = (formattedValue) => {
+    if (!formattedValue) return ""
+    // Remover separadores de miles y convertir a número
+    const numericValue = formattedValue.toString().replace(/,/g, '')
+    const num = parseFloat(numericValue)
+    return isNaN(num) ? "" : num
   }
 
   // Función para mostrar notificaciones
@@ -375,6 +402,7 @@ const MembershipAdminDashboard = () => {
       fecha_pago: "",
       concepto: "",
       estatus_pago: "pagado",
+      metodo_pago: "efectivo",
       observaciones: "",
     })
     setWithoutEmail(false)
@@ -407,6 +435,7 @@ const MembershipAdminDashboard = () => {
       fecha_pago: "",
       concepto: "",
       estatus_pago: "pagado",
+      metodo_pago: "efectivo",
       observaciones: "",
     })
   }
@@ -418,6 +447,7 @@ const MembershipAdminDashboard = () => {
       fecha_pago: "",
       concepto: "",
       estatus_pago: "pagado",
+      metodo_pago: "efectivo",
       observaciones: "",
     })
     
@@ -447,6 +477,7 @@ const MembershipAdminDashboard = () => {
       fecha_pago: "",
       concepto: "",
       estatus_pago: "pagado",
+      metodo_pago: "efectivo",
       observaciones: "",
     })
   }
@@ -482,6 +513,7 @@ const MembershipAdminDashboard = () => {
           fecha_pago: editingPayment.fecha_pago,
           concepto: editingPayment.concepto,
           estatus_pago: editingPayment.estatus_pago || "pagado",
+          metodo_pago: editingPayment.metodo_pago || "efectivo",
           observaciones: editingPayment.observaciones || null,
         }),
       })
@@ -520,6 +552,7 @@ const MembershipAdminDashboard = () => {
         fecha_pago: newPayment.fecha_pago,
         concepto: newPayment.concepto,
         estatus_pago: newPayment.estatus_pago || "pagado",
+        metodo_pago: newPayment.metodo_pago || "efectivo",
         observaciones: newPayment.observaciones || null
       }
 
@@ -631,6 +664,7 @@ const MembershipAdminDashboard = () => {
         fecha_pago: newClient.fecha_pago,
         concepto: newClient.concepto,
         estatus_pago: newClient.estatus_pago || "pagado",
+        metodo_pago: newClient.metodo_pago || "efectivo",
         observaciones: newClient.observaciones || null,
       }
 
@@ -1564,18 +1598,17 @@ const MembershipAdminDashboard = () => {
                   <div className="modal-field">
                     <label>Monto Mensualidad *:</label>
                     <input
-                      type="number"
-                      value={newClient.monto === "" ? "" : newClient.monto}
+                      type="text"
+                      value={newClient.monto === "" ? "" : formatNumberInput(newClient.monto)}
                       onChange={(e) => {
                         const val = e.target.value;
+                        const parsed = parseFormattedNumber(val);
                         setNewClient({
                           ...newClient,
-                          monto: val === "" ? "" : Number.parseFloat(val)
+                          monto: parsed === "" ? "" : parsed
                         });
                       }}
-                      placeholder="Ej: 200.00"
-                      step="0.01"
-                      min="0"
+                      placeholder="Ej: 18,000.00"
                       autoComplete="off"
                       inputMode="decimal"
                       data-lpignore="true"
@@ -1623,17 +1656,33 @@ const MembershipAdminDashboard = () => {
                     </select>
                   </div>
                 </div>
-                <div className="modal-field">
-                  <label>Observaciones:</label>
-                  <textarea
-                    value={newClient.observaciones}
-                    onChange={(e) => setNewClient({ ...newClient, observaciones: e.target.value })}
-                    placeholder="Observaciones adicionales (opcional)"
-                    rows="3"
-                    autoComplete="off"
-                    data-lpignore="true"
-                    data-form-type="other"
-                  />
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px", marginBottom: "15px" }}>
+                  <div className="modal-field">
+                    <label>Método de Pago *:</label>
+                    <select
+                      value={newClient.metodo_pago}
+                      onChange={(e) => setNewClient({ ...newClient, metodo_pago: e.target.value })}
+                      className="status-filter"
+                      data-lpignore="true"
+                      data-form-type="other"
+                    >
+                      <option value="efectivo">Efectivo</option>
+                      <option value="transferencia">Transferencia</option>
+                      <option value="link_pago">Link de Pago</option>
+                    </select>
+                  </div>
+                  <div className="modal-field">
+                    <label>Observaciones:</label>
+                    <textarea
+                      value={newClient.observaciones}
+                      onChange={(e) => setNewClient({ ...newClient, observaciones: e.target.value })}
+                      placeholder="Observaciones adicionales (opcional)"
+                      rows="3"
+                      autoComplete="off"
+                      data-lpignore="true"
+                      data-form-type="other"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -1680,6 +1729,7 @@ const MembershipAdminDashboard = () => {
                           <div className="payment-amount">${formatCurrency(payment.monto)}</div>
                           <div className="payment-concept">Concepto: {payment.concepto || "N/A"}</div>
                           <div className="payment-status">Estado: {payment.estatus_pago || "N/A"}</div>
+                          <div className="payment-method">Método de Pago: {payment.metodo_pago ? (payment.metodo_pago === 'link_pago' ? 'Link de Pago' : payment.metodo_pago.charAt(0).toUpperCase() + payment.metodo_pago.slice(1)) : "N/A"}</div>
                           <div className="payment-dates">
                             <span>Fecha de Pago: {formatDate(payment.fecha_pago)}</span>
                           </div>
@@ -1707,18 +1757,17 @@ const MembershipAdminDashboard = () => {
                 <div className="modal-field">
                   <label>Monto *:</label>
                   <input
-                    type="number"
-                    value={newPayment.monto === 0 ? "" : newPayment.monto}
+                    type="text"
+                    value={newPayment.monto === "" || newPayment.monto === 0 ? "" : formatNumberInput(newPayment.monto)}
                     onChange={(e) => {
                       const val = e.target.value;
+                      const parsed = parseFormattedNumber(val);
                       setNewPayment({
                         ...newPayment,
-                        monto: val === "" ? "" : Number.parseFloat(val)
+                        monto: parsed === "" ? "" : parsed
                       });
                     }}
-                    placeholder="Ej: 200.00"
-                    step="0.01"
-                    min="0"
+                    placeholder="Ej: 18,000.00"
                     autoComplete="off"
                     inputMode="decimal"
                     data-lpignore="true"
@@ -1748,20 +1797,36 @@ const MembershipAdminDashboard = () => {
                     data-form-type="other"
                   />
                 </div>
-                <div className="modal-field">
-                  <label>Estado del Pago *:</label>
-                  <select
-                    value={newPayment.estatus_pago}
-                    onChange={(e) => setNewPayment({ ...newPayment, estatus_pago: e.target.value })}
-                    className="status-filter"
-                    data-lpignore="true"
-                    data-form-type="other"
-                  >
-                    <option value="pagado">Pagado</option>
-                    <option value="pendiente">Pendiente</option>
-                    <option value="vencido">Vencido</option>
-                    <option value="bloqueado">Bloqueado</option>
-                  </select>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px", marginBottom: "15px" }}>
+                  <div className="modal-field">
+                    <label>Estado del Pago *:</label>
+                    <select
+                      value={newPayment.estatus_pago}
+                      onChange={(e) => setNewPayment({ ...newPayment, estatus_pago: e.target.value })}
+                      className="status-filter"
+                      data-lpignore="true"
+                      data-form-type="other"
+                    >
+                      <option value="pagado">Pagado</option>
+                      <option value="pendiente">Pendiente</option>
+                      <option value="vencido">Vencido</option>
+                      <option value="bloqueado">Bloqueado</option>
+                    </select>
+                  </div>
+                  <div className="modal-field">
+                    <label>Método de Pago *:</label>
+                    <select
+                      value={newPayment.metodo_pago}
+                      onChange={(e) => setNewPayment({ ...newPayment, metodo_pago: e.target.value })}
+                      className="status-filter"
+                      data-lpignore="true"
+                      data-form-type="other"
+                    >
+                      <option value="efectivo">Efectivo</option>
+                      <option value="transferencia">Transferencia</option>
+                      <option value="link_pago">Link de Pago</option>
+                    </select>
+                  </div>
                 </div>
                 <div className="modal-field">
                   <label>Observaciones:</label>
@@ -1805,10 +1870,14 @@ const MembershipAdminDashboard = () => {
                 <div className="modal-field">
                   <label>Monto *:</label>
                   <input
-                    type="number"
-                    value={editingPayment?.monto || ""}
-                    onChange={(e) => setEditingPayment({...editingPayment, monto: e.target.value})}
-                    placeholder="Ingresa el monto"
+                    type="text"
+                    value={editingPayment?.monto ? formatNumberInput(editingPayment.monto) : ""}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const parsed = parseFormattedNumber(val);
+                      setEditingPayment({...editingPayment, monto: parsed === "" ? "" : parsed});
+                    }}
+                    placeholder="Ej: 18,000.00"
                   />
                 </div>
 
@@ -1831,17 +1900,30 @@ const MembershipAdminDashboard = () => {
                   />
                 </div>
 
-                <div className="modal-field">
-                  <label>Estado del Pago *:</label>
-                  <select
-                    value={editingPayment?.estatus_pago || "pagado"}
-                    onChange={(e) => setEditingPayment({...editingPayment, estatus_pago: e.target.value})}
-                  >
-                    <option value="pagado">Pagado</option>
-                    <option value="pendiente">Pendiente</option>
-                    <option value="vencido">Vencido</option>
-                    <option value="bloqueado">Bloqueado</option>
-                  </select>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px", marginBottom: "15px" }}>
+                  <div className="modal-field">
+                    <label>Estado del Pago *:</label>
+                    <select
+                      value={editingPayment?.estatus_pago || "pagado"}
+                      onChange={(e) => setEditingPayment({...editingPayment, estatus_pago: e.target.value})}
+                    >
+                      <option value="pagado">Pagado</option>
+                      <option value="pendiente">Pendiente</option>
+                      <option value="vencido">Vencido</option>
+                      <option value="bloqueado">Bloqueado</option>
+                    </select>
+                  </div>
+                  <div className="modal-field">
+                    <label>Método de Pago *:</label>
+                    <select
+                      value={editingPayment?.metodo_pago || "efectivo"}
+                      onChange={(e) => setEditingPayment({...editingPayment, metodo_pago: e.target.value})}
+                    >
+                      <option value="efectivo">Efectivo</option>
+                      <option value="transferencia">Transferencia</option>
+                      <option value="link_pago">Link de Pago</option>
+                    </select>
+                  </div>
                 </div>
 
                 <div className="modal-field">

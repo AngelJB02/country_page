@@ -362,7 +362,7 @@ router.post('/preview-credentials', async (req, res) => {
 //   "observaciones": "Pago inicial del cliente"
 // }
 router.post('/register-cliente', async (req, res) => {
-  const { nombre, apellido, email, monto, fecha_pago, concepto, estatus_pago, withoutEmail, customPassword, edad, telefono, tipo_cliente, nivel, tipo_nivel, estatus, observaciones } = req.body;
+  const { nombre, apellido, email, monto, fecha_pago, concepto, estatus_pago, metodo_pago, withoutEmail, customPassword, edad, telefono, tipo_cliente, nivel, tipo_nivel, estatus, observaciones } = req.body;
 
   // Validar campos requeridos del usuario
   if (!nombre || !apellido) {
@@ -410,8 +410,8 @@ router.post('/register-cliente', async (req, res) => {
 
     // Registrar información de pago
     await connection.query(
-      "INSERT INTO contabilidad(cliente_id, monto, fecha_pago, concepto, estatus_pago, observaciones) VALUES(?,?,?,?,?,?)",
-      [userResult.insertId, monto, fecha_pago, concepto || 'Pago inicial', estatus_pago || 'pagado', observaciones || null]
+      "INSERT INTO contabilidad(cliente_id, monto, fecha_pago, concepto, estatus_pago, metodo_pago, observaciones) VALUES(?,?,?,?,?,?,?)",
+      [userResult.insertId, monto, fecha_pago, concepto || 'Pago inicial', estatus_pago || 'pagado', metodo_pago || 'efectivo', observaciones || null]
     );
 
     await connection.commit();
@@ -672,7 +672,7 @@ router.get('/payments/:id', async (req, res) => {
 
 // Crear o actualizar registro de contabilidad de usuario
 router.post('/payments', async (req, res) => {
-  const { cliente_id, monto, fecha_pago, concepto, estatus_pago, observaciones } = req.body;
+  const { cliente_id, monto, fecha_pago, concepto, estatus_pago, metodo_pago, observaciones } = req.body;
 
   // Validar campos requeridos
   if (!cliente_id) {
@@ -689,13 +689,14 @@ router.post('/payments', async (req, res) => {
       return res.status(400).json({ error: 'Para crear un nuevo registro se requieren los campos: monto, fecha_pago, concepto' });
     }
 
-    const insertQuery = `INSERT INTO contabilidad (cliente_id, monto, fecha_pago, concepto, estatus_pago, observaciones) VALUES (?, ?, ?, ?, ?, ?)`;
+    const insertQuery = `INSERT INTO contabilidad (cliente_id, monto, fecha_pago, concepto, estatus_pago, metodo_pago, observaciones) VALUES (?, ?, ?, ?, ?, ?, ?)`;
     const [result] = await db.query(insertQuery, [
       cliente_id,
       monto,
       formatDateForMySQL(fecha_pago),
       concepto,
       estatus_pago || 'pendiente',
+      metodo_pago || 'efectivo',
       observaciones || null
     ]);
 
@@ -732,6 +733,7 @@ router.get('/payment-history/:id', async (req, res) => {
         p.fecha_pago,
         p.concepto,
         p.estatus_pago,
+        p.metodo_pago,
         p.observaciones
       FROM contabilidad p
       WHERE p.cliente_id = ?
@@ -757,7 +759,7 @@ router.get('/payment-history/:id', async (req, res) => {
 
 // Agregar nuevo pago al historial
 router.post('/add-payment', async (req, res) => {
-  const { cliente_id, monto, fecha_pago, concepto, estatus_pago, observaciones } = req.body;
+  const { cliente_id, monto, fecha_pago, concepto, estatus_pago, metodo_pago, observaciones } = req.body;
 
   // Validar campos requeridos
   if (!cliente_id || !monto || !fecha_pago || !concepto) {
@@ -770,13 +772,14 @@ router.post('/add-payment', async (req, res) => {
     const fechaPagoFormatted = formatDateForMySQL(fecha_pago);
 
     const [result] = await db.query(
-      'INSERT INTO contabilidad (cliente_id, monto, fecha_pago, concepto, estatus_pago, observaciones) VALUES (?, ?, ?, ?, ?, ?)',
+      'INSERT INTO contabilidad (cliente_id, monto, fecha_pago, concepto, estatus_pago, metodo_pago, observaciones) VALUES (?, ?, ?, ?, ?, ?, ?)',
       [
         cliente_id,
         monto,
         fechaPagoFormatted,
         concepto,
         estatus_pago || 'pendiente',
+        metodo_pago || 'efectivo',
         observaciones || null
       ]
     );
@@ -876,7 +879,7 @@ router.get('/payment-status', async (req, res) => {
 router.put('/payment/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { monto, fecha_pago, concepto, estatus_pago, observaciones } = req.body;
+    const { monto, fecha_pago, concepto, estatus_pago, metodo_pago, observaciones } = req.body;
 
     // Validar que el ID sea válido
     if (!id || isNaN(parseInt(id))) {
@@ -884,7 +887,7 @@ router.put('/payment/:id', async (req, res) => {
     }
 
     // Validar que al menos un campo sea proporcionado
-    if (!monto && !fecha_pago && !concepto && !estatus_pago && !observaciones) {
+    if (!monto && !fecha_pago && !concepto && !estatus_pago && !metodo_pago && !observaciones) {
       return res.status(400).json({ 
         error: 'Al menos un campo debe ser proporcionado para actualizar' 
       });
@@ -923,6 +926,11 @@ router.put('/payment/:id', async (req, res) => {
     if (estatus_pago !== undefined) {
       updateFields.push('estatus_pago = ?');
       updateValues.push(estatus_pago);
+    }
+
+    if (metodo_pago !== undefined) {
+      updateFields.push('metodo_pago = ?');
+      updateValues.push(metodo_pago);
     }
 
     if (observaciones !== undefined) {
