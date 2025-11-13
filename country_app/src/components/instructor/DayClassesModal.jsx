@@ -1,9 +1,30 @@
 import { Clock } from "lucide-react"
+import { useState } from "react"
 
 function DayClassesModal({ date, classes, onClose, onClassClick }) {
+  const [cancelingId, setCancelingId] = useState(null);
   // Filtrar clases canceladas como medida de seguridad adicional
-  const activeClasses = classes.filter(c => c.status !== 'cancelada');
-  
+  const activeClasses = classes.filter(c => c.status !== 'cancelada' && c.status !== 'cancelado_instructor');
+
+  // Función para cancelar clase
+  const handleCancelClass = async (classItem) => {
+    if (!window.confirm('¿Seguro que deseas cancelar esta clase? Esto notificará al cliente.')) return;
+    setCancelingId(classItem.id);
+    try {
+      const response = await fetch(`http://localhost:3001/api/reservas/${classItem.id}/estatus`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estatus: 'cancelado_instructor' })
+      });
+      if (!response.ok) throw new Error('Error al cancelar la clase');
+      window.location.reload();
+    } catch (err) {
+      alert('No se pudo cancelar la clase.');
+    } finally {
+      setCancelingId(null);
+    }
+  };
+
   return (
     <div style={{
       position: 'fixed',
@@ -109,6 +130,26 @@ function DayClassesModal({ date, classes, onClose, onClassClick }) {
                     {classItem.attendance === 'asistió' ? '✓ Asistió' : '✗ Faltó'}
                   </div>
                 )}
+                <button
+                  style={{
+                    marginLeft: 'auto',
+                    backgroundColor: 'var(--terracotta)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    padding: '6px 14px',
+                    fontWeight: 'bold',
+                    cursor: cancelingId === classItem.id ? 'not-allowed' : 'pointer',
+                    opacity: cancelingId === classItem.id ? 0.6 : 1
+                  }}
+                  disabled={cancelingId === classItem.id}
+                  onClick={e => {
+                    e.stopPropagation();
+                    handleCancelClass(classItem);
+                  }}
+                >
+                  {cancelingId === classItem.id ? 'Cancelando...' : 'Cancelar clase'}
+                </button>
               </div>
             </div>
           ))}

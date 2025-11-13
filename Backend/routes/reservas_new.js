@@ -475,11 +475,11 @@ router.put('/admin/:id/status', async (req, res) => {
   }
 
   try {
-    // Si se está cancelando la reserva, también quitar el caballo asignado
+    // Si se está cancelando la reserva, también quitar el caballo e instructor asignados
     if (estatus === 'cancelada') {
       const [result] = await db.query(`
         UPDATE reservas 
-        SET estatus = ?, observaciones = COALESCE(?, observaciones), caballo_id = NULL
+        SET estatus = ?, observaciones = COALESCE(?, observaciones), caballo_id = NULL, instructora_id = NULL
         WHERE id = ?
       `, [estatus, observaciones, id]);
 
@@ -488,8 +488,9 @@ router.put('/admin/:id/status', async (req, res) => {
       }
 
       res.json({ 
-        message: 'Reserva cancelada correctamente y caballo liberado',
-        caballo_liberado: true 
+        message: 'Reserva cancelada correctamente y caballo e instructor liberados',
+        caballo_liberado: true,
+        instructor_liberado: true
       });
     } else {
       const [result] = await db.query(`
@@ -584,11 +585,11 @@ router.put('/admin/:reservaId/attendance', async (req, res) => {
       `[Admin] Clase completada. ${observaciones || ''}` : 
       `[Admin] No asistió. ${observaciones || ''}`;
 
-    // Si no asistió (cancelada), también liberar el caballo
+    // Si no asistió (cancelada), también liberar el caballo e instructor
     if (!asistio) {
       await db.query(`
         UPDATE reservas 
-        SET estatus = ?, observaciones = ?, caballo_id = NULL
+        SET estatus = ?, observaciones = ?, caballo_id = NULL, instructora_id = NULL
         WHERE id = ?
       `, [nuevoEstatus, nuevasObservaciones.trim(), reservaId]);
     } else {
@@ -1100,7 +1101,7 @@ router.get('/propietarios', async (req, res) => {
 });
 
 // Cancelar reserva (cliente)
-router.delete('/:id/cancel/:clienteId', async (req, res) => {
+router.put('/:id/cancel/:clienteId', async (req, res) => {
   const { id, clienteId } = req.params;
 
   try {
@@ -1127,7 +1128,7 @@ router.delete('/:id/cancel/:clienteId', async (req, res) => {
       });
     }
 
-    if (infoReserva.estatus === 'cancelada') {
+    if (infoReserva.estatus === 'cancelada' || infoReserva.estatus === 'cancelada_instructor') {
       return res.status(400).json({ error: 'La reserva ya está cancelada' });
     }
 
@@ -1135,14 +1136,21 @@ router.delete('/:id/cancel/:clienteId', async (req, res) => {
       return res.status(400).json({ error: 'No se puede cancelar una reserva completada' });
     }
 
-    // Cancelar la reserva y liberar el caballo
+    // Determinar estatus de cancelación
+    let nuevoEstatus = 'cancelada';
+    if (req.body && req.body.estatus && req.body.estatus === 'cancelada_instructor') {
+      nuevoEstatus = 'cancelada_instructor';
+    }
+
+    // Cancelar la reserva y liberar el caballo e instructor
     await db.query(`
-      UPDATE reservas SET estatus = 'cancelada', caballo_id = NULL WHERE id = ?
-    `, [id]);
+      UPDATE reservas SET estatus = ?, caballo_id = NULL, instructora_id = NULL WHERE id = ?
+    `, [nuevoEstatus, id]);
 
     res.json({ 
-      message: 'Reserva cancelada correctamente',
-      caballo_liberado: true 
+      message: `Reserva cancelada correctamente${nuevoEstatus === 'cancelada_instructor' ? ' por instructor' : ''}`,
+      caballo_liberado: true,
+      instructor_liberado: true
     });
   } catch (err) {
     console.error('Error cancelando reserva:', err);
@@ -1547,11 +1555,11 @@ router.put('/instructor/:reservaId/attendance', async (req, res) => {
       `Clase completada. ${observaciones || ''}` : 
       `No asistió. ${observaciones || ''}`;
 
-    // Si no asistió (cancelada), también liberar el caballo
+    // Si no asistió (cancelada), también liberar el caballo e instructor
     if (!asistio) {
       await db.query(`
         UPDATE reservas 
-        SET estatus = ?, observaciones = ?, caballo_id = NULL
+        SET estatus = ?, observaciones = ?, caballo_id = NULL, instructora_id = NULL
         WHERE id = ?
       `, [nuevoEstatus, nuevasObservaciones.trim(), reservaId]);
     } else {

@@ -216,6 +216,7 @@ export default function InstructorClases() {
                       <th>Caballo</th>
                       <th>Estado</th>
                       <th>Asistencia</th>
+                      <th>Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -231,6 +232,8 @@ export default function InstructorClases() {
                             return { border: "#6b4423", color: "#6b4423" }; // Marrón más oscuro
                           case "completada":
                             return { border: "#7a9d6a", color: "#7a9d6a" }; // Verde más oscuro
+                          case "cancelado_instructor":
+                            return { border: "#b8653a", color: "#b8653a" }; // Terracotta más oscuro
                           default:
                             return { border: "#b8653a", color: "#b8653a" }; // Terracotta más oscuro
                         }
@@ -297,7 +300,7 @@ export default function InstructorClases() {
                               textAlign: "center"
                             }}
                           >
-                            {classItem.status.charAt(0).toUpperCase() + classItem.status.slice(1)}
+                              {classItem.status === 'cancelada_instructor' ? 'Cancelada por instructor' : (classItem.status.charAt(0).toUpperCase() + classItem.status.slice(1))}
                           </span>
                         </td>
                         <td>
@@ -327,6 +330,38 @@ export default function InstructorClases() {
                             ) : (
                               'Marcar'
                             )}
+                          </button>
+                        </td>
+                        <td>
+                          <button
+                            style={{
+                              backgroundColor: '#b8653a',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '6px',
+                              padding: '6px 14px',
+                              fontWeight: 'bold',
+                              cursor: (classItem.status === 'cancelada_instructor' || classItem.status === 'cancelada' || classItem.status === 'completada') ? 'not-allowed' : 'pointer',
+                              opacity: (classItem.status === 'cancelada_instructor' || classItem.status === 'cancelada' || classItem.status === 'completada') ? 0.6 : 1
+                            }}
+                            disabled={classItem.status === 'cancelada_instructor' || classItem.status === 'cancelada' || classItem.status === 'completada'}
+                            onClick={async (e) => {
+                              e.preventDefault();
+                              if (!window.confirm('¿Seguro que deseas cancelar esta clase? Esto notificará al cliente.')) return;
+                              try {
+                                const response = await fetch(`http://localhost:3001/api/reservas/${classItem.id}/cancel/${classItem.cliente_id}`, {
+                                  method: 'PUT',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ estatus: 'cancelada_instructor' })
+                                });
+                                if (!response.ok) throw new Error('Error al cancelar la clase');
+                                window.location.reload();
+                              } catch (err) {
+                                alert('No se pudo cancelar la clase.');
+                              }
+                            }}
+                          >
+                            {classItem.status === 'cancelado_instructor' ? 'Cancelada por instructor' : 'Cancelar clase'}
                           </button>
                         </td>
                       </tr>

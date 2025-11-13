@@ -31,6 +31,12 @@
   border: 1px solid #f5c6cb;
   text-decoration: line-through;
 }
+.mc-booking-status-cancelada-instructor {
+  background: #f5e6e0;
+  color: #b8653a;
+  border: 1px solid #e6b8a3;
+}
+
 /* Reglas CSS mínimas para que la página tenga un aspecto razonable sin Tailwind. */
 .font-serif { font-family: "Playfair Display", serif; }
 .text-center { text-align: center; }

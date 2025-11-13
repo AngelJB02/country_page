@@ -36,7 +36,7 @@ export async function fetchWeekBookings(fechaInicio, fechaFin, clienteId) {
 // Cancelar reserva (cambia estatus a cancelada, no elimina)
 export async function cancelBooking(reservaId, clienteId) {
   const res = await fetch(`http://localhost:3001/api/reservas/${reservaId}/cancel/${clienteId}`, {
-    method: 'DELETE',
+    method: 'PUT',
   });
   const data = await res.json();
   if (!res.ok) {

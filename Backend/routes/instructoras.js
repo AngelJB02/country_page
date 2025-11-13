@@ -92,9 +92,11 @@ router.get('/clases/:usuario_id', async (req, res) => {
     console.log(`📋 Buscando clases para instructora ID: ${instructora.instructora_id} (${instructora.nombre} ${instructora.apellido})`);
     
     // Obtener todas las reservas/clases de esta instructora
+
     const [clasesRows] = await db.query(`
       SELECT 
         r.id,
+        r.cliente_id as cliente_id,
         r.fecha,
         r.hora_inicio as horario,
         u.nombre as student_nombre,
@@ -112,20 +114,19 @@ router.get('/clases/:usuario_id', async (req, res) => {
       WHERE r.instructora_id = ?
       ORDER BY r.fecha DESC, r.hora_inicio ASC
     `, [instructora.instructora_id]);
-    
+
     console.log(`🎯 Encontradas ${clasesRows.length} reservas para la instructora`);
     console.log('📊 Primeras 2 reservas:', clasesRows.slice(0, 2));
-    
+
     // Formatear los datos para que coincidan con el frontend
     const clasesFormateadas = clasesRows.map(clase => {
       // Formatear la fecha para que sea compatible
       const fecha = clase.fecha ? new Date(clase.fecha).toISOString().split('T')[0] : null;
-      
       // Formatear la hora para mostrar solo HH:MM
       const hora = clase.horario ? clase.horario.slice(0, 5) : '00:00';
-      
       return {
         id: clase.id,
+        cliente_id: clase.cliente_id,
         type: clase.type || 'Sin tipo',
         date: fecha,
         time: hora,

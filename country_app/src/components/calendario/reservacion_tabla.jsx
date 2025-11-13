@@ -9,7 +9,9 @@ export function ReservacionTabla({ userBookings = [], onCancelBooking }) {
         <p className="mc-no-bookings">No tienes reservas.</p>
       ) : (
         <ul className="mc-bookings-list">
-          {userBookings.filter(b => b.estatus !== 'cancelada').map((b) => {
+          {userBookings.filter(
+            b => b.estatus !== 'cancelada' || b.estatus === 'cancelada_instructor'
+          ).map((b) => {
             let day = '', time = '', clase = '';
             if (typeof b.timeSlotId === 'string' && b.timeSlotId.includes('-')) {
               [day, time] = b.timeSlotId.split('-');
@@ -38,6 +40,9 @@ export function ReservacionTabla({ userBookings = [], onCancelBooking }) {
             } else if (b.estatus === 'pendiente') {
               statusLabel = 'Pendiente';
               statusClass = 'mc-booking-status-pendiente';
+            } else if (b.estatus === 'cancelada_instructor') {
+              statusLabel = 'Cancelada por instructor';
+              statusClass = 'mc-booking-status-cancelada-instructor';
             }
             return (
               <li key={b.id} className="mc-booking-item">

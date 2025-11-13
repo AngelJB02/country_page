@@ -231,8 +231,8 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
   // Determina si el usuario ya reservó ese slot (solo confirmada/pendiente)
   const isBookedByUser = selectedSlot
     ? userBookings.some(b => {
-        // Excluir reservas canceladas o completadas
-        if (b.estatus === 'cancelada' || b.estatus === 'completada') {
+        // Excluir reservas canceladas, completadas o canceladas por instructor
+        if (b.estatus === 'cancelada' || b.estatus === 'completada' || b.estatus === 'cancelada_instructor') {
           return false;
         }
         // Para reservas dummy
@@ -258,7 +258,7 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
     ? userBookings.some(b => b.estatus === 'pendiente' || b.estatus === 'confirmada')
     : selectedSlot && userType !== 'propietario' && userType !== 'renta' && userType !== 'media_renta'
       ? userBookings.some(b => {
-          if (b.estatus === 'cancelada' || b.estatus === 'completada') {
+          if (b.estatus === 'cancelada' || b.estatus === 'completada' || b.estatus === 'cancelada_instructor') {
             return false;
           }
           if (b.timeSlotId && typeof b.timeSlotId === 'string') {

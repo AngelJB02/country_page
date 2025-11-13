@@ -156,19 +156,37 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
         return false;
       });
 
-      // Calcular reservas TOTALES ocupadas (todas menos cancelada) para el slot
+      // Calcular reservas TOTALES ocupadas (solo 'pendiente' y 'confirmada') para el slot, ignorando las demás
       const totalBookingsForSlot = allWeekBookings.filter((b) => {
         if (b.fecha && b.hora_inicio && b.clase_nombre && slotDateStr) {
           const reservaDateStr = b.fecha.split('T')[0];
-          return (
+          const matchesSlot = (
             reservaDateStr === slotDateStr &&
             b.hora_inicio.slice(0,5) === time &&
-            b.clase_nombre === className &&
-            b.estatus !== 'cancelada'
+            b.clase_nombre === className
           );
+          const esEstatusValido = (b.estatus === 'pendiente' || b.estatus === 'confirmada');
+          
+          // Debug: ver qué reservas se están considerando
+          if (matchesSlot) {
+            console.log(`🔍 Reserva en slot ${day}-${time}:`, {
+              id: b.id,
+              estatus: b.estatus,
+              esEstatusValido,
+              clase: b.clase_nombre
+            });
+          }
+          
+          // Solo contar si el estatus es 'pendiente' o 'confirmada'
+          return matchesSlot && esEstatusValido;
         }
         return false;
       }).length;
+      
+      // Debug: mostrar el resultado del conteo
+      if (totalBookingsForSlot > 0) {
+        console.log(`✅ Total válidas en ${day}-${time}: ${totalBookingsForSlot}`);
+      }
 
       // Buscar si el usuario tiene una reserva completada o cancelada en este slot
       let userStatus = null;
@@ -307,12 +325,22 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
                   
                   return matchesSlot && b.cliente_id === userId && (b.estatus === 'confirmada' || b.estatus === 'pendiente');
                 });
+                
+                // Debug: verificar totalBooked
+                if (slot.totalBooked > 0 || slot.bookings.length > 0) {
+                  console.log(`📊 Slot ${slot.day}-${slot.time}:`, {
+                    totalBooked: slot.totalBooked,
+                    bookingsLength: slot.bookings.length,
+                    usando: slot.totalBooked
+                  });
+                }
+                
                 return (
                   <TimeSlotCard
                     key={slot.id}
                     time={slot.time}
                     capacity={slot.capacity}
-                    bookedCount={slot.totalBooked || slot.bookings.length}
+                    bookedCount={slot.totalBooked}
                     isBookedByUser={isBookedByUser}
                     isBlocked={slot.isBlocked || false}
                     isWithin2Hours={slot.isWithin2Hours || false}
