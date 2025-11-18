@@ -22,8 +22,8 @@ function CalendarView({ classes, onDateClick }) {
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     const dateStr = `${year}-${month}-${day}`;
-    // Filtrar clases canceladas del calendario
-    return classes.filter(c => c.date === dateStr && c.status !== 'cancelada')
+    // Filtrar clases canceladas y canceladas por instructor del calendario
+    return classes.filter(c => c.date === dateStr && c.status !== 'cancelada' && c.status !== 'cancelada_instructor')
   }
 
   const { daysInMonth, startingDayOfWeek } = getDaysInMonth(currentMonth)

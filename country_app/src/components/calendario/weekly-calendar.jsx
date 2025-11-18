@@ -191,15 +191,19 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
       // Buscar si el usuario tiene una reserva completada o cancelada en este slot
       let userStatus = null;
       let instructoraNombre = null;
+      let motivoCancelacion = null;
       if (slotBookings.length > 0) {
         // Tomar la reserva más reciente (por id más alto)
         const userBooking = slotBookings.reduce((a, b) => (a.id > b.id ? a : b));
         userStatus = userBooking.estatus;
         instructoraNombre = userBooking.instructora_nombre || null;
+        motivoCancelacion = userBooking.motivo_cancelacion || null;
       }
 
       const hour = parseInt(time.split(":")[0], 10);
       const isBlocked = userLevel === "Iniciación" && hour >= 17;
+      // Bloquear también si está cancelada por instructor
+      const isCancelledByInstructor = userStatus === 'cancelada_instructor';
       slots.push({
         id: slotId,
         day,
@@ -208,11 +212,12 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
         capacity,
         bookings: slotBookings,
         totalBooked: totalBookingsForSlot,
-        isBlocked: isBlocked || isWithin2Hours || hasPassed, // Bloquear si: iniciación tarde, <2h, o ya pasó
+        isBlocked: isBlocked || isWithin2Hours || hasPassed || isCancelledByInstructor, // Bloquear si: iniciación tarde, <2h, ya pasó, o cancelada por instructor
         isWithin2Hours, // Flag específico para mensaje "muy pronto"
         hasPassed, // Flag específico para mensaje "clase finalizada"
         userStatus, // nuevo: estatus de la reserva del usuario (si existe)
         instructoraNombre,
+        motivoCancelacion, // motivo de cancelación si existe
       });
     });
     return slots;
@@ -347,6 +352,7 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
                     hasPassed={slot.hasPassed || false}
                     userStatus={slot.userStatus}
                     instructoraNombre={slot.instructoraNombre}
+                    motivoCancelacion={slot.motivoCancelacion}
                     onClick={() => onSlotClick(slot)}
                   />
                 );

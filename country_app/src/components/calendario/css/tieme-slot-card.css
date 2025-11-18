@@ -25,6 +25,31 @@
   color: white !important;
 }
 
+/* Cancelada por instructor: color rojo/naranja para distinguir */
+.tsc-card.tsc--cancelled-instructor {
+  background-color: #d9534f !important;
+  border-color: #c9302c !important;
+  color: white !important;
+  cursor: not-allowed;
+}
+
+.tsc-card.tsc--cancelled-instructor .tsc-meta {
+  color: white !important;
+}
+
+.tsc-cancelled-reason {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: center;
+}
+
+.tsc-reason {
+  font-size: 10px;
+  font-style: italic;
+  opacity: 0.95;
+}
+
 /* Asegurar que el texto interno y metadatos también sean blancos en bloqueado */
 /* Solo forzar color blanco en fondo bloqueado para .tsc-inner, .tsc-time y .tsc-horse, pero NO en .tsc-meta */
 .tsc-card.tsc--blocked .tsc-inner,

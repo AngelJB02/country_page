@@ -91,6 +91,15 @@ router.get('/clases/:usuario_id', async (req, res) => {
     
     console.log(`📋 Buscando clases para instructora ID: ${instructora.instructora_id} (${instructora.nombre} ${instructora.apellido})`);
     
+    // Actualizar clases pasadas de pendiente/confirmada a completada automáticamente
+    await db.query(`
+      UPDATE reservas 
+      SET estatus = 'completada'
+      WHERE instructora_id = ?
+      AND estatus IN ('pendiente', 'confirmada')
+      AND CONCAT(fecha, ' ', hora_fin) < NOW()
+    `, [instructora.instructora_id]);
+    
     // Obtener todas las reservas/clases de esta instructora
 
     const [clasesRows] = await db.query(`
@@ -106,6 +115,7 @@ router.get('/clases/:usuario_id', async (req, res) => {
         c.nombre as type,
         cab.nombre as horse,
         r.estatus as status,
+        r.motivo_cancelacion,
         'pendiente' as attendance
       FROM reservas r
       LEFT JOIN clases c ON r.clase_id = c.id
@@ -136,6 +146,7 @@ router.get('/clases/:usuario_id', async (req, res) => {
         studentAge: clase.studentAge || 0,
         studentLevel: clase.student_nivel || 'Intermedio', // Nivel del estudiante
         status: clase.status || 'pendiente',
+        motivo_cancelacion: clase.motivo_cancelacion || '',
         attendance: clase.attendance || 'pendiente',
         level: clase.student_nivel || 'Intermedio' // Mantenemos level para compatibilidad
       };

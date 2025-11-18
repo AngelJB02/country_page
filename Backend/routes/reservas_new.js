@@ -475,11 +475,11 @@ router.put('/admin/:id/status', async (req, res) => {
   }
 
   try {
-    // Si se está cancelando la reserva, también quitar el caballo e instructor asignados
+    // Si se está cancelando la reserva, liberar caballo pero mantener instructor para historial
     if (estatus === 'cancelada') {
       const [result] = await db.query(`
         UPDATE reservas 
-        SET estatus = ?, observaciones = COALESCE(?, observaciones), caballo_id = NULL, instructora_id = NULL
+        SET estatus = ?, observaciones = COALESCE(?, observaciones), caballo_id = NULL
         WHERE id = ?
       `, [estatus, observaciones, id]);
 
@@ -488,9 +488,9 @@ router.put('/admin/:id/status', async (req, res) => {
       }
 
       res.json({ 
-        message: 'Reserva cancelada correctamente y caballo e instructor liberados',
+        message: 'Reserva cancelada correctamente y caballo liberado',
         caballo_liberado: true,
-        instructor_liberado: true
+        instructor_liberado: false
       });
     } else {
       const [result] = await db.query(`
@@ -585,11 +585,11 @@ router.put('/admin/:reservaId/attendance', async (req, res) => {
       `[Admin] Clase completada. ${observaciones || ''}` : 
       `[Admin] No asistió. ${observaciones || ''}`;
 
-    // Si no asistió (cancelada), también liberar el caballo e instructor
+    // Si no asistió (cancelada), liberar caballo pero mantener instructor para historial
     if (!asistio) {
       await db.query(`
         UPDATE reservas 
-        SET estatus = ?, observaciones = ?, caballo_id = NULL, instructora_id = NULL
+        SET estatus = ?, observaciones = ?, caballo_id = NULL
         WHERE id = ?
       `, [nuevoEstatus, nuevasObservaciones.trim(), reservaId]);
     } else {
@@ -637,6 +637,7 @@ router.get('/my-reservations/:clienteId', async (req, res) => {
         r.hora_inicio,
         r.hora_fin,
         r.estatus,
+        r.motivo_cancelacion,
         r.tipo,
         r.observaciones,
         c.nombre as caballo_nombre,
@@ -1138,19 +1139,22 @@ router.put('/:id/cancel/:clienteId', async (req, res) => {
 
     // Determinar estatus de cancelación
     let nuevoEstatus = 'cancelada';
+    let motivoCancelacion = null;
     if (req.body && req.body.estatus && req.body.estatus === 'cancelada_instructor') {
       nuevoEstatus = 'cancelada_instructor';
+      motivoCancelacion = req.body.motivo_cancelacion || null;
     }
 
-    // Cancelar la reserva y liberar el caballo e instructor
+    // Cancelar la reserva, liberar caballo pero mantener instructor para historial
     await db.query(`
-      UPDATE reservas SET estatus = ?, caballo_id = NULL, instructora_id = NULL WHERE id = ?
-    `, [nuevoEstatus, id]);
+      UPDATE reservas SET estatus = ?, caballo_id = NULL, motivo_cancelacion = ?
+       WHERE id = ?
+    `, [nuevoEstatus, motivoCancelacion, id]);
 
     res.json({ 
       message: `Reserva cancelada correctamente${nuevoEstatus === 'cancelada_instructor' ? ' por instructor' : ''}`,
       caballo_liberado: true,
-      instructor_liberado: true
+      instructor_liberado: false
     });
   } catch (err) {
     console.error('Error cancelando reserva:', err);
@@ -1555,11 +1559,11 @@ router.put('/instructor/:reservaId/attendance', async (req, res) => {
       `Clase completada. ${observaciones || ''}` : 
       `No asistió. ${observaciones || ''}`;
 
-    // Si no asistió (cancelada), también liberar el caballo e instructor
+    // Si no asistió (cancelada), liberar caballo pero mantener instructor para historial
     if (!asistio) {
       await db.query(`
         UPDATE reservas 
-        SET estatus = ?, observaciones = ?, caballo_id = NULL, instructora_id = NULL
+        SET estatus = ?, observaciones = ?, caballo_id = NULL
         WHERE id = ?
       `, [nuevoEstatus, nuevasObservaciones.trim(), reservaId]);
     } else {
