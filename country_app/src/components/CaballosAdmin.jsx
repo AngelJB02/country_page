@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import ReactDOM from "react-dom";
-import { Loader, UserPlus, Trash2, Edit } from "lucide-react";
+import { Loader, UserPlus, Trash2, Edit, ChevronLeft, ChevronRight } from "lucide-react";
 
 const CaballosAdmin = () => {
   const [caballos, setCaballos] = useState([]);
@@ -8,6 +8,8 @@ const CaballosAdmin = () => {
   const [loading, setLoading] = useState(true);
   const [addHorseModalOpen, setAddHorseModalOpen] = useState(false);
   const [editHorseModalOpen, setEditHorseModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   const [newHorse, setNewHorse] = useState({
     nombre: "",
     propietario_id: "",
@@ -205,6 +207,7 @@ const CaballosAdmin = () => {
         showNotification("Caballo dado de baja correctamente", "success");
         closeConfirmDeleteModal();
         loadCaballos(); // Recargar la lista
+        setCurrentPage(1); // Resetear a la primera página
       } else {
         const error = await response.json();
         showNotification("Error al dar de baja: " + (error?.error ?? "Error desconocido"), "error");
@@ -251,7 +254,13 @@ const CaballosAdmin = () => {
         const result = await response.json();
         showNotification("Caballo agregado correctamente", "success");
         closeAddHorseModal();
-        loadCaballos(); // Recargar la lista
+        // Recargar la lista y luego ir a la última página
+        const updatedCaballos = [...caballos, result];
+        setCaballos(updatedCaballos);
+        const newTotalPages = Math.ceil(updatedCaballos.length / itemsPerPage);
+        setCurrentPage(newTotalPages);
+        // También recargar desde el servidor para asegurar consistencia
+        loadCaballos();
       } else {
         const error = await response.json();
         console.error('❌ Error del servidor:', error);
@@ -267,6 +276,21 @@ const CaballosAdmin = () => {
 
   const renderPortal = (node) => ReactDOM.createPortal(node, document.body);
 
+  // Calcular paginación
+  const totalPages = Math.ceil(caballos.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentCaballos = caballos.slice(startIndex, endIndex);
+
+  // Calcular métricas
+  const totalCaballos = caballos.length;
+  const disponibles = caballos.filter(c => c.disponibilidad === "disponible").length;
+  const noDisponibles = caballos.filter(c => c.disponibilidad === "no_disponible").length;
+  const publicos = caballos.filter(c => c.estatus === "publico").length;
+  const privados = caballos.filter(c => c.estatus === "privado").length;
+  const renta = caballos.filter(c => c.estatus === "renta").length;
+  const mediaRenta = caballos.filter(c => c.estatus === "media_renta").length;
+
   return (
     <div className="caballos-admin-container">
       <div className="controls-container enhanced-controls" style={{ marginBottom: "1.5rem" }}>
@@ -277,6 +301,109 @@ const CaballosAdmin = () => {
           </button>
         </div>
       </div>
+
+      {/* Métricas - Arriba de la tabla */}
+      {!loading && caballos.length > 0 && (
+        <div style={{ 
+          marginBottom: "1.5rem", 
+          display: "flex", 
+          gap: "1rem", 
+          justifyContent: "center",
+          flexWrap: "wrap"
+        }}>
+          <div style={{ 
+            padding: "1rem 1.5rem", 
+            background: "rgba(156, 175, 136, 0.1)", 
+            borderRadius: "8px",
+            border: "2px solid #9caf88"
+          }}>
+            <div style={{ fontSize: "0.85rem", color: "var(--stone-gray)", marginBottom: "0.3rem" }}>
+              Total Caballos
+            </div>
+            <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#9caf88" }}>
+              {totalCaballos}
+            </div>
+          </div>
+          <div style={{ 
+            padding: "1rem 1.5rem", 
+            background: "rgba(156, 175, 136, 0.1)", 
+            borderRadius: "8px",
+            border: "2px solid #9caf88"
+          }}>
+            <div style={{ fontSize: "0.85rem", color: "var(--stone-gray)", marginBottom: "0.3rem" }}>
+              Disponibles
+            </div>
+            <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#9caf88" }}>
+              {disponibles}
+            </div>
+          </div>
+          <div style={{ 
+            padding: "1rem 1.5rem", 
+            background: "rgba(139, 90, 43, 0.1)", 
+            borderRadius: "8px",
+            border: "2px solid #8b5a2b"
+          }}>
+            <div style={{ fontSize: "0.85rem", color: "var(--stone-gray)", marginBottom: "0.3rem" }}>
+              No Disponibles
+            </div>
+            <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#8b5a2b" }}>
+              {noDisponibles}
+            </div>
+          </div>
+          <div style={{ 
+            padding: "1rem 1.5rem", 
+            background: "rgba(193, 123, 74, 0.1)", 
+            borderRadius: "8px",
+            border: "2px solid #c17b4a"
+          }}>
+            <div style={{ fontSize: "0.85rem", color: "var(--stone-gray)", marginBottom: "0.3rem" }}>
+              Públicos
+            </div>
+            <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#c17b4a" }}>
+              {publicos}
+            </div>
+          </div>
+          <div style={{ 
+            padding: "1rem 1.5rem", 
+            background: "rgba(212, 165, 116, 0.1)", 
+            borderRadius: "8px",
+            border: "2px solid #d4a574"
+          }}>
+            <div style={{ fontSize: "0.85rem", color: "var(--stone-gray)", marginBottom: "0.3rem" }}>
+              Privados
+            </div>
+            <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#d4a574" }}>
+              {privados}
+            </div>
+          </div>
+          <div style={{ 
+            padding: "1rem 1.5rem", 
+            background: "rgba(193, 123, 74, 0.1)", 
+            borderRadius: "8px",
+            border: "2px solid #c17b4a"
+          }}>
+            <div style={{ fontSize: "0.85rem", color: "var(--stone-gray)", marginBottom: "0.3rem" }}>
+              Renta
+            </div>
+            <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#c17b4a" }}>
+              {renta}
+            </div>
+          </div>
+          <div style={{ 
+            padding: "1rem 1.5rem", 
+            background: "rgba(212, 165, 116, 0.1)", 
+            borderRadius: "8px",
+            border: "2px solid #d4a574"
+          }}>
+            <div style={{ fontSize: "0.85rem", color: "var(--stone-gray)", marginBottom: "0.3rem" }}>
+              Media Renta
+            </div>
+            <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#d4a574" }}>
+              {mediaRenta}
+            </div>
+          </div>
+        </div>
+      )}
       
       {loading ? (
         <div
@@ -330,7 +457,7 @@ const CaballosAdmin = () => {
                   </td>
                 </tr>
               ) : (
-                caballos.map(caballo => (
+                currentCaballos.map(caballo => (
                   <tr key={caballo.id}>
                     <td style={{ fontWeight: "600" }}>{caballo.nombre}</td>
                     <td style={{ color: "var(--stone-gray)" }}>
@@ -496,6 +623,94 @@ const CaballosAdmin = () => {
           </table>
         </div>
       )}
+
+      {/* Paginación */}
+      {!loading && caballos.length > itemsPerPage && (
+        <div style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          gap: "1rem",
+          marginTop: "2rem",
+          padding: "1rem"
+        }}>
+          <button
+            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+            disabled={currentPage === 1}
+            style={{
+              padding: "0.5rem 1rem",
+              border: "2px solid var(--terracotta)",
+              borderRadius: "8px",
+              background: currentPage === 1 ? "#f5f5f5" : "white",
+              color: currentPage === 1 ? "#999" : "var(--terracotta)",
+              cursor: currentPage === 1 ? "not-allowed" : "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              fontWeight: "600",
+              transition: "all 0.2s ease"
+            }}
+          >
+            <ChevronLeft size={18} />
+            Anterior
+          </button>
+          
+          <div style={{
+            display: "flex",
+            gap: "0.5rem",
+            alignItems: "center"
+          }}>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+              <button
+                key={page}
+                onClick={() => setCurrentPage(page)}
+                style={{
+                  padding: "0.5rem 0.75rem",
+                  border: currentPage === page ? "2px solid var(--terracotta)" : "2px solid #ddd",
+                  borderRadius: "6px",
+                  background: currentPage === page ? "var(--terracotta)" : "white",
+                  color: currentPage === page ? "white" : "var(--primary-brown)",
+                  cursor: "pointer",
+                  fontWeight: currentPage === page ? "700" : "500",
+                  minWidth: "40px",
+                  transition: "all 0.2s ease"
+                }}
+              >
+                {page}
+              </button>
+            ))}
+          </div>
+
+          <button
+            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+            disabled={currentPage === totalPages}
+            style={{
+              padding: "0.5rem 1rem",
+              border: "2px solid var(--terracotta)",
+              borderRadius: "8px",
+              background: currentPage === totalPages ? "#f5f5f5" : "white",
+              color: currentPage === totalPages ? "#999" : "var(--terracotta)",
+              cursor: currentPage === totalPages ? "not-allowed" : "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              fontWeight: "600",
+              transition: "all 0.2s ease"
+            }}
+          >
+            Siguiente
+            <ChevronRight size={18} />
+          </button>
+
+          <div style={{
+            marginLeft: "1rem",
+            color: "var(--stone-gray)",
+            fontSize: "0.9rem"
+          }}>
+            Mostrando {startIndex + 1} - {Math.min(endIndex, caballos.length)} de {caballos.length}
+          </div>
+        </div>
+      )}
       
       {/* Modal de confirmación de eliminación (Portal) */}
       {confirmDeleteModalOpen && horseToDelete &&
@@ -567,6 +782,7 @@ const CaballosAdmin = () => {
                     value={editingHorse.propietario_id || ""}
                     onChange={e => setEditingHorse({ ...editingHorse, propietario_id: e.target.value })}
                     name="edithorse-propietario"
+                    autoComplete="off"
                   >
                     <option value="">Sin propietario</option>
                     {propietarios.map(prop => (
@@ -585,6 +801,7 @@ const CaballosAdmin = () => {
                     value={editingHorse.disponibilidad}
                     onChange={e => setEditingHorse({ ...editingHorse, disponibilidad: e.target.value })}
                     name="edithorse-disponibilidad"
+                    autoComplete="off"
                   >
                     <option value="disponible">Disponible</option>
                     <option value="no_disponible">No disponible</option>
@@ -596,6 +813,7 @@ const CaballosAdmin = () => {
                     value={editingHorse.estatus}
                     onChange={e => setEditingHorse({ ...editingHorse, estatus: e.target.value })}
                     name="edithorse-estatus"
+                    autoComplete="off"
                   >
                     <option value="publico">Público</option>
                     <option value="privado">Privado</option>
@@ -605,14 +823,14 @@ const CaballosAdmin = () => {
                 </div>
                 <div className="modal-field">
                   <label>Especialidades:</label>
-                  <div style={{ 
+                  <div className="especialidades-checkbox-container" style={{ 
                     display: 'grid', 
                     gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', 
                     gap: '0.5rem',
                     marginTop: '0.5rem'
                   }}>
                     {especialidadesDisponibles.map(esp => (
-                      <label key={esp} style={{ 
+                      <label key={esp} className="especialidad-checkbox-label" style={{ 
                         display: 'flex', 
                         alignItems: 'center', 
                         gap: '0.5rem',
@@ -685,6 +903,7 @@ const CaballosAdmin = () => {
                     value={newHorse.propietario_id || ""}
                     onChange={e => setNewHorse({ ...newHorse, propietario_id: e.target.value })}
                     name="newhorse-propietario"
+                    autoComplete="off"
                   >
                     <option value="">Sin propietario</option>
                     {propietarios.map(prop => (
@@ -703,6 +922,7 @@ const CaballosAdmin = () => {
                     value={newHorse.disponibilidad}
                     onChange={e => setNewHorse({ ...newHorse, disponibilidad: e.target.value })}
                     name="newhorse-disponibilidad"
+                    autoComplete="off"
                   >
                     <option value="disponible">Disponible</option>
                     <option value="no_disponible">No disponible</option>
@@ -714,6 +934,7 @@ const CaballosAdmin = () => {
                     value={newHorse.estatus}
                     onChange={e => setNewHorse({ ...newHorse, estatus: e.target.value })}
                     name="newhorse-estatus"
+                    autoComplete="off"
                   >
                     <option value="publico">Público</option>
                     <option value="privado">Privado</option>
@@ -723,14 +944,14 @@ const CaballosAdmin = () => {
                 </div>
                 <div className="modal-field">
                   <label>Especialidades:</label>
-                  <div style={{ 
+                  <div className="especialidades-checkbox-container" style={{ 
                     display: 'grid', 
                     gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', 
                     gap: '0.5rem',
                     marginTop: '0.5rem'
                   }}>
                     {especialidadesDisponibles.map(esp => (
-                      <label key={esp} style={{ 
+                      <label key={esp} className="especialidad-checkbox-label" style={{ 
                         display: 'flex', 
                         alignItems: 'center', 
                         gap: '0.5rem',

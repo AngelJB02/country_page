@@ -629,6 +629,160 @@ body.no-scroll {
   box-sizing: border-box;
 }
 
+.modal-field select {
+  width: 100%;
+  padding: 1rem;
+  border: 2px solid rgba(193, 123, 74, 0.1);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--primary-brown);
+  font-size: 1rem;
+  font-family: var(--font-secondary);
+  transition: all 0.3s ease;
+  font-weight: 500;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b4423' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 12px;
+  padding-right: 2.5rem;
+}
+
+.modal-field select:focus {
+  outline: none;
+  border-color: var(--terracotta);
+  box-shadow: 0 0 0 4px rgba(193, 123, 74, 0.1);
+  background-color: #fff;
+}
+
+.modal-field input[type="checkbox"] {
+  width: auto;
+  height: 18px;
+  width: 18px;
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  border: 2px solid rgba(193, 123, 74, 0.3);
+  border-radius: 4px;
+  background: white;
+  position: relative;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.modal-field input[type="checkbox"]:checked {
+  background: #9caf88;
+  border-color: #9caf88;
+}
+
+.modal-field input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 2px;
+  width: 5px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+/* Estilos para labels que contienen checkboxes en el modal */
+.modal-field label:has(input[type="checkbox"]) {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  margin: 0;
+  width: auto;
+  font-weight: normal;
+}
+
+.modal-field label:has(input[type="checkbox"]) input[type="checkbox"] {
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.modal-field label:has(input[type="checkbox"]) span {
+  user-select: none;
+  pointer-events: none;
+}
+
+/* Estilos específicos para contenedores de especialidades */
+.especialidades-checkbox-container {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)) !important;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.especialidad-checkbox-label {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  padding: 0.5rem !important;
+  border: 1px solid #ddd !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  margin: 0 !important;
+  width: auto !important;
+  font-weight: normal !important;
+  background: white !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+}
+
+.especialidad-checkbox-label input[type="checkbox"] {
+  margin: 0 !important;
+  flex-shrink: 0 !important;
+  width: 18px !important;
+  height: 18px !important;
+  padding: 0 !important;
+  cursor: pointer !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+  border: 2px solid rgba(193, 123, 74, 0.3) !important;
+  border-radius: 4px !important;
+  background: white !important;
+  position: relative !important;
+  transition: all 0.2s ease !important;
+}
+
+.especialidad-checkbox-label input[type="checkbox"]:checked {
+  background: #9caf88 !important;
+  border-color: #9caf88 !important;
+}
+
+.especialidad-checkbox-label input[type="checkbox"]:checked::after {
+  content: '' !important;
+  position: absolute !important;
+  left: 5px !important;
+  top: 2px !important;
+  width: 5px !important;
+  height: 10px !important;
+  border: solid white !important;
+  border-width: 0 2px 2px 0 !important;
+  transform: rotate(45deg) !important;
+}
+
+.especialidad-checkbox-label span {
+  user-select: none !important;
+  pointer-events: none !important;
+  font-size: 0.9rem !important;
+  text-transform: capitalize !important;
+}
+
 .modal-field textarea {
   resize: vertical;
   min-height: 60px;
@@ -636,12 +790,18 @@ body.no-scroll {
   line-height: 1.5;
 }
 
-.modal-field input:focus,
+.modal-field input:focus:not([type="checkbox"]),
 .modal-field textarea:focus {
   outline: none;
   border-color: var(--terracotta);
   box-shadow: 0 0 0 4px rgba(193, 123, 74, 0.1);
   background: #fff;
+}
+
+.modal-field input[type="checkbox"]:focus {
+  outline: none;
+  border-color: var(--terracotta);
+  box-shadow: 0 0 0 3px rgba(193, 123, 74, 0.15);
 }
 
 .modal-actions {
@@ -1168,7 +1328,7 @@ body.no-scroll {
   font-size: 0.95rem;
 }
 
-.modal-field input,
+.modal-field input:not([type="checkbox"]),
 .modal-field select,
 .modal-field textarea {
   width: 100%;
@@ -1181,6 +1341,17 @@ body.no-scroll {
   box-sizing: border-box;
 }
 
+.modal-field select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b4423' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 12px;
+  padding-right: 2.5rem;
+}
+
 .modal-field textarea {
   resize: vertical;
   min-height: 60px;
@@ -1188,7 +1359,7 @@ body.no-scroll {
   font-family: inherit;
 }
 
-.modal-field input:focus,
+.modal-field input:focus:not([type="checkbox"]),
 .modal-field select:focus,
 .modal-field textarea:focus {
   outline: none;

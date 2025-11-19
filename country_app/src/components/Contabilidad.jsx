@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react"
 import ReactDOM from "react-dom"
 import "../CSS/Contabilidad.css"
 import LogoutButton from './LogoutBoton'
-import { UserPlus, Eye, XCircle, CheckCircle, Loader, Search, History, AlertTriangle, Clock, AlertCircle, Edit, Copy } from "lucide-react"
+import { UserPlus, Eye, XCircle, CheckCircle, Loader, Search, History, AlertTriangle, Clock, AlertCircle, Edit, Copy, ChevronLeft, ChevronRight } from "lucide-react"
 import useRoleGuard from '../hooks/useRoleGuard';
 import CaballosAdmin from "./CaballosAdmin";
 import InstructorasAdmin from "./InstructorasAdmin";
@@ -14,6 +14,8 @@ const MembershipAdminDashboard = () => {
   const [members, setMembers] = useState([])
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("")
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
   const [modalOpen, setModalOpen] = useState(false)
   const [addClientModalOpen, setAddClientModalOpen] = useState(false)
   const [paymentHistoryModalOpen, setPaymentHistoryModalOpen] = useState(false)
@@ -371,6 +373,17 @@ const MembershipAdminDashboard = () => {
         member.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
         (statusFilter === "" || normalize(member.status) === normalize(statusFilter)),
     )
+
+  // Calcular paginación
+  const totalPages = Math.ceil(filteredMembers.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const currentMembers = filteredMembers.slice(startIndex, endIndex)
+
+  // Resetear a la primera página cuando cambian los filtros
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, statusFilter])
 
   const openModal = (member) => {
     setSelectedMember(member)
@@ -1042,7 +1055,7 @@ const MembershipAdminDashboard = () => {
                       </td>
                     </tr>
                   ) : (
-                    filteredMembers.map((member) => {
+                    currentMembers.map((member) => {
                       const expired = isPaymentExpired(member.paymentDate)
                       const displayStatus = expired && member.status === "Activo" ? "Bloqueado" : member.status
 
@@ -1173,6 +1186,94 @@ const MembershipAdminDashboard = () => {
                   )}
                 </tbody>
                 </table>
+              </div>
+            </div>
+          )}
+
+          {/* Paginación */}
+          {!loading && filteredMembers.length > itemsPerPage && (
+            <div style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              gap: "1rem",
+              marginTop: "2rem",
+              padding: "1rem"
+            }}>
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                style={{
+                  padding: "0.5rem 1rem",
+                  border: "2px solid var(--terracotta)",
+                  borderRadius: "8px",
+                  background: currentPage === 1 ? "#f5f5f5" : "white",
+                  color: currentPage === 1 ? "#999" : "var(--terracotta)",
+                  cursor: currentPage === 1 ? "not-allowed" : "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  fontWeight: "600",
+                  transition: "all 0.2s ease"
+                }}
+              >
+                <ChevronLeft size={18} />
+                Anterior
+              </button>
+              
+              <div style={{
+                display: "flex",
+                gap: "0.5rem",
+                alignItems: "center"
+              }}>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    style={{
+                      padding: "0.5rem 0.75rem",
+                      border: currentPage === page ? "2px solid var(--terracotta)" : "2px solid #ddd",
+                      borderRadius: "6px",
+                      background: currentPage === page ? "var(--terracotta)" : "white",
+                      color: currentPage === page ? "white" : "var(--primary-brown)",
+                      cursor: "pointer",
+                      fontWeight: currentPage === page ? "700" : "500",
+                      minWidth: "40px",
+                      transition: "all 0.2s ease"
+                    }}
+                  >
+                    {page}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                style={{
+                  padding: "0.5rem 1rem",
+                  border: "2px solid var(--terracotta)",
+                  borderRadius: "8px",
+                  background: currentPage === totalPages ? "#f5f5f5" : "white",
+                  color: currentPage === totalPages ? "#999" : "var(--terracotta)",
+                  cursor: currentPage === totalPages ? "not-allowed" : "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  fontWeight: "600",
+                  transition: "all 0.2s ease"
+                }}
+              >
+                Siguiente
+                <ChevronRight size={18} />
+              </button>
+
+              <div style={{
+                marginLeft: "1rem",
+                color: "var(--stone-gray)",
+                fontSize: "0.9rem"
+              }}>
+                Mostrando {startIndex + 1} - {Math.min(endIndex, filteredMembers.length)} de {filteredMembers.length}
               </div>
             </div>
           )}

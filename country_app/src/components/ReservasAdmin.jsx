@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Loader, Calendar, Filter } from "lucide-react";
+import { Loader, Calendar, Filter, ChevronLeft, ChevronRight } from "lucide-react";
 
 const ReservasAdmin = () => {
   const [reservas, setReservas] = useState([]);
@@ -7,6 +7,8 @@ const ReservasAdmin = () => {
   const [notification, setNotification] = useState({ show: false, message: "", type: "" });
   const [filtroTiempo, setFiltroTiempo] = useState("dia"); // "dia" o "semana"
   const [fechaSeleccionada, setFechaSeleccionada] = useState(new Date().toISOString().split("T")[0]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // Mostrar notificación
   const showNotification = (message, type = "success") => {
@@ -60,7 +62,21 @@ const ReservasAdmin = () => {
 
   useEffect(() => {
     loadReservas();
+    setCurrentPage(1); // Resetear a la primera página cuando cambian los filtros
   }, [filtroTiempo, fechaSeleccionada]);
+
+  // Calcular paginación
+  const totalPages = Math.ceil(reservas.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentReservas = reservas.slice(startIndex, endIndex);
+
+  // Calcular métricas
+  const totalReservas = reservas.length;
+  const confirmadas = reservas.filter(r => r.estatus === "confirmada").length;
+  const pendientes = reservas.filter(r => r.estatus === "pendiente").length;
+  const completadas = reservas.filter(r => r.estatus === "completada").length;
+  const canceladas = reservas.filter(r => r.estatus === "cancelada").length;
 
   const formatDate = (dateString) => {
     if (!dateString) return "";
@@ -139,6 +155,83 @@ const ReservasAdmin = () => {
           <h2 style={{ margin: 0, color: "var(--primary-brown)" }}>Gestión de Reservas</h2>
         </div>
       </div>
+
+      {/* Métricas - Movidas arriba */}
+      {!loading && reservas.length > 0 && (
+        <div style={{ 
+          marginBottom: "1.5rem", 
+          display: "flex", 
+          gap: "1rem", 
+          justifyContent: "center",
+          flexWrap: "wrap"
+        }}>
+          <div style={{ 
+            padding: "1rem 1.5rem", 
+            background: "rgba(156, 175, 136, 0.1)", 
+            borderRadius: "8px",
+            border: "2px solid #9caf88"
+          }}>
+            <div style={{ fontSize: "0.85rem", color: "var(--stone-gray)", marginBottom: "0.3rem" }}>
+              Total Reservas
+            </div>
+            <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#9caf88" }}>
+              {totalReservas}
+            </div>
+          </div>
+          <div style={{ 
+            padding: "1rem 1.5rem", 
+            background: "rgba(156, 175, 136, 0.1)", 
+            borderRadius: "8px",
+            border: "2px solid #9caf88"
+          }}>
+            <div style={{ fontSize: "0.85rem", color: "var(--stone-gray)", marginBottom: "0.3rem" }}>
+              Confirmadas
+            </div>
+            <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#9caf88" }}>
+              {confirmadas}
+            </div>
+          </div>
+          <div style={{ 
+            padding: "1rem 1.5rem", 
+            background: "rgba(212, 165, 116, 0.1)", 
+            borderRadius: "8px",
+            border: "2px solid #d4a574"
+          }}>
+            <div style={{ fontSize: "0.85rem", color: "var(--stone-gray)", marginBottom: "0.3rem" }}>
+              Pendientes
+            </div>
+            <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#d4a574" }}>
+              {pendientes}
+            </div>
+          </div>
+          <div style={{ 
+            padding: "1rem 1.5rem", 
+            background: "rgba(156, 175, 136, 0.1)", 
+            borderRadius: "8px",
+            border: "2px solid #9caf88"
+          }}>
+            <div style={{ fontSize: "0.85rem", color: "var(--stone-gray)", marginBottom: "0.3rem" }}>
+              Completadas
+            </div>
+            <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#9caf88" }}>
+              {completadas}
+            </div>
+          </div>
+          <div style={{ 
+            padding: "1rem 1.5rem", 
+            background: "rgba(139, 90, 43, 0.1)", 
+            borderRadius: "8px",
+            border: "2px solid #8b5a2b"
+          }}>
+            <div style={{ fontSize: "0.85rem", color: "var(--stone-gray)", marginBottom: "0.3rem" }}>
+              Canceladas
+            </div>
+            <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#8b5a2b" }}>
+              {canceladas}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Filtros */}
       <div className="controls-container enhanced-controls" style={{ marginBottom: "1.5rem" }}>
@@ -237,7 +330,7 @@ const ReservasAdmin = () => {
                   </td>
                 </tr>
               ) : (
-                reservas.map(reserva => {
+                currentReservas.map(reserva => {
                   const estadoColor = getEstadoBadgeColor(reserva.estatus);
                   
                   return (
@@ -308,66 +401,90 @@ const ReservasAdmin = () => {
         </div>
       )}
 
-      {/* Resumen de estadísticas */}
-      {!loading && reservas.length > 0 && (
-        <div style={{ 
-          marginTop: "2rem", 
-          display: "flex", 
-          gap: "1rem", 
+      {/* Paginación */}
+      {!loading && reservas.length > itemsPerPage && (
+        <div style={{
+          display: "flex",
           justifyContent: "center",
-          flexWrap: "wrap"
+          alignItems: "center",
+          gap: "1rem",
+          marginTop: "2rem",
+          padding: "1rem"
         }}>
-          <div style={{ 
-            padding: "1rem 1.5rem", 
-            background: "rgba(156, 175, 136, 0.1)", 
-            borderRadius: "8px",
-            border: "2px solid #9caf88"
+          <button
+            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+            disabled={currentPage === 1}
+            style={{
+              padding: "0.5rem 1rem",
+              border: "2px solid var(--terracotta)",
+              borderRadius: "8px",
+              background: currentPage === 1 ? "#f5f5f5" : "white",
+              color: currentPage === 1 ? "#999" : "var(--terracotta)",
+              cursor: currentPage === 1 ? "not-allowed" : "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              fontWeight: "600",
+              transition: "all 0.2s ease"
+            }}
+          >
+            <ChevronLeft size={18} />
+            Anterior
+          </button>
+          
+          <div style={{
+            display: "flex",
+            gap: "0.5rem",
+            alignItems: "center"
           }}>
-            <div style={{ fontSize: "0.85rem", color: "var(--stone-gray)", marginBottom: "0.3rem" }}>
-              Total Reservas
-            </div>
-            <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#9caf88" }}>
-              {reservas.length}
-            </div>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+              <button
+                key={page}
+                onClick={() => setCurrentPage(page)}
+                style={{
+                  padding: "0.5rem 0.75rem",
+                  border: currentPage === page ? "2px solid var(--terracotta)" : "2px solid #ddd",
+                  borderRadius: "6px",
+                  background: currentPage === page ? "var(--terracotta)" : "white",
+                  color: currentPage === page ? "white" : "var(--primary-brown)",
+                  cursor: "pointer",
+                  fontWeight: currentPage === page ? "700" : "500",
+                  minWidth: "40px",
+                  transition: "all 0.2s ease"
+                }}
+              >
+                {page}
+              </button>
+            ))}
           </div>
-          <div style={{ 
-            padding: "1rem 1.5rem", 
-            background: "rgba(156, 175, 136, 0.1)", 
-            borderRadius: "8px",
-            border: "2px solid #9caf88"
+
+          <button
+            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+            disabled={currentPage === totalPages}
+            style={{
+              padding: "0.5rem 1rem",
+              border: "2px solid var(--terracotta)",
+              borderRadius: "8px",
+              background: currentPage === totalPages ? "#f5f5f5" : "white",
+              color: currentPage === totalPages ? "#999" : "var(--terracotta)",
+              cursor: currentPage === totalPages ? "not-allowed" : "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              fontWeight: "600",
+              transition: "all 0.2s ease"
+            }}
+          >
+            Siguiente
+            <ChevronRight size={18} />
+          </button>
+
+          <div style={{
+            marginLeft: "1rem",
+            color: "var(--stone-gray)",
+            fontSize: "0.9rem"
           }}>
-            <div style={{ fontSize: "0.85rem", color: "var(--stone-gray)", marginBottom: "0.3rem" }}>
-              Confirmadas
-            </div>
-            <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#9caf88" }}>
-              {reservas.filter(r => r.estatus === "confirmada").length}
-            </div>
-          </div>
-          <div style={{ 
-            padding: "1rem 1.5rem", 
-            background: "rgba(212, 165, 116, 0.1)", 
-            borderRadius: "8px",
-            border: "2px solid #d4a574"
-          }}>
-            <div style={{ fontSize: "0.85rem", color: "var(--stone-gray)", marginBottom: "0.3rem" }}>
-              Pendientes
-            </div>
-            <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#d4a574" }}>
-              {reservas.filter(r => r.estatus === "pendiente").length}
-            </div>
-          </div>
-          <div style={{ 
-            padding: "1rem 1.5rem", 
-            background: "rgba(156, 175, 136, 0.1)", 
-            borderRadius: "8px",
-            border: "2px solid #9caf88"
-          }}>
-            <div style={{ fontSize: "0.85rem", color: "var(--stone-gray)", marginBottom: "0.3rem" }}>
-              Completadas
-            </div>
-            <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#9caf88" }}>
-              {reservas.filter(r => r.estatus === "completada").length}
-            </div>
+            Mostrando {startIndex + 1} - {Math.min(endIndex, reservas.length)} de {reservas.length}
           </div>
         </div>
       )}
