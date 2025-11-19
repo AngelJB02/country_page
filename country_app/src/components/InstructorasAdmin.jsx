@@ -31,6 +31,8 @@ const InstructorasAdmin = () => {
   const [editDescansoModalOpen, setEditDescansoModalOpen] = useState(false);
   const [editingDescanso, setEditingDescanso] = useState(null);
   const [newDescanso, setNewDescanso] = useState({
+    es_recurrente: false,
+    dia_semana: "",
     fecha_inicio: "",
     fecha_fin: "",
     motivo: "",
@@ -273,6 +275,8 @@ const InstructorasAdmin = () => {
 
   const openAddDescansoModal = () => {
     setNewDescanso({
+      es_recurrente: false,
+      dia_semana: "",
       fecha_inicio: "",
       fecha_fin: "",
       motivo: "",
@@ -284,6 +288,8 @@ const InstructorasAdmin = () => {
   const closeAddDescansoModal = () => {
     setAddDescansoModalOpen(false);
     setNewDescanso({
+      es_recurrente: false,
+      dia_semana: "",
       fecha_inicio: "",
       fecha_fin: "",
       motivo: "",
@@ -294,6 +300,8 @@ const InstructorasAdmin = () => {
   const openEditDescansoModal = (descanso) => {
     setEditingDescanso({
       id: descanso.id,
+      es_recurrente: descanso.es_recurrente || false,
+      dia_semana: descanso.dia_semana || "",
       fecha_inicio: formatDate(descanso.fecha_inicio),
       fecha_fin: formatDate(descanso.fecha_fin),
       motivo: descanso.motivo,
@@ -308,25 +316,52 @@ const InstructorasAdmin = () => {
   };
 
   const createDescanso = async () => {
-    if (!newDescanso.fecha_inicio || !newDescanso.fecha_fin || !newDescanso.motivo) {
-      showNotification("Por favor completa todos los campos obligatorios", "error");
+    if (!newDescanso.motivo) {
+      showNotification("Por favor completa el motivo del descanso", "error");
       return;
     }
 
-    // Validar que fecha_fin no sea anterior a fecha_inicio
-    if (new Date(newDescanso.fecha_fin) < new Date(newDescanso.fecha_inicio)) {
-      showNotification("La fecha de fin no puede ser anterior a la fecha de inicio", "error");
-      return;
+    // Validaciones según el tipo de descanso
+    if (newDescanso.es_recurrente) {
+      // Descanso fijo recurrente
+      if (!newDescanso.dia_semana) {
+        showNotification("Por favor selecciona un día de la semana", "error");
+        return;
+      }
+    } else {
+      // Descanso programado
+      if (!newDescanso.fecha_inicio || !newDescanso.fecha_fin) {
+        showNotification("Por favor completa las fechas de inicio y fin", "error");
+        return;
+      }
+
+      // Validar que fecha_fin no sea anterior a fecha_inicio
+      if (new Date(newDescanso.fecha_fin) < new Date(newDescanso.fecha_inicio)) {
+        showNotification("La fecha de fin no puede ser anterior a la fecha de inicio", "error");
+        return;
+      }
     }
 
     try {
+      const descansoData = {
+        instructora_id: selectedInstructorDescansos.id,
+        motivo: newDescanso.motivo,
+        tipo: newDescanso.tipo,
+        es_recurrente: Boolean(newDescanso.es_recurrente),
+        ...(newDescanso.es_recurrente ? {
+          dia_semana: newDescanso.dia_semana
+        } : {
+          fecha_inicio: newDescanso.fecha_inicio,
+          fecha_fin: newDescanso.fecha_fin
+        })
+      };
+
+      console.log('Enviando descanso:', descansoData); // Debug
+
       const response = await fetch("http://localhost:3001/api/descansos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          instructora_id: selectedInstructorDescansos.id,
-          ...newDescanso
-        })
+        body: JSON.stringify(descansoData)
       });
 
       if (!response.ok) {
@@ -346,27 +381,49 @@ const InstructorasAdmin = () => {
   };
 
   const updateDescanso = async () => {
-    if (!editingDescanso.fecha_inicio || !editingDescanso.fecha_fin || !editingDescanso.motivo) {
-      showNotification("Por favor completa todos los campos obligatorios", "error");
+    if (!editingDescanso.motivo) {
+      showNotification("Por favor completa el motivo del descanso", "error");
       return;
     }
 
-    // Validar que fecha_fin no sea anterior a fecha_inicio
-    if (new Date(editingDescanso.fecha_fin) < new Date(editingDescanso.fecha_inicio)) {
-      showNotification("La fecha de fin no puede ser anterior a la fecha de inicio", "error");
-      return;
+    // Validaciones según el tipo de descanso
+    if (editingDescanso.es_recurrente) {
+      // Descanso fijo recurrente
+      if (!editingDescanso.dia_semana) {
+        showNotification("Por favor selecciona un día de la semana", "error");
+        return;
+      }
+    } else {
+      // Descanso programado
+      if (!editingDescanso.fecha_inicio || !editingDescanso.fecha_fin) {
+        showNotification("Por favor completa las fechas de inicio y fin", "error");
+        return;
+      }
+
+      // Validar que fecha_fin no sea anterior a fecha_inicio
+      if (new Date(editingDescanso.fecha_fin) < new Date(editingDescanso.fecha_inicio)) {
+        showNotification("La fecha de fin no puede ser anterior a la fecha de inicio", "error");
+        return;
+      }
     }
 
     try {
+      const descansoData = {
+        motivo: editingDescanso.motivo,
+        tipo: editingDescanso.tipo,
+        es_recurrente: editingDescanso.es_recurrente,
+        ...(editingDescanso.es_recurrente ? {
+          dia_semana: editingDescanso.dia_semana
+        } : {
+          fecha_inicio: editingDescanso.fecha_inicio,
+          fecha_fin: editingDescanso.fecha_fin
+        })
+      };
+
       const response = await fetch(`http://localhost:3001/api/descansos/${editingDescanso.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fecha_inicio: editingDescanso.fecha_inicio,
-          fecha_fin: editingDescanso.fecha_fin,
-          motivo: editingDescanso.motivo,
-          tipo: editingDescanso.tipo
-        })
+        body: JSON.stringify(descansoData)
       });
 
       if (!response.ok) {
@@ -912,9 +969,10 @@ const InstructorasAdmin = () => {
                   <table className="members-table" style={{ margin: 0 }}>
                     <thead>
                       <tr>
-                        <th>Fecha Inicio</th>
-                        <th>Fecha Fin</th>
                         <th>Tipo</th>
+                        <th>Día / Fecha Inicio</th>
+                        <th>Fecha Fin / Límite</th>
+                        <th>Tipo Descanso</th>
                         <th>Motivo</th>
                         <th>Acciones</th>
                       </tr>
@@ -922,24 +980,65 @@ const InstructorasAdmin = () => {
                     <tbody>
                       {descansos.map((descanso) => {
                         const hoy = new Date();
-                        hoy.setHours(0, 0, 0, 0); // Normalizar a medianoche para comparación justa
-                        const inicio = new Date(descanso.fecha_inicio);
-                        inicio.setHours(0, 0, 0, 0);
-                        const fin = new Date(descanso.fecha_fin);
-                        fin.setHours(0, 0, 0, 0);
-                        const isActivo = hoy >= inicio && hoy <= fin;
-                        const isPasado = fin < hoy; // Solo pasado si la fecha fin ya terminó (antes de hoy)
+                        hoy.setHours(0, 0, 0, 0);
+                        let isActivo = false;
+                        let isPasado = false;
+                        
+                        if (descanso.es_recurrente) {
+                          // Para descansos fijos, siempre están activos (a menos que alcancen el límite)
+                          const diaSemanaHoy = ['D', 'L', 'M', 'X', 'J', 'V', 'S'][hoy.getDay()];
+                          isActivo = descanso.dia_semana === diaSemanaHoy && 
+                                    (descanso.limite_reservas === null || 
+                                     (descanso.reservas_realizadas || 0) < descanso.limite_reservas);
+                          isPasado = false; // Los descansos fijos no "pasan"
+                        } else {
+                          // Para descansos programados, verificar fechas
+                          const inicio = descanso.fecha_inicio ? new Date(descanso.fecha_inicio) : null;
+                          const fin = descanso.fecha_fin ? new Date(descanso.fecha_fin) : null;
+                          if (inicio && fin) {
+                            inicio.setHours(0, 0, 0, 0);
+                            fin.setHours(0, 0, 0, 0);
+                            isActivo = hoy >= inicio && hoy <= fin;
+                            isPasado = fin < hoy;
+                          }
+                        }
+                        
+                        const diasMap = { 'L': 'Lunes', 'M': 'Martes', 'X': 'Miércoles', 'J': 'Jueves', 'V': 'Viernes', 'S': 'Sábado', 'D': 'Domingo' };
                         
                         return (
                           <tr key={descanso.id} style={{ 
                             background: isActivo ? "#fff8e1" : isPasado ? "#f5f5f5" : "white",
                             opacity: isPasado ? 0.7 : 1
                           }}>
-                            <td style={{ fontWeight: isActivo ? "600" : "normal" }}>
-                              {formatDate(descanso.fecha_inicio)}
-                              {isActivo && <span style={{ marginLeft: "0.5rem", color: "#9caf88" }}>●</span>}
+                            <td>
+                              <span style={{
+                                padding: "0.25rem 0.75rem",
+                                borderRadius: "12px",
+                                fontSize: "0.85rem",
+                                fontWeight: "600",
+                                background: descanso.es_recurrente ? "#e3f2fd" : "#f3e5f5",
+                                color: descanso.es_recurrente ? "#1976d2" : "#7b1fa2"
+                              }}>
+                                {descanso.es_recurrente ? "🔄 Fijo" : "📅 Programado"}
+                              </span>
                             </td>
-                            <td>{formatDate(descanso.fecha_fin)}</td>
+                            <td style={{ fontWeight: isActivo ? "600" : "normal" }}>
+                              {descanso.es_recurrente ? (
+                                <span>{diasMap[descanso.dia_semana] || descanso.dia_semana}</span>
+                              ) : (
+                                <>
+                                  {formatDate(descanso.fecha_inicio)}
+                                  {isActivo && <span style={{ marginLeft: "0.5rem", color: "#9caf88" }}>●</span>}
+                                </>
+                              )}
+                            </td>
+                            <td>
+                              {descanso.es_recurrente ? (
+                                <span style={{ color: "#666", fontStyle: "italic" }}>Recurrente</span>
+                              ) : (
+                                formatDate(descanso.fecha_fin)
+                              )}
+                            </td>
                             <td>
                               <span style={{ 
                                 padding: "0.25rem 0.75rem",
@@ -1026,23 +1125,63 @@ const InstructorasAdmin = () => {
               <h2>Agregar Descanso</h2>
               <div className="modal-section">
                 <div className="modal-field">
-                  <label>Fecha Inicio *:</label>
-                  <input
-                    type="date"
-                    value={newDescanso.fecha_inicio}
-                    onChange={e => setNewDescanso({ ...newDescanso, fecha_inicio: e.target.value })}
-                    autoComplete="off"
-                  />
+                  <label>Tipo de Descanso *:</label>
+                  <select
+                    value={newDescanso.es_recurrente ? "recurrente" : "programado"}
+                    onChange={e => setNewDescanso({ 
+                      ...newDescanso, 
+                      es_recurrente: e.target.value === "recurrente",
+                      fecha_inicio: e.target.value === "recurrente" ? "" : newDescanso.fecha_inicio,
+                      fecha_fin: e.target.value === "recurrente" ? "" : newDescanso.fecha_fin,
+                      dia_semana: e.target.value === "programado" ? "" : newDescanso.dia_semana
+                    })}
+                  >
+                    <option value="programado">📅 Descanso Programado (por fechas)</option>
+                    <option value="recurrente">🔄 Descanso Fijo Recurrente (por día de semana)</option>
+                  </select>
                 </div>
-                <div className="modal-field">
-                  <label>Fecha Fin *:</label>
-                  <input
-                    type="date"
-                    value={newDescanso.fecha_fin}
-                    onChange={e => setNewDescanso({ ...newDescanso, fecha_fin: e.target.value })}
-                    autoComplete="off"
-                  />
-                </div>
+
+                {newDescanso.es_recurrente ? (
+                  <>
+                    <div className="modal-field">
+                      <label>Día de la Semana *:</label>
+                      <select
+                        value={newDescanso.dia_semana}
+                        onChange={e => setNewDescanso({ ...newDescanso, dia_semana: e.target.value })}
+                      >
+                        <option value="">Selecciona un día</option>
+                        <option value="L">Lunes</option>
+                        <option value="M">Martes</option>
+                        <option value="X">Miércoles</option>
+                        <option value="J">Jueves</option>
+                        <option value="V">Viernes</option>
+                        <option value="S">Sábado</option>
+                        <option value="D">Domingo</option>
+                      </select>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="modal-field">
+                      <label>Fecha Inicio *:</label>
+                      <input
+                        type="date"
+                        value={newDescanso.fecha_inicio}
+                        onChange={e => setNewDescanso({ ...newDescanso, fecha_inicio: e.target.value })}
+                        autoComplete="off"
+                      />
+                    </div>
+                    <div className="modal-field">
+                      <label>Fecha Fin *:</label>
+                      <input
+                        type="date"
+                        value={newDescanso.fecha_fin}
+                        onChange={e => setNewDescanso({ ...newDescanso, fecha_fin: e.target.value })}
+                        autoComplete="off"
+                      />
+                    </div>
+                  </>
+                )}
                 <div className="modal-field">
                   <label>Tipo *:</label>
                   <select
@@ -1094,23 +1233,63 @@ const InstructorasAdmin = () => {
               <h2>Editar Descanso</h2>
               <div className="modal-section">
                 <div className="modal-field">
-                  <label>Fecha Inicio *:</label>
-                  <input
-                    type="date"
-                    value={editingDescanso.fecha_inicio}
-                    onChange={e => setEditingDescanso({ ...editingDescanso, fecha_inicio: e.target.value })}
-                    autoComplete="off"
-                  />
+                  <label>Tipo de Descanso *:</label>
+                  <select
+                    value={editingDescanso.es_recurrente ? "recurrente" : "programado"}
+                    onChange={e => setEditingDescanso({ 
+                      ...editingDescanso, 
+                      es_recurrente: e.target.value === "recurrente",
+                      fecha_inicio: e.target.value === "recurrente" ? "" : editingDescanso.fecha_inicio,
+                      fecha_fin: e.target.value === "recurrente" ? "" : editingDescanso.fecha_fin,
+                      dia_semana: e.target.value === "programado" ? "" : editingDescanso.dia_semana
+                    })}
+                  >
+                    <option value="programado">📅 Descanso Programado (por fechas)</option>
+                    <option value="recurrente">🔄 Descanso Fijo Recurrente (por día de semana)</option>
+                  </select>
                 </div>
-                <div className="modal-field">
-                  <label>Fecha Fin *:</label>
-                  <input
-                    type="date"
-                    value={editingDescanso.fecha_fin}
-                    onChange={e => setEditingDescanso({ ...editingDescanso, fecha_fin: e.target.value })}
-                    autoComplete="off"
-                  />
-                </div>
+
+                {editingDescanso.es_recurrente ? (
+                  <>
+                    <div className="modal-field">
+                      <label>Día de la Semana *:</label>
+                      <select
+                        value={editingDescanso.dia_semana}
+                        onChange={e => setEditingDescanso({ ...editingDescanso, dia_semana: e.target.value })}
+                      >
+                        <option value="">Selecciona un día</option>
+                        <option value="L">Lunes</option>
+                        <option value="M">Martes</option>
+                        <option value="X">Miércoles</option>
+                        <option value="J">Jueves</option>
+                        <option value="V">Viernes</option>
+                        <option value="S">Sábado</option>
+                        <option value="D">Domingo</option>
+                      </select>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="modal-field">
+                      <label>Fecha Inicio *:</label>
+                      <input
+                        type="date"
+                        value={editingDescanso.fecha_inicio}
+                        onChange={e => setEditingDescanso({ ...editingDescanso, fecha_inicio: e.target.value })}
+                        autoComplete="off"
+                      />
+                    </div>
+                    <div className="modal-field">
+                      <label>Fecha Fin *:</label>
+                      <input
+                        type="date"
+                        value={editingDescanso.fecha_fin}
+                        onChange={e => setEditingDescanso({ ...editingDescanso, fecha_fin: e.target.value })}
+                        autoComplete="off"
+                      />
+                    </div>
+                  </>
+                )}
                 <div className="modal-field">
                   <label>Tipo *:</label>
                   <select

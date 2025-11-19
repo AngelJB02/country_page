@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react'
 import './css/weekly-calendar.css'
 
 
-export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userBookings = [], allWeekBookings = [], className, claseCupoMax }) {
+export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userBookings = [], allWeekBookings = [], className, claseCupoMax, claseId }) {
   // ⚠️ IMPORTANTE: Todos los hooks deben estar al inicio, antes de cualquier return condicional
   
   // Estados para horarios dinámicos desde la base de datos
@@ -47,6 +47,9 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
     
     fetchSchedule();
   }, [className]);
+
+  // Ya no necesitamos cargar capacidades ajustadas por fecha
+  // El endpoint /api/horarios/clase ya devuelve la capacidad ajustada según descansos fijos
   
   // Renders condicionales DESPUÉS de todos los hooks
   if (loadingSchedule) {
@@ -91,15 +94,16 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
   };
   
   // Función para obtener la capacidad correcta según el día y hora específica (desde DB)
-  const getCapacityForSlot = (dayName, time) => {
+  // La capacidad ya viene ajustada desde el backend según descansos fijos
+  const getCapacityForSlot = (dayName, time, realDate) => {
     if (!dayNameToDate[dayName]) return claseCupoMax || 6;
     
-    // Obtener capacidad desde la BD (PRIORIDAD)
+    // Obtener capacidad desde la BD (ya viene ajustada para iniciación según descansos)
     const horariosDelDia = dynamicSchedule.horarios[dayName];
     if (horariosDelDia && Array.isArray(horariosDelDia)) {
       const horario = horariosDelDia.find(h => h.hora_inicio === time);
       if (horario && horario.capacidad) {
-        return horario.capacidad; // Usar capacidad específica del horario
+        return horario.capacidad; // Esta capacidad ya está ajustada para iniciación
       }
     }
     
@@ -117,8 +121,8 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
       const slotId = `${day}-${time}`;
       const slotDateStr = realDate ? format(realDate, 'yyyy-MM-dd') : null;
       
-      // Obtener capacidad específica para este slot
-      const capacity = getCapacityForSlot(day, time);
+      // Obtener capacidad específica para este slot (ajustada para iniciación)
+      const capacity = getCapacityForSlot(day, time, realDate);
       
       // Calcular la hora de inicio del slot
       const [hours, minutes] = time.split(':').map(Number);

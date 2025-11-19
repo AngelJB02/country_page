@@ -16,6 +16,7 @@ router.get('/clase/:nombreClase', async (req, res) => {
         hc.hora_fin,
         hc.capacidad,
         c.nombre as clase_nombre,
+        c.id as clase_id,
         c.duracion_min
        FROM horarios_clase hc
        INNER JOIN clases c ON hc.clase_id = c.id
@@ -25,6 +26,47 @@ router.get('/clase/:nombreClase', async (req, res) => {
          hc.hora_inicio ASC`,
       [nombreClase.toLowerCase()]
     );
+    
+    // Si es iniciación, calcular capacidad ajustada según descansos fijos
+    let capacidadAjustadaPorDia = {};
+    if (nombreClase.toLowerCase() === 'iniciacion' && rows.length > 0) {
+      const claseId = rows[0].clase_id;
+      
+      // Obtener todas las instructoras que pueden dar iniciación
+      const [instructorasAptas] = await db.execute(`
+        SELECT i.id
+        FROM instructoras i
+        INNER JOIN instructora_clase ic ON i.id = ic.instructora_id 
+          AND ic.clase_id = ? 
+          AND ic.activo = 1
+        WHERE i.disponibilidad = 'disponible'
+      `, [claseId]);
+      
+      const totalInstructoras = instructorasAptas.length;
+      
+      // Para cada día de la semana, contar cuántas instructoras descansan
+      const diasSemana = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+      for (const dia of diasSemana) {
+        const [descansosDia] = await db.execute(`
+          SELECT COUNT(DISTINCT d.instructora_id) as en_descanso
+          FROM descansos d
+          WHERE d.es_recurrente = 1
+            AND d.dia_semana = ?
+            AND d.instructora_id IN (
+              SELECT i.id
+              FROM instructoras i
+              INNER JOIN instructora_clase ic ON i.id = ic.instructora_id 
+                AND ic.clase_id = ? 
+                AND ic.activo = 1
+              WHERE i.disponibilidad = 'disponible'
+            )
+        `, [dia, claseId]);
+        
+        const enDescanso = descansosDia[0]?.en_descanso || 0;
+        const disponibles = totalInstructoras - enDescanso;
+        capacidadAjustadaPorDia[dia] = Math.max(0, disponibles);
+      }
+    }
     
     // Mapear día de semana a nombre completo
     const dayMap = {
@@ -43,11 +85,18 @@ router.get('/clase/:nombreClase', async (req, res) => {
       if (!acc[dia]) {
         acc[dia] = [];
       }
+      
+      // Para iniciación, usar capacidad ajustada si está disponible
+      let capacidad = row.capacidad;
+      if (nombreClase.toLowerCase() === 'iniciacion' && capacidadAjustadaPorDia[row.dia_semana] !== undefined) {
+        capacidad = Math.min(row.capacidad, capacidadAjustadaPorDia[row.dia_semana]);
+      }
+      
       acc[dia].push({
         id: row.id,
         hora_inicio: row.hora_inicio.substring(0, 5), // HH:MM
         hora_fin: row.hora_fin.substring(0, 5),
-        capacidad: row.capacidad,
+        capacidad: capacidad,
         duracion_min: row.duracion_min
       });
       return acc;

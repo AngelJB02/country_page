@@ -42,16 +42,124 @@ const formatTimeForMySQL = (timeString) => {
   throw new Error('Formato de hora inválido');
 };
 
+// Función para obtener el día de la semana en formato MySQL (L, M, X, J, V, S, D)
+// IMPORTANTE: Usar fecha local para evitar problemas de zona horaria
+const getDiaSemanaMySQL = (fecha) => {
+  // Si la fecha viene como string "YYYY-MM-DD", parsearla correctamente
+  let fechaObj;
+  if (typeof fecha === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+    // Parsear como fecha local (no UTC) para evitar problemas de zona horaria
+    const [year, month, day] = fecha.split('-').map(Number);
+    fechaObj = new Date(year, month - 1, day); // month es 0-indexed en JS
+  } else {
+    fechaObj = new Date(fecha);
+  }
+  
+  const diaSemana = fechaObj.getDay(); // 0 = domingo, 6 = sábado
+  const diasMap = { 0: 'D', 1: 'L', 2: 'M', 3: 'X', 4: 'J', 5: 'V', 6: 'S' };
+  const diaMySQL = diasMap[diaSemana];
+  
+  // Debug: verificar que el cálculo sea correcto
+  const nombreDia = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'][diaSemana];
+  console.log(`📅 Fecha: ${fecha} → Día JS: ${diaSemana} (${nombreDia}) → MySQL: ${diaMySQL}`);
+  
+  return diaMySQL;
+};
+
+// Función para calcular instructoras disponibles considerando descansos fijos
+// OPTIMIZADA: Usa LEFT JOIN para excluir instructoras en descanso (más confiable que NOT IN)
+const calcularInstructorasDisponibles = async (clase_id, fecha, hora_inicio) => {
+  try {
+    const diaSemanaMySQL = getDiaSemanaMySQL(fecha);
+    const fechaMySQL = formatDateForMySQL(fecha);
+    
+    // Primero, obtener todas las instructoras aptas (sin filtrar descansos)
+    const [todasAptas] = await db.query(`
+      SELECT i.id
+      FROM instructoras i
+      INNER JOIN instructora_clase ic ON i.id = ic.instructora_id 
+        AND ic.clase_id = ? 
+        AND ic.activo = 1
+      WHERE i.disponibilidad = 'disponible'
+    `, [clase_id]);
+    
+    console.log(`🔍 Todas las instructoras aptas para clase ${clase_id}:`, todasAptas.map(i => i.id));
+    
+    // Verificar descansos para estas instructoras
+    // Si no hay instructoras aptas, no hay descansos que verificar
+    if (todasAptas.length === 0) {
+      console.log(`⚠️ No hay instructoras aptas para clase ${clase_id}`);
+      return 0;
+    }
+    
+    // Primero, verificar TODOS los descansos recurrentes de estas instructoras (para debug)
+    const idsInstructoras = todasAptas.map(i => i.id);
+    const placeholders = idsInstructoras.map(() => '?').join(',');
+    
+    const [todosDescansos] = await db.query(`
+      SELECT d.instructora_id, d.es_recurrente, d.dia_semana, d.fecha_inicio, d.fecha_fin
+      FROM descansos d
+      WHERE d.instructora_id IN (${placeholders})
+        AND d.es_recurrente = 1
+    `, idsInstructoras);
+    
+    console.log(`🔍 TODOS los descansos recurrentes de estas instructoras:`, todosDescansos);
+    
+    // Ahora buscar descansos que aplican para este día/fecha específica
+    const [descansosEncontrados] = await db.query(`
+      SELECT d.instructora_id, d.es_recurrente, d.dia_semana, d.fecha_inicio, d.fecha_fin
+      FROM descansos d
+      WHERE d.instructora_id IN (${placeholders})
+        AND (
+          (d.es_recurrente = 1 AND d.dia_semana = ?)
+          OR
+          (d.es_recurrente = 0 AND ? BETWEEN d.fecha_inicio AND d.fecha_fin)
+        )
+    `, [...idsInstructoras, diaSemanaMySQL, fechaMySQL]);
+    
+    console.log(`🔍 Descansos encontrados para día ${diaSemanaMySQL} (${fecha}):`, descansosEncontrados);
+    
+    // Filtrar instructoras en descanso
+    const instructorasEnDescanso = new Set(descansosEncontrados.map(d => d.instructora_id));
+    const instructorasDisponibles = todasAptas.filter(i => !instructorasEnDescanso.has(i.id));
+    
+    console.log(`📊 Instructoras en descanso:`, Array.from(instructorasEnDescanso));
+    console.log(`✅ Instructoras disponibles: ${instructorasDisponibles.length} de ${todasAptas.length}`);
+    
+    return Math.max(0, instructorasDisponibles.length);
+  } catch (err) {
+    console.error('Error calculando instructoras disponibles:', err);
+    // En caso de error, retornar 0 (conservador)
+    return 0;
+  }
+};
+
 
 
 // Verificar disponibilidad de instructora
 const verificarDisponibilidadInstructora = async (instructoraId, fecha, horaInicio, horaFin) => {
   try {
-    // Verificar si la instructora está en descanso
+    const diaSemanaMySQL = getDiaSemanaMySQL(fecha);
+    
+    // Verificar descansos fijos recurrentes por día de semana
+    // Nota: Los descansos fijos siempre se aplican (solo afectan iniciación)
+    const [descansosFijos] = await db.query(`
+      SELECT id FROM descansos
+      WHERE instructora_id = ?
+        AND es_recurrente = 1
+        AND dia_semana = ?
+    `, [instructoraId, diaSemanaMySQL]);
+
+    if (descansosFijos.length > 0) {
+      return { disponible: false, razon: 'Instructora en descanso fijo' };
+    }
+
+    // Verificar descansos por fecha específica (no recurrentes)
     const [descansos] = await db.query(`
       SELECT id FROM descansos
       WHERE instructora_id = ?
-      AND ? BETWEEN fecha_inicio AND fecha_fin
+        AND es_recurrente = 0
+        AND ? BETWEEN fecha_inicio AND fecha_fin
     `, [instructoraId, fecha]);
 
     if (descansos.length > 0) {
@@ -475,7 +583,7 @@ router.put('/admin/:id/status', async (req, res) => {
   }
 
   try {
-    // Si se está cancelando la reserva, liberar caballo pero mantener instructor para historial
+    // Si se está cancelando la reserva, también quitar el caballo asignado
     if (estatus === 'cancelada') {
       const [result] = await db.query(`
         UPDATE reservas 
@@ -489,8 +597,7 @@ router.put('/admin/:id/status', async (req, res) => {
 
       res.json({ 
         message: 'Reserva cancelada correctamente y caballo liberado',
-        caballo_liberado: true,
-        instructor_liberado: false
+        caballo_liberado: true 
       });
     } else {
       const [result] = await db.query(`
@@ -585,7 +692,7 @@ router.put('/admin/:reservaId/attendance', async (req, res) => {
       `[Admin] Clase completada. ${observaciones || ''}` : 
       `[Admin] No asistió. ${observaciones || ''}`;
 
-    // Si no asistió (cancelada), liberar caballo pero mantener instructor para historial
+    // Si no asistió (cancelada), también liberar el caballo
     if (!asistio) {
       await db.query(`
         UPDATE reservas 
@@ -637,7 +744,6 @@ router.get('/my-reservations/:clienteId', async (req, res) => {
         r.hora_inicio,
         r.hora_fin,
         r.estatus,
-        r.motivo_cancelacion,
         r.tipo,
         r.observaciones,
         c.nombre as caballo_nombre,
@@ -707,58 +813,31 @@ router.get('/available-slots/:clienteId', async (req, res) => {
     const infoClase = clase[0];
     const fechaObj = new Date(fecha);
     const diaSemana = fechaObj.getDay(); // 0 = domingo, 6 = sábado
+    
+    // Mapear día de semana JavaScript a formato MySQL
+    const diasMap = { 0: 'D', 1: 'L', 2: 'M', 3: 'X', 4: 'J', 5: 'V', 6: 'S' };
+    const diaSemanaMySQL = diasMap[diaSemana];
 
-    // Generar horarios según la clase y día de la semana
-    let horariosDisponibles = [];
+    // Obtener horarios desde la base de datos (SIEMPRE desde BD, sin fallback hardcodeado)
+    const [horariosBD] = await db.query(`
+      SELECT hora_inicio, hora_fin, capacidad
+      FROM horarios_clase
+      WHERE clase_id = ? 
+        AND dia_semana = ?
+        AND activo = 1
+      ORDER BY hora_inicio ASC
+    `, [clase_id, diaSemanaMySQL]);
 
-    // Lógica específica por tipo de clase
-    switch (infoClase.nombre) {
-      case 'iniciacion':
-        // Matutino: 7:30-10:30, Vespertino: 3:00-4:30 (no sábados/domingos tarde)
-        if (diaSemana >= 1 && diaSemana <= 5) { // Lunes a viernes
-          horariosDisponibles = [
-            '07:30:00', '08:00:00', '08:30:00', '09:00:00', '09:30:00', '10:00:00',
-            '15:00:00', '15:30:00', '16:00:00', '16:30:00'
-          ];
-        } else if (diaSemana === 6) { // Sábado
-          horariosDisponibles = ['07:30:00', '08:00:00', '08:30:00', '09:00:00', '09:30:00'];
-        } else { // Domingo
-          horariosDisponibles = ['07:30:00', '08:00:00', '08:30:00', '09:00:00', '09:30:00'];
-        }
-        break;
-
-      case 'intermedio':
-        // Horario 5pm + matutinos específicos
-        if (diaSemana >= 1 && diaSemana <= 5) { // Lunes a viernes
-          horariosDisponibles = ['08:00:00', '09:00:00', '10:00:00', '17:00:00'];
-        } else { // Sábados y domingos
-          horariosDisponibles = ['08:00:00', '09:00:00', '10:00:00'];
-        }
-        break;
-
-      case 'paseo':
-        // Lun-Vie: 8AM-12PM, Vespertino: 4-5PM
-        if (diaSemana >= 1 && diaSemana <= 5) {
-          horariosDisponibles = [
-            '08:00:00', '09:00:00', '10:00:00', '11:00:00', '12:00:00',
-            '16:00:00', '17:00:00'
-          ];
-        } else {
-          horariosDisponibles = ['08:00:00', '09:00:00', '10:00:00', '11:00:00', '12:00:00'];
-        }
-        break;
-
-      case 'salto':
-        // Solo horario 5pm + matutino 8-10AM
-        if (diaSemana >= 1 && diaSemana <= 5) {
-          horariosDisponibles = ['08:00:00', '09:00:00', '10:00:00', '17:00:00'];
-        } else {
-          horariosDisponibles = ['08:00:00', '09:00:00', '10:00:00'];
-        }
-        break;
-
-      default:
-        horariosDisponibles = ['08:00:00', '10:00:00', '15:00:00', '17:00:00'];
+    // Usar SOLO los horarios de la base de datos
+    const horariosDisponibles = horariosBD.map(h => h.hora_inicio);
+    
+    if (horariosDisponibles.length === 0) {
+      // Si no hay horarios en la BD, devolver error o array vacío
+      return res.json({
+        clase: infoClase.nombre,
+        fecha: fecha,
+        horarios_disponibles: []
+      });
     }
 
     // Filtrar horarios ocupados
@@ -768,6 +847,23 @@ router.get('/available-slots/:clienteId', async (req, res) => {
       horaFin.setMinutes(horaFin.getMinutes() + infoClase.duracion_min);
       const horaFinStr = horaFin.toTimeString().slice(0, 8);
 
+      // Solo para iniciación: ajustar cupo según instructoras disponibles (considerando descansos)
+      // Para otras clases, el cupo se mantiene como está configurado
+      let cupoMaximoAjustado = infoClase.cupo_max;
+      
+      if (infoClase.nombre.toLowerCase() === 'iniciacion') {
+        // Calcular instructoras disponibles para este horario (considerando descansos)
+        const instructorasDisponibles = await calcularInstructorasDisponibles(clase_id, fecha, hora);
+        
+        // El cupo máximo es el mínimo entre el cupo configurado y las instructoras disponibles
+        // Ejemplo: si hay 2 instructoras y 1 descansa, cupo pasa de 2 a 1
+        cupoMaximoAjustado = Math.min(infoClase.cupo_max, instructorasDisponibles);
+        
+        if (cupoMaximoAjustado < infoClase.cupo_max) {
+          console.log(`⚠️ Cupo ajustado por descansos: ${cupoMaximoAjustado} (original: ${infoClase.cupo_max})`);
+        }
+      }
+
       // Verificar cupo disponible
       const [reservasExistentes] = await db.query(`
         SELECT COUNT(*) as ocupadas FROM reservas
@@ -776,11 +872,14 @@ router.get('/available-slots/:clienteId', async (req, res) => {
         AND estatus IN ('pendiente', 'confirmada')
       `, [formatDateForMySQL(fecha), clase_id, hora]);
 
-      if (reservasExistentes[0].ocupadas < infoClase.cupo_max) {
+      const espaciosDisponibles = cupoMaximoAjustado - reservasExistentes[0].ocupadas;
+
+      if (espaciosDisponibles > 0) {
         horariosLibres.push({
           hora_inicio: hora,
           hora_fin: horaFinStr,
-          espacios_disponibles: infoClase.cupo_max - reservasExistentes[0].ocupadas
+          espacios_disponibles: espaciosDisponibles,
+          cupo_maximo_ajustado: cupoMaximoAjustado
         });
       }
     }
@@ -881,6 +980,19 @@ router.post('/book', async (req, res) => {
     horaFinObj.setMinutes(horaFinObj.getMinutes() + infoClase.duracion_min);
     const hora_fin = horaFinObj.toTimeString().slice(0, 8);
 
+    // Solo para iniciación: ajustar cupo según instructoras disponibles (considerando descansos)
+    // Para otras clases, el cupo se mantiene como está configurado
+    let cupoMaximoAjustado = infoClase.cupo_max;
+    
+    if (infoClase.nombre.toLowerCase() === 'iniciacion') {
+      // Calcular instructoras disponibles para este horario
+      const instructorasDisponibles = await calcularInstructorasDisponibles(clase_id, fecha, hora_inicio);
+      
+      // El cupo máximo es el mínimo entre el cupo configurado y las instructoras disponibles
+      // Ejemplo: si hay 2 instructoras y 1 descansa, cupo pasa de 2 a 1
+      cupoMaximoAjustado = Math.min(infoClase.cupo_max, instructorasDisponibles);
+    }
+
     // Verificar cupo disponible
     const [reservasExistentes] = await db.query(`
       SELECT COUNT(*) as ocupadas FROM reservas
@@ -889,7 +1001,7 @@ router.post('/book', async (req, res) => {
       AND estatus IN ('pendiente', 'confirmada')
     `, [formatDateForMySQL(fecha), clase_id, hora_inicio]);
 
-    if (reservasExistentes[0].ocupadas >= infoClase.cupo_max) {
+    if (reservasExistentes[0].ocupadas >= cupoMaximoAjustado) {
       return res.status(400).json({ 
         error: 'No hay espacios disponibles en este horario' 
       });
@@ -905,6 +1017,7 @@ router.post('/book', async (req, res) => {
     // IMPORTANTE: Una instructora NO puede tener dos clases al mismo tiempo (aunque sean de diferente categoría)
 
     // Primero: buscar si hay una instructora que ya tiene reserva en ESTE HORARIO Y ESTA CLASE exacta
+    const diaSemanaMySQL = getDiaSemanaMySQL(fecha);
     const [instructoraActual] = await db.query(`
       SELECT DISTINCT r.instructora_id, COUNT(*) as alumnos_en_slot
       FROM reservas r
@@ -916,12 +1029,14 @@ router.post('/book', async (req, res) => {
         AND r.estatus IN ('pendiente','confirmada')
         AND i.disponibilidad = 'disponible'
         AND r.instructora_id NOT IN (
-          SELECT d.instructora_id FROM descansos d WHERE ? BETWEEN d.fecha_inicio AND d.fecha_fin
+          SELECT d.instructora_id FROM descansos d 
+          WHERE (d.es_recurrente = 1 AND d.dia_semana = ?)
+             OR (d.es_recurrente = 0 AND ? BETWEEN d.fecha_inicio AND d.fecha_fin)
         )
       GROUP BY r.instructora_id
       HAVING alumnos_en_slot < ?
       LIMIT 1
-    `, [clase_id, formatDateForMySQL(fecha), formatTimeForMySQL(hora_inicio), clase_id, fecha, infoClase.cupo_max]);
+    `, [clase_id, formatDateForMySQL(fecha), formatTimeForMySQL(hora_inicio), clase_id, diaSemanaMySQL, fecha, cupoMaximoAjustado]);
 
     let instructora_id = null;
 
@@ -948,7 +1063,9 @@ router.post('/book', async (req, res) => {
         JOIN instructora_clase ic ON i.id = ic.instructora_id AND ic.clase_id = ? AND ic.activo = 1
         WHERE i.disponibilidad = 'disponible'
           AND i.id NOT IN (
-            SELECT d.instructora_id FROM descansos d WHERE ? BETWEEN d.fecha_inicio AND d.fecha_fin
+            SELECT d.instructora_id FROM descansos d 
+            WHERE (d.es_recurrente = 1 AND d.dia_semana = ?)
+               OR (d.es_recurrente = 0 AND ? BETWEEN d.fecha_inicio AND d.fecha_fin)
           )
           AND i.id NOT IN (
             SELECT r.instructora_id FROM reservas r 
@@ -961,7 +1078,8 @@ router.post('/book', async (req, res) => {
         fecha, fecha, fecha, fecha, // para calcular semana de la reserva
         fecha, hora_inicio, hora_fin, // para detectar clases consecutivas
         clase_id,
-        fecha,
+        diaSemanaMySQL, // para descansos fijos recurrentes
+        fecha, // para descansos por fecha
         fecha,
         hora_inicio
       ]);
@@ -1005,6 +1123,9 @@ router.post('/book', async (req, res) => {
       tipoCliente === 'renta' ? 'renta' :
       tipoCliente === 'media_renta' ? 'media_renta' : 'normal'
     ]);
+
+    // Nota: Ya no se incrementa contador de reservas durante descansos
+    // porque los descansos fijos siempre se aplican (solo afectan iniciación)
 
     res.json({
       message: 'Reserva creada correctamente',
@@ -1102,7 +1223,7 @@ router.get('/propietarios', async (req, res) => {
 });
 
 // Cancelar reserva (cliente)
-router.put('/:id/cancel/:clienteId', async (req, res) => {
+router.delete('/:id/cancel/:clienteId', async (req, res) => {
   const { id, clienteId } = req.params;
 
   try {
@@ -1129,7 +1250,7 @@ router.put('/:id/cancel/:clienteId', async (req, res) => {
       });
     }
 
-    if (infoReserva.estatus === 'cancelada' || infoReserva.estatus === 'cancelada_instructor') {
+    if (infoReserva.estatus === 'cancelada') {
       return res.status(400).json({ error: 'La reserva ya está cancelada' });
     }
 
@@ -1137,24 +1258,14 @@ router.put('/:id/cancel/:clienteId', async (req, res) => {
       return res.status(400).json({ error: 'No se puede cancelar una reserva completada' });
     }
 
-    // Determinar estatus de cancelación
-    let nuevoEstatus = 'cancelada';
-    let motivoCancelacion = null;
-    if (req.body && req.body.estatus && req.body.estatus === 'cancelada_instructor') {
-      nuevoEstatus = 'cancelada_instructor';
-      motivoCancelacion = req.body.motivo_cancelacion || null;
-    }
-
-    // Cancelar la reserva, liberar caballo pero mantener instructor para historial
+    // Cancelar la reserva y liberar el caballo
     await db.query(`
-      UPDATE reservas SET estatus = ?, caballo_id = NULL, motivo_cancelacion = ?
-       WHERE id = ?
-    `, [nuevoEstatus, motivoCancelacion, id]);
+      UPDATE reservas SET estatus = 'cancelada', caballo_id = NULL WHERE id = ?
+    `, [id]);
 
     res.json({ 
-      message: `Reserva cancelada correctamente${nuevoEstatus === 'cancelada_instructor' ? ' por instructor' : ''}`,
-      caballo_liberado: true,
-      instructor_liberado: false
+      message: 'Reserva cancelada correctamente',
+      caballo_liberado: true 
     });
   } catch (err) {
     console.error('Error cancelando reserva:', err);
@@ -1559,7 +1670,7 @@ router.put('/instructor/:reservaId/attendance', async (req, res) => {
       `Clase completada. ${observaciones || ''}` : 
       `No asistió. ${observaciones || ''}`;
 
-    // Si no asistió (cancelada), liberar caballo pero mantener instructor para historial
+    // Si no asistió (cancelada), también liberar el caballo
     if (!asistio) {
       await db.query(`
         UPDATE reservas 
@@ -1794,6 +1905,111 @@ router.post('/instructor/request-break', async (req, res) => {
   } catch (err) {
     console.error('Error registrando descanso:', err);
     res.status(500).json({ error: 'Error al registrar solicitud de descanso' });
+  }
+});
+
+// Cancelar todas las reservas de un día (instructora)
+router.post('/instructor/cancel-day', async (req, res) => {
+  const { instructora_id, fecha, motivo } = req.body;
+
+  if (!instructora_id || !fecha) {
+    return res.status(400).json({ 
+      error: 'Faltan campos requeridos: instructora_id, fecha' 
+    });
+  }
+
+  try {
+    // Verificar que hay reservas para cancelar
+    const [reservas] = await db.query(`
+      SELECT id, estatus FROM reservas 
+      WHERE instructora_id = ? 
+        AND DATE(fecha) = ? 
+        AND estatus IN ('pendiente', 'confirmada')
+    `, [instructora_id, formatDateForMySQL(fecha)]);
+
+    if (reservas.length === 0) {
+      return res.status(404).json({ 
+        error: 'No hay reservas pendientes o confirmadas para cancelar en esta fecha' 
+      });
+    }
+
+    // Construir observaciones con motivo si se proporciona
+    const motivoTexto = motivo ? `\nMotivo: ${motivo}` : '';
+    const observaciones = `[Cancelación masiva por instructora]${motivoTexto}`;
+
+    // Cancelar todas las reservas y liberar caballos
+    const [result] = await db.query(`
+      UPDATE reservas 
+      SET estatus = 'cancelada', 
+          caballo_id = NULL,
+          observaciones = CONCAT(COALESCE(observaciones, ''), ?)
+      WHERE instructora_id = ? 
+        AND DATE(fecha) = ? 
+        AND estatus IN ('pendiente', 'confirmada')
+    `, [observaciones, instructora_id, formatDateForMySQL(fecha)]);
+
+    res.json({
+      message: `Se cancelaron ${result.affectedRows} reserva(s) correctamente`,
+      canceladas: result.affectedRows,
+      fecha: fecha
+    });
+  } catch (err) {
+    console.error('Error cancelando reservas del día:', err);
+    res.status(500).json({ error: 'Error al cancelar reservas del día' });
+  }
+});
+
+// Cancelar reservas desde cierta hora en adelante (instructora)
+router.post('/instructor/cancel-from-time', async (req, res) => {
+  const { instructora_id, fecha, hora_inicio, motivo } = req.body;
+
+  if (!instructora_id || !fecha || !hora_inicio) {
+    return res.status(400).json({ 
+      error: 'Faltan campos requeridos: instructora_id, fecha, hora_inicio' 
+    });
+  }
+
+  try {
+    // Verificar que hay reservas para cancelar
+    const [reservas] = await db.query(`
+      SELECT id, estatus, hora_inicio FROM reservas 
+      WHERE instructora_id = ? 
+        AND DATE(fecha) = ? 
+        AND TIME(hora_inicio) >= ?
+        AND estatus IN ('pendiente', 'confirmada')
+    `, [instructora_id, formatDateForMySQL(fecha), formatTimeForMySQL(hora_inicio)]);
+
+    if (reservas.length === 0) {
+      return res.status(404).json({ 
+        error: 'No hay reservas pendientes o confirmadas para cancelar desde esta hora' 
+      });
+    }
+
+    // Construir observaciones con motivo si se proporciona
+    const motivoTexto = motivo ? `\nMotivo: ${motivo}` : '';
+    const observaciones = `[Cancelación masiva por instructora desde ${hora_inicio}]${motivoTexto}`;
+
+    // Cancelar todas las reservas desde la hora especificada y liberar caballos
+    const [result] = await db.query(`
+      UPDATE reservas 
+      SET estatus = 'cancelada', 
+          caballo_id = NULL,
+          observaciones = CONCAT(COALESCE(observaciones, ''), ?)
+      WHERE instructora_id = ? 
+        AND DATE(fecha) = ? 
+        AND TIME(hora_inicio) >= ?
+        AND estatus IN ('pendiente', 'confirmada')
+    `, [observaciones, instructora_id, formatDateForMySQL(fecha), formatTimeForMySQL(hora_inicio)]);
+
+    res.json({
+      message: `Se cancelaron ${result.affectedRows} reserva(s) correctamente desde las ${hora_inicio}`,
+      canceladas: result.affectedRows,
+      fecha: fecha,
+      hora_inicio: hora_inicio
+    });
+  } catch (err) {
+    console.error('Error cancelando reservas desde hora:', err);
+    res.status(500).json({ error: 'Error al cancelar reservas desde hora' });
   }
 });
 
