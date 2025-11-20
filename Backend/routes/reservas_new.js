@@ -1223,7 +1223,7 @@ router.get('/propietarios', async (req, res) => {
 });
 
 // Cancelar reserva (cliente)
-router.delete('/:id/cancel/:clienteId', async (req, res) => {
+router.put('/:id/cancel/:clienteId', async (req, res) => {
   const { id, clienteId } = req.params;
 
   try {
