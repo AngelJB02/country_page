@@ -113,6 +113,40 @@ ${formData.mensaje || 'El cliente no incluyó mensaje adicional'}
       );
       
       console.log('Correo enviado exitosamente:', result);
+      
+      // ========== ENVÍO DE EMAIL DE CONFIRMACIÓN AL CLIENTE ==========
+      // Enviar email de confirmación al cliente si tiene email
+      if (formData.email && formData.email.trim() !== '') {
+        try {
+          // Como no tenemos hora de inicio/fin en este formulario de eventos,
+          // enviamos horario genérico o lo dejamos sin especificar
+          const emailPayload = {
+            email: formData.email,
+            nombre: formData.nombre,
+            fechaReserva: formData.fecha || new Date().toISOString().split('T')[0],
+            horaInicio: 'Por confirmar',
+            horaFin: 'Por confirmar',
+            instructor: null, // No aplica para eventos
+            tipoReserva: formData.tipoEvento || 'Evento'
+          };
+          
+          const emailRes = await fetch('http://localhost:3001/api/email/send-reservation-confirmation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(emailPayload)
+          });
+          
+          if (emailRes.ok) {
+            console.log('✅ Email de confirmación enviado al cliente');
+          } else {
+            console.log('⚠️ No se pudo enviar email de confirmación al cliente');
+          }
+        } catch (emailError) {
+          console.log('Error al enviar email de confirmación:', emailError);
+        }
+      }
+      // ================================================================
+      
       alert('¡Gracias por tu consulta! Te contactaremos pronto. Tu solicitud ha sido enviada correctamente.');
       
       // Limpiar el formulario después del envío exitoso

@@ -2,6 +2,7 @@
 import express from 'express';
 import db from '../server/db.js';
 import { DateTime } from 'luxon';
+import axios from 'axios';
 
 const router = express.Router();
 
@@ -946,7 +947,7 @@ router.post('/book', async (req, res) => {
 
     // Obtener información del cliente
     const [cliente] = await db.query(`
-      SELECT tipo_cliente FROM usuarios WHERE id = ?
+      SELECT tipo_cliente, nombre, apellido, correo FROM usuarios WHERE id = ?
     `, [cliente_id]);
 
     if (cliente.length === 0) {
@@ -1127,6 +1128,69 @@ router.post('/book', async (req, res) => {
     // Nota: Ya no se incrementa contador de reservas durante descansos
     // porque los descansos fijos siempre se aplican (solo afectan iniciación)
 
+    // Debug: Verificar datos del cliente
+    console.log('📧 Datos del cliente obtenidos:', {
+      id: cliente_id,
+      nombre: cliente[0].nombre,
+      apellido: cliente[0].apellido,
+      correo: cliente[0].correo,
+      correoExiste: !!cliente[0].correo,
+      correoLength: cliente[0].correo ? cliente[0].correo.length : 0
+    });
+
+    // Enviar email de confirmación si el cliente tiene correo
+    if (cliente[0].correo && cliente[0].correo.trim() !== '') {
+      try {
+        // Obtener información de la instructora
+        let instructoraNombre = null;
+        if (instructora_id) {
+          const [instructora] = await db.query(`
+            SELECT i.nombre, i.apellido 
+            FROM instructoras inst
+            JOIN usuarios i ON inst.usuario_id = i.id
+            WHERE inst.id = ?
+          `, [instructora_id]);
+          
+          if (instructora.length > 0) {
+            instructoraNombre = `${instructora[0].nombre} ${instructora[0].apellido}`;
+          }
+        }
+
+        // Preparar datos para el email
+        const emailPayload = {
+          email: cliente[0].correo.trim(),
+          nombre: `${cliente[0].nombre} ${cliente[0].apellido}`,
+          fechaReserva: fecha,
+          horaInicio: hora_inicio,
+          horaFin: hora_fin,
+          instructor: instructoraNombre,
+          tipoReserva: tipoCliente === 'propietario' ? 'propietario' : 
+                       tipoCliente === 'renta' ? 'renta' :
+                       tipoCliente === 'media_renta' ? 'media_renta' : 'normal'
+        };
+
+        console.log('📨 Enviando email de confirmación con payload:', emailPayload);
+
+        // Enviar email de confirmación (no bloquea la respuesta si falla)
+        axios.post('http://localhost:3001/api/email/send-reservation-confirmation', emailPayload)
+          .then(() => {
+            console.log('✅ Email de confirmación enviado correctamente a:', cliente[0].correo);
+          })
+          .catch((emailError) => {
+            console.error('⚠️ Error al enviar email de confirmación:', emailError.message);
+            if (emailError.response) {
+              console.error('⚠️ Respuesta del servidor de email:', emailError.response.data);
+            }
+            // No fallar la creación de la reserva si el email falla
+          });
+      } catch (emailError) {
+        console.error('⚠️ Error al preparar envío de email:', emailError.message);
+        // No fallar la creación de la reserva si el email falla
+      }
+    } else {
+      console.log('ℹ️ Cliente sin correo registrado, no se envía email. Correo recibido:', cliente[0].correo);
+    }
+
     res.json({
       message: 'Reserva creada correctamente',
       id: result.insertId,
@@ -1227,10 +1291,11 @@ router.put('/:id/cancel/:clienteId', async (req, res) => {
   const { id, clienteId } = req.params;
 
   try {
-    // Verificar que la reserva pertenece al cliente
+    // Verificar que la reserva pertenece al cliente y obtener datos completos
     const [reserva] = await db.query(`
-      SELECT fecha, hora_inicio, estatus FROM reservas 
-      WHERE id = ? AND cliente_id = ?
+      SELECT r.fecha, r.hora_inicio, r.hora_fin, r.estatus, r.instructora_id, r.cliente_id
+      FROM reservas r
+      WHERE r.id = ? AND r.cliente_id = ?
     `, [id, clienteId]);
 
     if (reserva.length === 0) {
@@ -1238,16 +1303,20 @@ router.put('/:id/cancel/:clienteId', async (req, res) => {
     }
 
     const infoReserva = reserva[0];
+    const { motivo_cancelacion } = req.body; // Motivo si viene del instructor
 
-    // Verificar que la reserva se puede cancelar (2 horas antes)
-    const ahora = new Date();
-    const fechaHoraReserva = new Date(`${infoReserva.fecha} ${infoReserva.hora_inicio}`);
-    const diferenciaHoras = (fechaHoraReserva - ahora) / (1000 * 60 * 60);
+    // Verificar que la reserva se puede cancelar (2 horas antes) - solo para clientes
+    // Si viene motivo_cancelacion, es un instructor cancelando, no aplicar restricción
+    if (!motivo_cancelacion) {
+      const ahora = new Date();
+      const fechaHoraReserva = new Date(`${infoReserva.fecha} ${infoReserva.hora_inicio}`);
+      const diferenciaHoras = (fechaHoraReserva - ahora) / (1000 * 60 * 60);
 
-    if (diferenciaHoras < 2) {
-      return res.status(400).json({ 
-        error: 'Las reservas solo se pueden cancelar al menos 2 horas antes' 
-      });
+      if (diferenciaHoras < 2) {
+        return res.status(400).json({ 
+          error: 'Las reservas solo se pueden cancelar al menos 2 horas antes' 
+        });
+      }
     }
 
     if (infoReserva.estatus === 'cancelada') {
@@ -1258,10 +1327,83 @@ router.put('/:id/cancel/:clienteId', async (req, res) => {
       return res.status(400).json({ error: 'No se puede cancelar una reserva completada' });
     }
 
+    // Determinar el nuevo estatus
+    const nuevoEstatus = motivo_cancelacion ? 'cancelada_instructor' : 'cancelada';
+    const observaciones = motivo_cancelacion ? `[Cancelación por instructora]\nMotivo: ${motivo_cancelacion}` : null;
+
     // Cancelar la reserva y liberar el caballo
-    await db.query(`
-      UPDATE reservas SET estatus = 'cancelada', caballo_id = NULL WHERE id = ?
-    `, [id]);
+    if (observaciones) {
+      await db.query(`
+        UPDATE reservas SET estatus = ?, caballo_id = NULL, observaciones = CONCAT(COALESCE(observaciones, ''), ?) WHERE id = ?
+      `, [nuevoEstatus, observaciones, id]);
+    } else {
+      await db.query(`
+        UPDATE reservas SET estatus = ?, caballo_id = NULL WHERE id = ?
+      `, [nuevoEstatus, id]);
+    }
+
+    // Si es cancelación por instructor, enviar email
+    if (motivo_cancelacion && infoReserva.instructora_id) {
+      try {
+        // Obtener datos del cliente
+        const [cliente] = await db.query(`
+          SELECT nombre, apellido, correo FROM usuarios WHERE id = ?
+        `, [infoReserva.cliente_id]);
+
+        // Obtener nombre de la instructora
+        let instructoraNombre = null;
+        try {
+          const [instructora] = await db.query(`
+            SELECT i.nombre, i.apellido 
+            FROM instructoras inst
+            JOIN usuarios i ON inst.usuario_id = i.id
+            WHERE inst.id = ?
+          `, [infoReserva.instructora_id]);
+          
+          if (instructora.length > 0) {
+            instructoraNombre = `${instructora[0].nombre} ${instructora[0].apellido}`;
+          }
+        } catch (e) {
+          console.error('Error obteniendo nombre de instructora:', e);
+        }
+
+        if (cliente.length > 0 && cliente[0].correo && cliente[0].correo.trim() !== '') {
+          // Formatear hora de fin si no existe
+          let horaFin = infoReserva.hora_fin;
+          if (!horaFin && infoReserva.hora_inicio) {
+            const [hora, minuto] = infoReserva.hora_inicio.split(':');
+            const horaFinDate = new Date(`2000-01-01 ${hora}:${minuto}:00`);
+            horaFinDate.setHours(horaFinDate.getHours() + 1);
+            horaFin = horaFinDate.toTimeString().slice(0, 5);
+          }
+
+          const emailPayload = {
+            email: cliente[0].correo.trim(),
+            nombre: `${cliente[0].nombre} ${cliente[0].apellido}`,
+            fechaReserva: infoReserva.fecha,
+            horaInicio: infoReserva.hora_inicio ? infoReserva.hora_inicio.slice(0, 5) : '',
+            horaFin: horaFin ? horaFin.slice(0, 5) : '',
+            instructor: instructoraNombre,
+            motivoCancelacion: motivo_cancelacion || 'Cancelación por parte de la instructora'
+          };
+
+          console.log(`📨 Enviando email de cancelación a ${cliente[0].correo} desde endpoint cancel cliente`);
+
+          // Enviar email de cancelación (no bloquea si falla)
+          axios.post('http://localhost:3001/api/email/send-cancellation-notification', emailPayload)
+            .then(() => {
+              console.log(`✅ Email de cancelación enviado correctamente a: ${cliente[0].correo}`);
+            })
+            .catch((emailError) => {
+              console.error(`⚠️ Error al enviar email de cancelación a ${cliente[0].correo}:`, emailError.message);
+            });
+        } else {
+          console.log(`ℹ️ Cliente ${infoReserva.cliente_id} sin correo registrado, no se envía email`);
+        }
+      } catch (emailError) {
+        console.error(`⚠️ Error al procesar email para reserva ${id}:`, emailError.message);
+      }
+    }
 
     res.json({ 
       message: 'Reserva cancelada correctamente',
@@ -1269,7 +1411,18 @@ router.put('/:id/cancel/:clienteId', async (req, res) => {
     });
   } catch (err) {
     console.error('Error cancelando reserva:', err);
-    res.status(500).json({ error: 'Error al cancelar reserva' });
+    
+    // Manejar errores específicos de conexión
+    if (err.code === 'ECONNRESET' || err.code === 'PROTOCOL_CONNECTION_LOST') {
+      return res.status(503).json({ 
+        error: 'Error de conexión con la base de datos. Por favor, intenta de nuevo.' 
+      });
+    }
+    
+    res.status(500).json({ 
+      error: 'Error al cancelar reserva',
+      details: err.message 
+    });
   }
 });
 
@@ -1650,10 +1803,11 @@ router.put('/instructor/:reservaId/attendance', async (req, res) => {
   }
 
   try {
-    // Verificar que la reserva pertenece a la instructora y obtener información del cliente
+    // Verificar que la reserva pertenece a la instructora y obtener información completa
     const [reserva] = await db.query(`
-      SELECT id, cliente_id FROM reservas 
-      WHERE id = ? AND instructora_id = ?
+      SELECT r.id, r.cliente_id, r.fecha, r.hora_inicio, r.hora_fin
+      FROM reservas r
+      WHERE r.id = ? AND r.instructora_id = ?
     `, [reservaId, instructora_id]);
 
     if (reserva.length === 0) {
@@ -1662,7 +1816,8 @@ router.put('/instructor/:reservaId/attendance', async (req, res) => {
       });
     }
 
-    const clienteId = reserva[0].cliente_id;
+    const reservaData = reserva[0];
+    const clienteId = reservaData.cliente_id;
 
     // Actualizar estatus y observaciones
     const nuevoEstatus = asistio ? 'completada' : 'cancelada';
@@ -1677,6 +1832,65 @@ router.put('/instructor/:reservaId/attendance', async (req, res) => {
         SET estatus = ?, observaciones = ?, caballo_id = NULL
         WHERE id = ?
       `, [nuevoEstatus, nuevasObservaciones.trim(), reservaId]);
+
+      // Enviar email de cancelación cuando no asistió
+      try {
+        // Obtener datos del cliente
+        const [cliente] = await db.query(`
+          SELECT nombre, apellido, correo FROM usuarios WHERE id = ?
+        `, [clienteId]);
+
+        // Obtener nombre de la instructora
+        let instructoraNombre = null;
+        try {
+          const [instructora] = await db.query(`
+            SELECT i.nombre, i.apellido 
+            FROM instructoras inst
+            JOIN usuarios i ON inst.usuario_id = i.id
+            WHERE inst.id = ?
+          `, [instructora_id]);
+          
+          if (instructora.length > 0) {
+            instructoraNombre = `${instructora[0].nombre} ${instructora[0].apellido}`;
+          }
+        } catch (e) {
+          console.error('Error obteniendo nombre de instructora:', e);
+        }
+
+        if (cliente.length > 0 && cliente[0].correo && cliente[0].correo.trim() !== '') {
+          // Formatear hora de fin si no existe
+          let horaFin = reservaData.hora_fin;
+          if (!horaFin && reservaData.hora_inicio) {
+            const [hora, minuto] = reservaData.hora_inicio.split(':');
+            const horaFinDate = new Date(`2000-01-01 ${hora}:${minuto}:00`);
+            horaFinDate.setHours(horaFinDate.getHours() + 1);
+            horaFin = horaFinDate.toTimeString().slice(0, 5);
+          }
+
+          const emailPayload = {
+            email: cliente[0].correo.trim(),
+            nombre: `${cliente[0].nombre} ${cliente[0].apellido}`,
+            fechaReserva: reservaData.fecha,
+            horaInicio: reservaData.hora_inicio ? reservaData.hora_inicio.slice(0, 5) : '',
+            horaFin: horaFin ? horaFin.slice(0, 5) : '',
+            instructor: instructoraNombre,
+            motivoCancelacion: observaciones || 'El cliente no asistió a la clase'
+          };
+
+          // Enviar email de cancelación (no bloquea si falla)
+          axios.post('http://localhost:3001/api/email/send-cancellation-notification', emailPayload)
+            .then(() => {
+              console.log(`✅ Email de cancelación enviado a: ${cliente[0].correo}`);
+            })
+            .catch((emailError) => {
+              console.error(`⚠️ Error al enviar email de cancelación a ${cliente[0].correo}:`, emailError.message);
+            });
+        } else {
+          console.log(`ℹ️ Cliente ${clienteId} sin correo registrado, no se envía email`);
+        }
+      } catch (emailError) {
+        console.error(`⚠️ Error al procesar email para reserva ${reservaId}:`, emailError.message);
+      }
     } else {
       await db.query(`
         UPDATE reservas 
@@ -1787,10 +2001,11 @@ router.put('/instructor/:reservaId/status', async (req, res) => {
   }
 
   try {
-    // Verificar que la reserva pertenece a la instructora
+    // Verificar que la reserva pertenece a la instructora y obtener datos completos
     const [reserva] = await db.query(`
-      SELECT id FROM reservas 
-      WHERE id = ? AND instructora_id = ?
+      SELECT r.id, r.cliente_id, r.fecha, r.hora_inicio, r.hora_fin
+      FROM reservas r
+      WHERE r.id = ? AND r.instructora_id = ?
     `, [reservaId, instructora_id]);
 
     if (reserva.length === 0) {
@@ -1799,12 +2014,75 @@ router.put('/instructor/:reservaId/status', async (req, res) => {
       });
     }
 
+    const reservaData = reserva[0];
+
     // Actualizar estatus y observaciones
     const [result] = await db.query(`
       UPDATE reservas 
       SET estatus = ?, observaciones = COALESCE(?, observaciones)
       WHERE id = ?
     `, [estatus, observaciones, reservaId]);
+
+    // Si se canceló la reserva, enviar email de cancelación
+    if (estatus === 'cancelada') {
+      try {
+        // Obtener datos del cliente
+        const [cliente] = await db.query(`
+          SELECT nombre, apellido, correo FROM usuarios WHERE id = ?
+        `, [reservaData.cliente_id]);
+
+        // Obtener nombre de la instructora
+        let instructoraNombre = null;
+        try {
+          const [instructora] = await db.query(`
+            SELECT i.nombre, i.apellido 
+            FROM instructoras inst
+            JOIN usuarios i ON inst.usuario_id = i.id
+            WHERE inst.id = ?
+          `, [instructora_id]);
+          
+          if (instructora.length > 0) {
+            instructoraNombre = `${instructora[0].nombre} ${instructora[0].apellido}`;
+          }
+        } catch (e) {
+          console.error('Error obteniendo nombre de instructora:', e);
+        }
+
+        if (cliente.length > 0 && cliente[0].correo && cliente[0].correo.trim() !== '') {
+          // Formatear hora de fin si no existe
+          let horaFin = reservaData.hora_fin;
+          if (!horaFin && reservaData.hora_inicio) {
+            const [hora, minuto] = reservaData.hora_inicio.split(':');
+            const horaFinDate = new Date(`2000-01-01 ${hora}:${minuto}:00`);
+            horaFinDate.setHours(horaFinDate.getHours() + 1);
+            horaFin = horaFinDate.toTimeString().slice(0, 5);
+          }
+
+          const emailPayload = {
+            email: cliente[0].correo.trim(),
+            nombre: `${cliente[0].nombre} ${cliente[0].apellido}`,
+            fechaReserva: reservaData.fecha,
+            horaInicio: reservaData.hora_inicio ? reservaData.hora_inicio.slice(0, 5) : '',
+            horaFin: horaFin ? horaFin.slice(0, 5) : '',
+            instructor: instructoraNombre,
+            motivoCancelacion: observaciones || 'Cancelación por parte de la instructora'
+          };
+
+          // Enviar email de cancelación (no bloquea si falla)
+          axios.post('http://localhost:3001/api/email/send-cancellation-notification', emailPayload)
+            .then(() => {
+              console.log(`✅ Email de cancelación enviado a: ${cliente[0].correo}`);
+            })
+            .catch((emailError) => {
+              console.error(`⚠️ Error al enviar email de cancelación a ${cliente[0].correo}:`, emailError.message);
+            });
+        } else {
+          console.log(`ℹ️ Cliente ${reservaData.cliente_id} sin correo registrado, no se envía email`);
+        }
+      } catch (emailError) {
+        console.error(`⚠️ Error al procesar email para reserva ${reservaId}:`, emailError.message);
+      }
+    }
 
     res.json({ 
       message: 'Estatus de reserva actualizado correctamente',
@@ -1919,18 +2197,36 @@ router.post('/instructor/cancel-day', async (req, res) => {
   }
 
   try {
-    // Verificar que hay reservas para cancelar
+    // Verificar que hay reservas para cancelar y obtener datos completos
     const [reservas] = await db.query(`
-      SELECT id, estatus FROM reservas 
-      WHERE instructora_id = ? 
-        AND DATE(fecha) = ? 
-        AND estatus IN ('pendiente', 'confirmada')
+      SELECT r.id, r.estatus, r.cliente_id, r.fecha, r.hora_inicio, r.hora_fin
+      FROM reservas r
+      WHERE r.instructora_id = ? 
+        AND DATE(r.fecha) = ? 
+        AND r.estatus IN ('pendiente', 'confirmada')
     `, [instructora_id, formatDateForMySQL(fecha)]);
 
     if (reservas.length === 0) {
       return res.status(404).json({ 
         error: 'No hay reservas pendientes o confirmadas para cancelar en esta fecha' 
       });
+    }
+
+    // Obtener nombre de la instructora
+    let instructoraNombre = null;
+    try {
+      const [instructora] = await db.query(`
+        SELECT i.nombre, i.apellido 
+        FROM instructoras inst
+        JOIN usuarios i ON inst.usuario_id = i.id
+        WHERE inst.id = ?
+      `, [instructora_id]);
+      
+      if (instructora.length > 0) {
+        instructoraNombre = `${instructora[0].nombre} ${instructora[0].apellido}`;
+      }
+    } catch (e) {
+      console.error('Error obteniendo nombre de instructora:', e);
     }
 
     // Construir observaciones con motivo si se proporciona
@@ -1947,6 +2243,9 @@ router.post('/instructor/cancel-day', async (req, res) => {
         AND DATE(fecha) = ? 
         AND estatus IN ('pendiente', 'confirmada')
     `, [observaciones, instructora_id, formatDateForMySQL(fecha)]);
+
+    // Nota: Este endpoint no se usa en el frontend, solo se usa cancel-from-time
+    // Por lo tanto, no se envía email aquí
 
     res.json({
       message: `Se cancelaron ${result.affectedRows} reserva(s) correctamente`,
@@ -1970,19 +2269,37 @@ router.post('/instructor/cancel-from-time', async (req, res) => {
   }
 
   try {
-    // Verificar que hay reservas para cancelar
+    // Verificar que hay reservas para cancelar y obtener datos completos
     const [reservas] = await db.query(`
-      SELECT id, estatus, hora_inicio FROM reservas 
-      WHERE instructora_id = ? 
-        AND DATE(fecha) = ? 
-        AND TIME(hora_inicio) >= ?
-        AND estatus IN ('pendiente', 'confirmada')
+      SELECT r.id, r.estatus, r.hora_inicio, r.cliente_id, r.fecha, r.hora_fin
+      FROM reservas r
+      WHERE r.instructora_id = ? 
+        AND DATE(r.fecha) = ? 
+        AND TIME(r.hora_inicio) >= ?
+        AND r.estatus IN ('pendiente', 'confirmada')
     `, [instructora_id, formatDateForMySQL(fecha), formatTimeForMySQL(hora_inicio)]);
 
     if (reservas.length === 0) {
       return res.status(404).json({ 
         error: 'No hay reservas pendientes o confirmadas para cancelar desde esta hora' 
       });
+    }
+
+    // Obtener nombre de la instructora
+    let instructoraNombre = null;
+    try {
+      const [instructora] = await db.query(`
+        SELECT i.nombre, i.apellido 
+        FROM instructoras inst
+        JOIN usuarios i ON inst.usuario_id = i.id
+        WHERE inst.id = ?
+      `, [instructora_id]);
+      
+      if (instructora.length > 0) {
+        instructoraNombre = `${instructora[0].nombre} ${instructora[0].apellido}`;
+      }
+    } catch (e) {
+      console.error('Error obteniendo nombre de instructora:', e);
     }
 
     // Construir observaciones con motivo si se proporciona
@@ -2000,6 +2317,65 @@ router.post('/instructor/cancel-from-time', async (req, res) => {
         AND TIME(hora_inicio) >= ?
         AND estatus IN ('pendiente', 'confirmada')
     `, [observaciones, instructora_id, formatDateForMySQL(fecha), formatTimeForMySQL(hora_inicio)]);
+
+    console.log(`📧 Procesando envío de emails para ${reservas.length} reservas canceladas`);
+
+    // Enviar emails de cancelación a cada cliente afectado
+    for (const reserva of reservas) {
+      console.log(`📧 Procesando email para reserva ${reserva.id}, cliente ${reserva.cliente_id}`);
+      try {
+        // Obtener datos del cliente
+        const [cliente] = await db.query(`
+          SELECT nombre, apellido, correo FROM usuarios WHERE id = ?
+        `, [reserva.cliente_id]);
+
+        if (cliente.length > 0) {
+          console.log(`📧 Cliente encontrado: ${cliente[0].nombre} ${cliente[0].apellido}, correo: ${cliente[0].correo || 'SIN CORREO'}`);
+          
+          if (cliente[0].correo && cliente[0].correo.trim() !== '') {
+            // Formatear hora de fin si no existe
+            let horaFin = reserva.hora_fin;
+            if (!horaFin && reserva.hora_inicio) {
+              // Intentar calcular hora fin (asumiendo duración de 1 hora por defecto)
+              const [hora, minuto] = reserva.hora_inicio.split(':');
+              const horaFinDate = new Date(`2000-01-01 ${hora}:${minuto}:00`);
+              horaFinDate.setHours(horaFinDate.getHours() + 1);
+              horaFin = horaFinDate.toTimeString().slice(0, 5);
+            }
+
+            const emailPayload = {
+              email: cliente[0].correo.trim(),
+              nombre: `${cliente[0].nombre} ${cliente[0].apellido}`,
+              fechaReserva: reserva.fecha,
+              horaInicio: reserva.hora_inicio ? reserva.hora_inicio.slice(0, 5) : '',
+              horaFin: horaFin ? horaFin.slice(0, 5) : '',
+              instructor: instructoraNombre,
+              motivoCancelacion: motivo || 'Cancelación por parte de la instructora'
+            };
+
+            console.log(`📨 Enviando email de cancelación a ${cliente[0].correo} con payload:`, emailPayload);
+
+            // Enviar email de cancelación (no bloquea si falla)
+            axios.post('http://localhost:3001/api/email/send-cancellation-notification', emailPayload)
+              .then(() => {
+                console.log(`✅ Email de cancelación enviado correctamente a: ${cliente[0].correo}`);
+              })
+              .catch((emailError) => {
+                console.error(`⚠️ Error al enviar email de cancelación a ${cliente[0].correo}:`, emailError.message);
+                if (emailError.response) {
+                  console.error(`⚠️ Respuesta del servidor:`, emailError.response.data);
+                }
+              });
+          } else {
+            console.log(`ℹ️ Cliente ${reserva.cliente_id} sin correo registrado, no se envía email`);
+          }
+        } else {
+          console.log(`⚠️ Cliente ${reserva.cliente_id} no encontrado en la base de datos`);
+        }
+      } catch (emailError) {
+        console.error(`⚠️ Error al procesar email para reserva ${reserva.id}:`, emailError.message);
+      }
+    }
 
     res.json({
       message: `Se cancelaron ${result.affectedRows} reserva(s) correctamente desde las ${hora_inicio}`,

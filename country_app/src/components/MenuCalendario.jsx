@@ -157,12 +157,15 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
     
     const [day, time] = selectedSlot.id.split('-');
     try {
-      await createBooking({
+      const reservaCreada = await createBooking({
         cliente_id: userId,
         clase_id: selectedClass.id,
         fecha: fechaISO, // Fecha real calculada del slot
         hora_inicio: time + ':00',
       });
+      
+      // El email de confirmación se envía automáticamente desde el backend
+      
       toast.success(`Reserva confirmada para ${selectedSlot.day} a las ${selectedSlot.time}`, {
         position: "top-right",
         autoClose: 3000,
