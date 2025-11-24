@@ -1,54 +1,18 @@
-import { Clock } from "lucide-react"
+import { Clock, X as XIcon } from "lucide-react"
 import { useState } from "react"
+import { CancelMassModal } from "./CancelMassModal"
 
-function DayClassesModal({ date, classes, onClose, onClassClick }) {
-  const [cancelingId, setCancelingId] = useState(null);
-  const [showMotivoModal, setShowMotivoModal] = useState(false);
-  const [motivo, setMotivo] = useState('');
-  const [classToCancel, setClassToCancel] = useState(null);
-  const motivosPredefinidos = [
-    'Enfermedad',
-    'Mantenimiento',
-    'Problema de logística',
-    'Condiciones climáticas',
-    'Otro'
-  ];
+function DayClassesModal({ date, classes, onClose, onClassClick, instructoraId, onCancelSuccess }) {
+  const [showCancelModal, setShowCancelModal] = useState(false)
+  
   // Filtrar clases canceladas como medida de seguridad adicional
-  const activeClasses = classes.filter(c => c.status !== 'cancelada' && c.status !== 'cancelada_instructor');
-
-  // Mostrar modal de motivo antes de cancelar
-  const handleCancelClass = (classItem) => {
-    console.log('handleCancelClass llamado', classItem);
-    setClassToCancel(classItem);
-    setShowMotivoModal(true);
-    console.log('showMotivoModal debe ser true ahora');
-  };
-
-  // Confirmar cancelación con motivo
-  const confirmCancelClass = async () => {
-    if (!motivo) {
-      alert('Selecciona un motivo para cancelar la clase.');
-      return;
-    }
-    setCancelingId(classToCancel.id);
-    try {
-      const response = await fetch(`http://localhost:3001/api/reservas/${classToCancel.id}/estatus`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ estatus: 'cancelada_instructor', motivo_cancelacion: motivo })
-      });
-      if (!response.ok) throw new Error('Error al cancelar la clase');
-      window.location.reload();
-    } catch (err) {
-      alert('No se pudo cancelar la clase.');
-    } finally {
-      setCancelingId(null);
-      setShowMotivoModal(false);
-      setMotivo('');
-      setClassToCancel(null);
-    }
-  };
-
+  const activeClasses = classes.filter(c => c.status !== 'cancelada');
+  
+  // Clases activas (pendientes o confirmadas) que se pueden cancelar
+  const clasesCancelables = classes.filter(c => 
+    c.status === 'pendiente' || c.status === 'confirmada'
+  )
+  
   return (
     <div style={{
       position: 'fixed',
@@ -154,109 +118,77 @@ function DayClassesModal({ date, classes, onClose, onClassClick }) {
                     {classItem.attendance === 'asistió' ? '✓ Asistió' : '✗ Faltó'}
                   </div>
                 )}
-                <button
-                  style={{
-                    marginLeft: 'auto',
-                    backgroundColor: 'var(--terracotta)',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    padding: '6px 14px',
-                    fontWeight: 'bold',
-                    cursor: cancelingId === classItem.id ? 'not-allowed' : 'pointer',
-                    opacity: cancelingId === classItem.id ? 0.6 : 1
-                  }}
-                  disabled={cancelingId === classItem.id}
-                  onClick={e => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    console.log('Botón cancelar clickeado');
-                    handleCancelClass(classItem);
-                  }}
-                >
-                  {cancelingId === classItem.id ? 'Cancelando...' : 'Cancelar clase'}
-                </button>
               </div>
             </div>
           ))}
           </div>
         )}
 
-        <button
-          onClick={onClose}
-          style={{
-            width: '100%',
-            padding: '12px',
-            backgroundColor: 'var(--primary-brown)',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontSize: '16px',
-            fontWeight: '600',
-            transition: 'all 0.2s'
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--dark-brown)'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--primary-brown)'}
-        >
-          Cerrar
-        </button>
+        <div style={{ display: 'flex', gap: '12px', flexDirection: 'column' }}>
+          {clasesCancelables.length > 0 && instructoraId && (
+            <button
+              onClick={() => setShowCancelModal(true)}
+              style={{
+                width: '100%',
+                padding: '12px',
+                backgroundColor: '#A63924',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '16px',
+                fontWeight: '600',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#8b2e1f'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#A63924'}
+            >
+              <XIcon size={18} />
+              Cancelar Reservas
+            </button>
+          )}
+          <button
+            onClick={onClose}
+            style={{
+              width: '100%',
+              padding: '12px',
+              backgroundColor: 'var(--primary-brown)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '16px',
+              fontWeight: '600',
+              transition: 'all 0.2s'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--dark-brown)'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--primary-brown)'}
+          >
+            Cerrar
+          </button>
+        </div>
       </div>
 
-      {/* Modal de motivo de cancelación */}
-      {showMotivoModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.4)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 2000
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '10px',
-            padding: '32px',
-            minWidth: '320px',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.2)'
-          }}>
-            <h4 style={{ fontSize: '20px', marginBottom: '16px', color: 'var(--primary-brown)' }}>
-              Selecciona el motivo de la cancelación
-            </h4>
-            <select
-              value={motivo}
-              onChange={e => setMotivo(e.target.value)}
-              style={{ width: '100%', padding: '10px', fontSize: '16px', marginBottom: '24px', borderRadius: '6px', border: '1px solid var(--stone-gray)' }}
-            >
-              <option value="">-- Selecciona motivo --</option>
-              {motivosPredefinidos.map(m => (
-                <option key={m} value={m}>{m}</option>
-              ))}
-            </select>
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => {
-                  setShowMotivoModal(false);
-                  setMotivo('');
-                  setClassToCancel(null);
-                }}
-                style={{ padding: '8px 18px', borderRadius: '6px', background: 'var(--soft-gray)', color: 'var(--charcoal)', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={confirmCancelClass}
-                style={{ padding: '8px 18px', borderRadius: '6px', background: 'var(--terracotta)', color: 'white', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}
-              >
-                Confirmar cancelación
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* Modal de cancelación masiva */}
+      {showCancelModal && (
+        <CancelMassModal
+          date={date}
+          classes={classes}
+          instructoraId={instructoraId}
+          onClose={() => setShowCancelModal(false)}
+          onCancelSuccess={(result) => {
+            setShowCancelModal(false)
+            if (onCancelSuccess) {
+              onCancelSuccess(result)
+            }
+            // Cerrar también el modal de clases del día
+            onClose()
+          }}
+        />
       )}
     </div>
   )
