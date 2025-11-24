@@ -725,14 +725,14 @@ router.put('/admin/:reservaId/attendance', async (req, res) => {
 router.get('/my-reservations/:clienteId', async (req, res) => {
   const { clienteId } = req.params;
 
-  try {
-    // Actualizar reservas pasadas a completadas automáticamente
+   try {
+    // Actualizar reservas pasadas a completadas automáticamente (usando zona horaria Cancún)
     await db.query(`
       UPDATE reservas 
       SET estatus = 'completada'
       WHERE cliente_id = ?
       AND estatus IN ('pendiente', 'confirmada')
-      AND CONCAT(fecha, ' ', hora_fin) < NOW()
+      AND CONVERT_TZ(CONCAT(fecha, ' ', hora_fin), '+00:00', 'America/Cancun') < CONVERT_TZ(NOW(), @@session.time_zone, 'America/Cancun')
     `, [clienteId]);
 
     const query = `
@@ -947,7 +947,7 @@ router.post('/book', async (req, res) => {
 
     // Obtener información del cliente
     const [cliente] = await db.query(`
-      SELECT tipo_cliente, nombre, apellido, correo FROM usuarios WHERE id = ?
+      SELECT tipo_cliente FROM usuarios WHERE id = ?
     `, [cliente_id]);
 
     if (cliente.length === 0) {
@@ -981,19 +981,6 @@ router.post('/book', async (req, res) => {
     horaFinObj.setMinutes(horaFinObj.getMinutes() + infoClase.duracion_min);
     const hora_fin = horaFinObj.toTimeString().slice(0, 8);
 
-    // Solo para iniciación: ajustar cupo según instructoras disponibles (considerando descansos)
-    // Para otras clases, el cupo se mantiene como está configurado
-    let cupoMaximoAjustado = infoClase.cupo_max;
-    
-    if (infoClase.nombre.toLowerCase() === 'iniciacion') {
-      // Calcular instructoras disponibles para este horario
-      const instructorasDisponibles = await calcularInstructorasDisponibles(clase_id, fecha, hora_inicio);
-      
-      // El cupo máximo es el mínimo entre el cupo configurado y las instructoras disponibles
-      // Ejemplo: si hay 2 instructoras y 1 descansa, cupo pasa de 2 a 1
-      cupoMaximoAjustado = Math.min(infoClase.cupo_max, instructorasDisponibles);
-    }
-
     // Verificar cupo disponible
     const [reservasExistentes] = await db.query(`
       SELECT COUNT(*) as ocupadas FROM reservas
@@ -1002,7 +989,7 @@ router.post('/book', async (req, res) => {
       AND estatus IN ('pendiente', 'confirmada')
     `, [formatDateForMySQL(fecha), clase_id, hora_inicio]);
 
-    if (reservasExistentes[0].ocupadas >= cupoMaximoAjustado) {
+    if (reservasExistentes[0].ocupadas >= infoClase.cupo_max) {
       return res.status(400).json({ 
         error: 'No hay espacios disponibles en este horario' 
       });
@@ -1011,41 +998,50 @@ router.post('/book', async (req, res) => {
     // ===================== ASIGNACIÓN AUTOMÁTICA DE INSTRUCTORA =====================
     // Buscar instructoras aptas para la clase, disponibles y sin conflicto de horario
     // Prioridades de asignación:
+    // INICIACIÓN: Una instructora por alumno (NO agrupar)
+    // OTRAS CLASES:
     // 1. Instructora que YA tenga reserva en este mismo horario Y MISMA CLASE (para agrupar alumnos)
     // 2. Primera reserva del horario: asignación ALEATORIA entre instructoras disponibles
     // 3. Instructora SIN clases consecutivas (para dar descanso)
     // 4. Menor número de reservas en la semana (balanceo de carga)
     // IMPORTANTE: Una instructora NO puede tener dos clases al mismo tiempo (aunque sean de diferente categoría)
 
-    // Primero: buscar si hay una instructora que ya tiene reserva en ESTE HORARIO Y ESTA CLASE exacta
-    const diaSemanaMySQL = getDiaSemanaMySQL(fecha);
-    const [instructoraActual] = await db.query(`
-      SELECT DISTINCT r.instructora_id, COUNT(*) as alumnos_en_slot
-      FROM reservas r
-      JOIN instructoras i ON r.instructora_id = i.id
-      JOIN instructora_clase ic ON i.id = ic.instructora_id AND ic.clase_id = ? AND ic.activo = 1
-      WHERE r.fecha = ?
-        AND r.hora_inicio = ?
-        AND r.clase_id = ?
-        AND r.estatus IN ('pendiente','confirmada')
-        AND i.disponibilidad = 'disponible'
-        AND r.instructora_id NOT IN (
-          SELECT d.instructora_id FROM descansos d 
-          WHERE (d.es_recurrente = 1 AND d.dia_semana = ?)
-             OR (d.es_recurrente = 0 AND ? BETWEEN d.fecha_inicio AND d.fecha_fin)
-        )
-      GROUP BY r.instructora_id
-      HAVING alumnos_en_slot < ?
-      LIMIT 1
-    `, [clase_id, formatDateForMySQL(fecha), formatTimeForMySQL(hora_inicio), clase_id, diaSemanaMySQL, fecha, cupoMaximoAjustado]);
-
     let instructora_id = null;
 
-    // Si hay una instructora que ya tiene alumnos en este slot y clase específica, asignarle
-    if (instructoraActual.length > 0) {
-      instructora_id = instructoraActual[0].instructora_id;
-      console.log(`✅ Asignando a instructora existente en el slot (tiene ${instructoraActual[0].alumnos_en_slot} alumnos)`);
+    // REGLA ESPECIAL PARA INICIACIÓN: Una instructora por alumno
+    const esIniciacion = infoClase.nombre.toLowerCase().includes('iniciaci');
+
+    if (!esIniciacion) {
+      // Para clases que NO son iniciación: buscar si hay una instructora que ya tiene alumnos en este slot
+      const [instructoraActual] = await db.query(`
+        SELECT DISTINCT r.instructora_id, COUNT(*) as alumnos_en_slot
+        FROM reservas r
+        JOIN instructoras i ON r.instructora_id = i.id
+        JOIN instructora_clase ic ON i.id = ic.instructora_id AND ic.clase_id = ? AND ic.activo = 1
+        WHERE r.fecha = ?
+          AND r.hora_inicio = ?
+          AND r.clase_id = ?
+          AND r.estatus IN ('pendiente','confirmada')
+          AND i.disponibilidad = 'disponible'
+          AND r.instructora_id NOT IN (
+            SELECT d.instructora_id FROM descansos d WHERE ? BETWEEN d.fecha_inicio AND d.fecha_fin
+          )
+        GROUP BY r.instructora_id
+        HAVING alumnos_en_slot < ?
+        LIMIT 1
+      `, [clase_id, formatDateForMySQL(fecha), formatTimeForMySQL(hora_inicio), clase_id, fecha, infoClase.cupo_max]);
+
+      // Si hay una instructora que ya tiene alumnos en este slot y clase específica, asignarle
+      if (instructoraActual.length > 0) {
+        instructora_id = instructoraActual[0].instructora_id;
+        console.log(`✅ Asignando a instructora existente en el slot (tiene ${instructoraActual[0].alumnos_en_slot} alumnos)`);
+      }
     } else {
+      // Para INICIACIÓN: NO buscar instructoras con alumnos, siempre asignar una nueva
+      console.log(`📚 Clase de INICIACIÓN detectada - cada alumno tendrá su propia instructora`);
+    }
+
+    if (!instructora_id) {
       // Si no hay nadie en el slot, buscar TODAS las instructoras disponibles
       // EXCLUIR instructoras que YA tengan CUALQUIER clase en este horario (sin importar categoría)
       const [candidatas] = await db.query(`
@@ -1064,9 +1060,7 @@ router.post('/book', async (req, res) => {
         JOIN instructora_clase ic ON i.id = ic.instructora_id AND ic.clase_id = ? AND ic.activo = 1
         WHERE i.disponibilidad = 'disponible'
           AND i.id NOT IN (
-            SELECT d.instructora_id FROM descansos d 
-            WHERE (d.es_recurrente = 1 AND d.dia_semana = ?)
-               OR (d.es_recurrente = 0 AND ? BETWEEN d.fecha_inicio AND d.fecha_fin)
+            SELECT d.instructora_id FROM descansos d WHERE ? BETWEEN d.fecha_inicio AND d.fecha_fin
           )
           AND i.id NOT IN (
             SELECT r.instructora_id FROM reservas r 
@@ -1079,8 +1073,7 @@ router.post('/book', async (req, res) => {
         fecha, fecha, fecha, fecha, // para calcular semana de la reserva
         fecha, hora_inicio, hora_fin, // para detectar clases consecutivas
         clase_id,
-        diaSemanaMySQL, // para descansos fijos recurrentes
-        fecha, // para descansos por fecha
+        fecha,
         fecha,
         hora_inicio
       ]);
@@ -1124,72 +1117,6 @@ router.post('/book', async (req, res) => {
       tipoCliente === 'renta' ? 'renta' :
       tipoCliente === 'media_renta' ? 'media_renta' : 'normal'
     ]);
-
-    // Nota: Ya no se incrementa contador de reservas durante descansos
-    // porque los descansos fijos siempre se aplican (solo afectan iniciación)
-
-    // Debug: Verificar datos del cliente
-    console.log('📧 Datos del cliente obtenidos:', {
-      id: cliente_id,
-      nombre: cliente[0].nombre,
-      apellido: cliente[0].apellido,
-      correo: cliente[0].correo,
-      correoExiste: !!cliente[0].correo,
-      correoLength: cliente[0].correo ? cliente[0].correo.length : 0
-    });
-
-    // Enviar email de confirmación si el cliente tiene correo
-    if (cliente[0].correo && cliente[0].correo.trim() !== '') {
-      try {
-        // Obtener información de la instructora
-        let instructoraNombre = null;
-        if (instructora_id) {
-          const [instructora] = await db.query(`
-            SELECT i.nombre, i.apellido 
-            FROM instructoras inst
-            JOIN usuarios i ON inst.usuario_id = i.id
-            WHERE inst.id = ?
-          `, [instructora_id]);
-          
-          if (instructora.length > 0) {
-            instructoraNombre = `${instructora[0].nombre} ${instructora[0].apellido}`;
-          }
-        }
-
-        // Preparar datos para el email
-        const emailPayload = {
-          email: cliente[0].correo.trim(),
-          nombre: `${cliente[0].nombre} ${cliente[0].apellido}`,
-          fechaReserva: fecha,
-          horaInicio: hora_inicio,
-          horaFin: hora_fin,
-          instructor: instructoraNombre,
-          tipoReserva: tipoCliente === 'propietario' ? 'propietario' : 
-                       tipoCliente === 'renta' ? 'renta' :
-                       tipoCliente === 'media_renta' ? 'media_renta' : 'normal'
-        };
-
-        console.log('📨 Enviando email de confirmación con payload:', emailPayload);
-
-        // Enviar email de confirmación (no bloquea la respuesta si falla)
-        axios.post('http://localhost:3001/api/email/send-reservation-confirmation', emailPayload)
-          .then(() => {
-            console.log('✅ Email de confirmación enviado correctamente a:', cliente[0].correo);
-          })
-          .catch((emailError) => {
-            console.error('⚠️ Error al enviar email de confirmación:', emailError.message);
-            if (emailError.response) {
-              console.error('⚠️ Respuesta del servidor de email:', emailError.response.data);
-            }
-            // No fallar la creación de la reserva si el email falla
-          });
-      } catch (emailError) {
-        console.error('⚠️ Error al preparar envío de email:', emailError.message);
-        // No fallar la creación de la reserva si el email falla
-      }
-    } else {
-      console.log('ℹ️ Cliente sin correo registrado, no se envía email. Correo recibido:', cliente[0].correo);
-    }
 
     res.json({
       message: 'Reserva creada correctamente',
