@@ -57,38 +57,7 @@ export default function InstructorDashboard() {
         })))
         
         setInstructoraInfo(instructora)
-        
-        // Actualizar clases pasadas de pendiente/confirmada a completada automáticamente
-        const clasesActualizadas = clases.map(clase => {
-          // Si el status es pendiente o confirmada, verificar si ya pasó
-          if (clase.status === 'pendiente' || clase.status === 'confirmada') {
-            const [cYear, cMonth, cDay] = clase.date.split('-').map(Number);
-            const classDate = new Date(cYear, cMonth - 1, cDay);
-            
-            const now = new Date();
-            const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            
-            // Si es de un día anterior, marcar como completada
-            if (classDate < todayDate) {
-              return { ...clase, status: 'completada' };
-            }
-            
-            // Si es de hoy, verificar si la hora ya pasó
-            if (classDate.getTime() === todayDate.getTime() && clase.time) {
-              const [horaClase, minutoClase] = clase.time.split(':').map(Number);
-              const horaActual = now.getHours();
-              const minutoActual = now.getMinutes();
-              
-              // Si la hora de la clase ya pasó, marcar como completada
-              if (horaClase < horaActual || (horaClase === horaActual && minutoClase < minutoActual)) {
-                return { ...clase, status: 'completada' };
-              }
-            }
-          }
-          return clase;
-        });
-        
-        setClasses(clasesActualizadas)
+        setClasses(clases)
         
         // Quitamos el prefetch para evitar N+1 de actividades; todo vendrá de /caballos/disponibles
         
@@ -171,27 +140,17 @@ export default function InstructorDashboard() {
     return dateB - dateA;
   })
 
-  // Filtrar clases por vista
+  // Filtrar clases por vista y excluir canceladas de vistas activas
   const getClassesByView = () => {
     let viewClasses;
     if (activeView === 'today') {
-      viewClasses = todayClasses;
+      viewClasses = todayClasses.filter(c => c.status !== 'cancelada');
     } else if (activeView === 'week') {
-      viewClasses = weekClasses;
+      viewClasses = weekClasses.filter(c => c.status !== 'cancelada');
     } else if (activeView === 'history') {
-      // En historial mostrar TODAS las clases, ordenadas por fecha descendente
-      viewClasses = classes.sort((a, b) => {
-        const [aYear, aMonth, aDay] = a.date.split('-').map(Number);
-        const [bYear, bMonth, bDay] = b.date.split('-').map(Number);
-        const dateA = new Date(aYear, aMonth - 1, aDay);
-        const dateB = new Date(bYear, bMonth - 1, bDay);
-        return dateB - dateA;
-      });
-    } else if (activeView === 'month') {
-      // En vista de mes mostrar TODAS las clases
-      viewClasses = classes;
+      viewClasses = pastClasses; // En historial SÍ mostramos las canceladas
     } else {
-      viewClasses = classes;
+      viewClasses = classes.filter(c => c.status !== 'cancelada'); // Vista general sin canceladas
     }
     
     console.log(`📊 ${activeView} view - clases antes del filtro:`, viewClasses.length);
@@ -443,6 +402,23 @@ export default function InstructorDashboard() {
     return caballosEnHorario;
   }, [classes]);
 
+  // Función para recargar las clases
+  const recargarClases = useCallback(async () => {
+    try {
+      const usuario = obtenerUsuarioActual()
+      if (!usuario || !usuario.id) {
+        throw new Error('No se encontró información de usuario')
+      }
+      
+      const { instructora, clases } = await obtenerClasesInstructora(usuario.id)
+      setInstructoraInfo(instructora)
+      setClasses(clases)
+    } catch (err) {
+      console.error('Error al recargar clases:', err)
+      setToast({ message: 'Error al recargar las clases', type: 'error' })
+    }
+  }, [])
+
   return {
     searchTerm, setSearchTerm,
     filterType, setFilterType,
@@ -464,5 +440,6 @@ export default function InstructorDashboard() {
     loading, 
     error, 
     instructoraInfo,
+    recargarClases, // Función para recargar clases
   }
 }

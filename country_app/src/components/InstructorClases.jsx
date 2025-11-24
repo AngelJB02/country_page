@@ -1,6 +1,5 @@
 // React hooks are provided by the custom hook `useInstructorDashboard` below
 import { Calendar, Users, Clock, Download, Check, X, ChevronLeft, ChevronRight } from "lucide-react"
-import { useState } from 'react'
 import { CalendarView } from "./instructor/CalendarView"
 import { DayClassesModal } from "./instructor/DayClassesModal"
 import { AttendanceModal } from "./instructor/atendance-modal"
@@ -33,52 +32,8 @@ export default function InstructorClases() {
     loading,
     error,
     instructoraInfo,
+    recargarClases,
   } = useInstructorDashboard()
-
-  // Estado para modal de motivo de cancelación (tabla)
-  const [showMotivoModalTable, setShowMotivoModalTable] = useState(false);
-  const [motivoTable, setMotivoTable] = useState('');
-  const [classToCancelTable, setClassToCancelTable] = useState(null);
-  const motivosPredefinidos = [
-    'Enfermedad',
-    'Mantenimiento',
-    'Problema de logística',
-    'Condiciones climáticas',
-    'Otro'
-  ];
-
-  const openCancelModalFromTable = (classItem) => {
-    setClassToCancelTable(classItem);
-    setShowMotivoModalTable(true);
-  }
-
-  const confirmCancelFromTable = async () => {
-    if (!motivoTable) {
-      alert('Selecciona un motivo para cancelar la clase.');
-      return;
-    }
-    try {
-      const response = await fetch(`http://localhost:3001/api/reservas/${classToCancelTable.id}/cancel/${classToCancelTable.cliente_id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ estatus: 'cancelada_instructor', motivo_cancelacion: motivoTable })
-      });
-      if (!response.ok) throw new Error('Error al cancelar la clase');
-      // Actualizar el estado local de la clase cancelada
-      setClasses(prevClasses => prevClasses.map(c =>
-        c.id === classToCancelTable.id
-          ? { ...c, status: 'cancelada_instructor', motivo_cancelacion: motivoTable }
-          : c
-      ));
-      setToast({ message: 'Clase cancelada correctamente', type: 'success' });
-    } catch (err) {
-      alert('No se pudo cancelar la clase.');
-    } finally {
-      setShowMotivoModalTable(false);
-      setMotivoTable('');
-      setClassToCancelTable(null);
-    }
-  }
 
   // Mostrar loading
   if (loading) {
@@ -223,7 +178,6 @@ export default function InstructorClases() {
                 <option value="confirmada">Confirmada</option>
                 <option value="pendiente">Pendiente</option>
                 <option value="completada">Completada</option>
-                <option value="cancelada_instructor">Cancelada por instructor</option>
               </select>
             </div>
           </div>
@@ -263,7 +217,6 @@ export default function InstructorClases() {
                       <th>Caballo</th>
                       <th>Estado</th>
                       <th>Asistencia</th>
-                      <th>Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -272,136 +225,112 @@ export default function InstructorClases() {
                       const getEstadoBadgeColor = (estado) => {
                         switch(estado) {
                           case "confirmada":
-                            return { border: "#7a9d6a", color: "#7a9d6a" };
+                            return { border: "#7a9d6a", color: "#7a9d6a" }; // Verde más oscuro
                           case "pendiente":
-                            return { border: "#c8965a", color: "#c8965a" };
+                            return { border: "#c8965a", color: "#c8965a" }; // Beige más oscuro/naranja
                           case "cancelada":
-                            return { border: "#6b4423", color: "#6b4423" };
+                            return { border: "#6b4423", color: "#6b4423" }; // Marrón más oscuro
                           case "completada":
-                            return { border: "#7a9d6a", color: "#7a9d6a" };
-                          case "cancelada_instructor":
-                            return { border: "#b8653a", color: "#b8653a" };
+                            return { border: "#7a9d6a", color: "#7a9d6a" }; // Verde más oscuro
                           default:
-                            return { border: "#b8653a", color: "#b8653a" };
+                            return { border: "#b8653a", color: "#b8653a" }; // Terracotta más oscuro
                         }
                       };
+                      
                       const estadoColor = getEstadoBadgeColor(classItem.status);
                       const isEven = index % 2 === 0;
+                      
                       return (
-                        <tr 
-                          key={classItem.id}
-                          style={{ backgroundColor: isEven ? 'white' : '#f5f1e8' }}
-                        >
-                          {activeView !== 'today' && (
-                            <td>
-                              <span style={{ fontWeight: '600' }}>
-                                {(() => {
-                                  const [year, month, day] = classItem.date.split('-');
-                                  const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-                                  return date.toLocaleDateString('es-ES', {
-                                    day: 'numeric',
-                                    month: 'short'
-                                  });
-                                })()}
-                              </span>
-                            </td>
-                          )}
+                      <tr 
+                        key={classItem.id}
+                        style={{
+                          backgroundColor: isEven ? 'white' : '#f5f1e8'
+                        }}
+                      >
+                        {activeView !== 'today' && (
                           <td>
-                            <div className="time-cell">
-                              <Clock size={16} />
-                              {classItem.time}
-                            </div>
-                          </td>
-                          <td>
-                            <span className="type-badge">{classItem.type}</span>
-                          </td>
-                          <td>
-                            <span className="student-name">{classItem.student}</span>
-                          </td>
-                          <td>{classItem.studentAge} años</td>
-                          <td>
-                            <HorseSelect
-                              classItem={classItem}
-                              onHorseChange={handleHorseChange}
-                              obtenerCaballosParaClase={obtenerCaballosParaClase}
-                              horsesHash={getHorsesHashForHorario(classItem.date, classItem.time)}
-                              disabled={activeView === 'history' || classItem.attendance === 'asistió' || classItem.status === 'completada'}
-                            />
-                          </td>
-                          <td>
-                            <span
-                              className="status-badge"
-                              style={{
-                                borderColor: estadoColor.border,
-                                color: estadoColor.color,
-                                padding: "0.4rem 0.8rem",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                cursor: "default",
-                                textAlign: "center"
-                              }}
-                            >
-                              {classItem.status === 'cancelada_instructor' ? 'Cancelada por instructor' : (classItem.status.charAt(0).toUpperCase() + classItem.status.slice(1))}
+                            <span style={{ fontWeight: '600' }}>
+                              {(() => {
+                                // Crear fecha asegurándonos de que use la zona horaria local
+                                const [year, month, day] = classItem.date.split('-');
+                                const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                                return date.toLocaleDateString('es-ES', {
+                                  day: 'numeric',
+                                  month: 'short'
+                                });
+                              })()}
                             </span>
-                            {/* Motivo de cancelación visible si existe y fue cancelada por instructor */}
-                            {classItem.status === 'cancelada_instructor' && classItem.motivo_cancelacion && (
-                              <div style={{ color: '#b8653a', fontSize: '0.95em', marginTop: 4 }}>
-                                Motivo: {classItem.motivo_cancelacion}
-                              </div>
+                          </td>
+                        )}
+                        <td>
+                          <div className="time-cell">
+                            <Clock size={16} />
+                            {classItem.time}
+                          </div>
+                        </td>
+                        <td>
+                          <span className="type-badge">{classItem.type}</span>
+                        </td>
+                        <td>
+                          <span className="student-name">{classItem.student}</span>
+                        </td>
+                        <td>{classItem.studentAge} años</td>
+                        <td>
+                          <HorseSelect
+                            classItem={classItem}
+                            onHorseChange={handleHorseChange}
+                            obtenerCaballosParaClase={obtenerCaballosParaClase}
+                            horsesHash={getHorsesHashForHorario(classItem.date, classItem.time)}
+                            disabled={activeView === 'history' || classItem.attendance === 'asistió' || classItem.status === 'completada'}
+                          />
+                        </td>
+                        <td>
+                          <span
+                            className="status-badge"
+                            style={{
+                              borderColor: estadoColor.border,
+                              color: estadoColor.color,
+                              padding: "0.4rem 0.8rem",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              cursor: "default",
+                              textAlign: "center"
+                            }}
+                          >
+                            {classItem.status.charAt(0).toUpperCase() + classItem.status.slice(1)}
+                          </span>
+                        </td>
+                        <td>
+                          <button 
+                            className={`btn-attendance ${
+                              classItem.attendance === 'asistió' ? 'attendance-asistio' : 
+                              classItem.attendance === 'faltó' ? 'attendance-falto' : ''
+                            }`}
+                            onClick={() => {
+                              if (activeView !== 'history') {
+                                setSelectedClass(classItem)
+                                setShowAttendanceModal(true)
+                              }
+                            }}
+                            disabled={activeView === 'history'}
+                          >
+                            {classItem.attendance === 'asistió' ? (
+                              <>
+                                <Check size={16} />
+                                Asistió
+                              </>
+                            ) : classItem.attendance === 'faltó' ? (
+                              <>
+                                <X size={16} />
+                                Faltó
+                              </>
+                            ) : (
+                              'Marcar'
                             )}
-                          </td>
-                          <td>
-                            <button 
-                              className={`btn-attendance ${
-                                classItem.attendance === 'asistió' ? 'attendance-asistio' : 
-                                classItem.attendance === 'faltó' ? 'attendance-falto' : ''
-                              }`}
-                              onClick={() => {
-                                if (activeView !== 'history') {
-                                  setSelectedClass(classItem)
-                                  setShowAttendanceModal(true)
-                                }
-                              }}
-                              disabled={activeView === 'history'}
-                            >
-                              {classItem.attendance === 'asistió' ? (
-                                <>
-                                  <Check size={16} />
-                                  Asistió
-                                </>
-                              ) : classItem.attendance === 'faltó' ? (
-                                <>
-                                  <X size={16} />
-                                  Faltó
-                                </>
-                              ) : (
-                                'Marcar'
-                              )}
-                            </button>
-                          </td>
-                          <td>
-                            <button
-                              style={{
-                                backgroundColor: '#b8653a',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '6px',
-                                padding: '6px 14px',
-                                fontWeight: 'bold',
-                                cursor: (classItem.status === 'cancelada_instructor' || classItem.status === 'cancelada' || classItem.status === 'completada') ? 'not-allowed' : 'pointer',
-                                opacity: (classItem.status === 'cancelada_instructor' || classItem.status === 'cancelada' || classItem.status === 'completada') ? 0.6 : 1
-                              }}
-                              disabled={classItem.status === 'cancelada_instructor' || classItem.status === 'cancelada' || classItem.status === 'completada'}
-                              onClick={(e) => {
-                                e.preventDefault();
-                                openCancelModalFromTable(classItem);
-                              }}
-                            >
-                              {classItem.status === 'cancelada_instructor' ? 'Cancelada por instructor' : 'Cancelar clase'}
-                            </button>
-                          </td>
-                        </tr>
+                          </button>
+                        </td>
+                      </tr>
                       );
                     })}
                   </tbody>
@@ -427,27 +356,17 @@ export default function InstructorClases() {
           classes={dateClasses}
           onClose={() => setShowDateClasses(false)}
           onClassClick={handleClassClickFromModal}
+          instructoraId={instructoraInfo?.id}
+          onCancelSuccess={async (result) => {
+            // Recargar las clases después de cancelar
+            await recargarClases()
+            // Mostrar mensaje de éxito
+            setToast({ 
+              message: result.message || `Se cancelaron ${result.canceladas} reserva(s) correctamente`, 
+              type: 'success' 
+            })
+          }}
         />
-      )}
-
-      {/* Modal de motivo para cancelación desde la tabla */}
-      {showMotivoModalTable && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000
-        }}>
-          <div style={{ backgroundColor: 'white', borderRadius: 10, padding: 24, minWidth: 320, boxShadow: '0 8px 32px rgba(0,0,0,0.2)'}}>
-            <h4 style={{ marginBottom: 12, color: 'var(--primary-brown)' }}>Selecciona el motivo de la cancelación</h4>
-            <select value={motivoTable} onChange={e => setMotivoTable(e.target.value)} style={{ width: '100%', padding: 10, marginBottom: 16 }}>
-              <option value="">-- Selecciona motivo --</option>
-              {motivosPredefinidos.map(m => <option key={m} value={m}>{m}</option>)}
-            </select>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button onClick={() => { setShowMotivoModalTable(false); setMotivoTable(''); setClassToCancelTable(null); }} style={{ padding: '8px 14px' }}>Cancelar</button>
-              <button onClick={confirmCancelFromTable} style={{ padding: '8px 14px', background: 'var(--terracotta)', color: 'white', border: 'none', borderRadius: 6 }}>Confirmar cancelación</button>
-            </div>
-          </div>
-        </div>
       )}
 
       {/* Toast discreto para advertencias */}

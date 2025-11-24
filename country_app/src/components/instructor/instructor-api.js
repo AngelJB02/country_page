@@ -517,3 +517,73 @@ export const obtenerUsuarioActual = () => {
 export const obtenerCaballosDisponibles = async ({ nivel, fecha, hora, excludeReservaId }) => {
   return obtenerCaballosDisponiblesParaHorario(nivel, fecha, hora, excludeReservaId || null);
 };
+
+/**
+ * Cancelar todas las reservas de un día (instructora)
+ * @param {number} instructoraId - ID de la instructora
+ * @param {string} fecha - Fecha en formato YYYY-MM-DD
+ * @param {string} motivo - Motivo de la cancelación (opcional)
+ * @returns {Promise<Object>}
+ */
+export const cancelarReservasDia = async (instructoraId, fecha, motivo = null) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/reservas/instructor/cancel-day`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        instructora_id: instructoraId,
+        fecha: fecha,
+        motivo: motivo
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Error al cancelar reservas del día');
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error al cancelar reservas del día:', error);
+    throw error;
+  }
+};
+
+/**
+ * Cancelar reservas desde cierta hora en adelante (instructora)
+ * @param {number} instructoraId - ID de la instructora
+ * @param {string} fecha - Fecha en formato YYYY-MM-DD
+ * @param {string} horaInicio - Hora de inicio en formato HH:MM
+ * @param {string} motivo - Motivo de la cancelación (opcional)
+ * @returns {Promise<Object>}
+ */
+export const cancelarReservasDesdeHora = async (instructoraId, fecha, horaInicio, motivo = null) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/reservas/instructor/cancel-from-time`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        instructora_id: instructoraId,
+        fecha: fecha,
+        hora_inicio: horaInicio,
+        motivo: motivo
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Error al cancelar reservas desde hora');
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error al cancelar reservas desde hora:', error);
+    throw error;
+  }
+};
