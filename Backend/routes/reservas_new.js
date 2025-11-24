@@ -1303,7 +1303,7 @@ router.put('/:id/cancel/:clienteId', async (req, res) => {
     }
 
     const infoReserva = reserva[0];
-    const { motivo_cancelacion } = req.body; // Motivo si viene del instructor
+    const { motivo_cancelacion } = req.body || {}; // Motivo si viene del instructor
 
     // Verificar que la reserva se puede cancelar (2 horas antes) - solo para clientes
     // Si viene motivo_cancelacion, es un instructor cancelando, no aplicar restricción
