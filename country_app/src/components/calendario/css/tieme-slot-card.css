@@ -18,6 +18,19 @@
   cursor: not-allowed;
 }
 
+.tsc-card.tsc--full {
+  /* Completo: clase llena (sin cupo), fondo naranja/terracota oscuro */
+  background-color: #b8856a !important;
+  border-color: #a67557 !important;
+  color: white !important;
+}
+
+.tsc-card.tsc--full .tsc-inner,
+.tsc-card.tsc--full .tsc-time,
+.tsc-card.tsc--full .tsc-horse {
+  color: white !important;
+}
+
 .tsc-card.tsc--blocked {
   /* Bloqueado: color oscuro/gris para indicar no disponible (diferente de 'full') */
   background-color: #333333 !important;

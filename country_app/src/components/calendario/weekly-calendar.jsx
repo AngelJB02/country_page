@@ -5,6 +5,7 @@ import { format, addDays, isBefore, startOfDay } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { useState, useEffect } from 'react'
 import './css/weekly-calendar.css'
+import { DateTime } from 'luxon'
 
 
 export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userBookings = [], allWeekBookings = [], className, claseCupoMax, claseId }) {
@@ -115,7 +116,7 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
   const generateTimeSlots = (day, realDate) => {
     const slots = [];
     const timeSlots = getTimeSlotsForDay(day);
-    const now = new Date();
+    const now = DateTime.now().setZone('America/Cancun');
     
     timeSlots.forEach((time) => {
       const slotId = `${day}-${time}`;
@@ -124,22 +125,23 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
       // Obtener capacidad específica para este slot (ajustada para iniciación)
       const capacity = getCapacityForSlot(day, time, realDate);
       
-      // Calcular la hora de inicio del slot
+      // Calcular la hora de inicio del slot usando Luxon con zona horaria de Cancún
       const [hours, minutes] = time.split(':').map(Number);
-      const slotStartTime = new Date(realDate);
-      slotStartTime.setHours(hours, minutes, 0, 0);
+      const slotStartTime = DateTime.fromJSDate(realDate)
+        .setZone('America/Cancun')
+        .set({ hour: hours, minute: minutes, second: 0, millisecond: 0 });
       
       // Calcular duración de la clase (desde BD)
       const classDuration = dynamicSchedule.duracion || 60;
-      const slotEndTime = new Date(slotStartTime);
-      slotEndTime.setMinutes(slotEndTime.getMinutes() + classDuration);
+      const slotEndTime = slotStartTime.plus({ minutes: classDuration });
       
-      // � FILTRO 1: Detectar si el slot ya pasó (pero SÍ mostrarlo, solo marcarlo como bloqueado)
+      // 🕐 FILTRO 1: Detectar si el slot ya pasó completamente
       const hasPassed = slotEndTime < now;
       
-      // ⏰ FILTRO 2: Calcular si está dentro de las próximas 2 horas
-      const hoursUntilSlot = (slotStartTime - now) / (1000 * 60 * 60);
-      const isWithin2Hours = hoursUntilSlot < 2 && hoursUntilSlot > 0;
+      // ⏰ FILTRO 2: Calcular si está dentro de las próximas 2 horas o ya está en curso
+      const hoursUntilSlot = slotStartTime.diff(now, 'hours').hours;
+      // Bloquear si faltan menos de 2 horas O si la hora de inicio ya pasó (incluso si aún no termina)
+      const isWithin2Hours = hoursUntilSlot < 2;
 
       // Filtrar reservas del usuario para este slot (ocupado si no está cancelada)
       const slotBookings = userBookings.filter((b) => {
