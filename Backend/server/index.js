@@ -2,6 +2,7 @@
 import express from "express";
 import cors from "cors";
 import db from "./db.js"; // db.js al mismo nivel que server
+import os from "os";
 
 // Importar rutas
 import instructorRoutes from "../routes/instructor.js";
@@ -24,12 +25,7 @@ const PORT = 3001;
 // ========================
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      "http://localhost:5174",
-      "https://elrefugiocountryclub.com",
-      "http://localhost:3001",
-    ],
+    origin: true, // Permitir todas las conexiones en desarrollo
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     credentials: true,
   })
@@ -162,6 +158,22 @@ app.use((err, req, res, next) => {
 // ========================
 // Iniciar servidor
 // ========================
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
+  // Obtener la IP de red
+  const networkInterfaces = os.networkInterfaces();
+  let networkIP = 'No disponible';
+  
+  for (const interfaceName in networkInterfaces) {
+    const interfaces = networkInterfaces[interfaceName];
+    for (const iface of interfaces) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        networkIP = iface.address;
+        break;
+      }
+    }
+    if (networkIP !== 'No disponible') break;
+  }
+
   console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
+  console.log(`🌐 Network: http://${networkIP}:${PORT}`);
 });
