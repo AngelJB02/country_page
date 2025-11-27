@@ -30,7 +30,7 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
       
       try {
         setLoadingSchedule(true);
-        const response = await fetch(`http://localhost:3001/api/horarios/clase/${className}`);
+        const response = await fetch(`http://212.227.238.213/api/api/horarios/clase/${className}`);
         if (!response.ok) {
           throw new Error('Error al cargar horarios desde la base de datos');
         }
