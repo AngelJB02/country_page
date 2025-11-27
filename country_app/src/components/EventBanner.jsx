@@ -1,5 +1,5 @@
 import React from 'react';
-import ElRefugio from '../img/ElrefugioCountryClub .webp';
+import ElRefugio from '../img/ElrefugioCountryClub.webp';
 
 const EventBanner = () => {
   return (
