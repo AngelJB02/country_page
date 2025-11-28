@@ -66,6 +66,10 @@ const MembershipAdminDashboard = () => {
   const searchRef = useRef(null)
   const editFirstInputRef = useRef(null)
   const addFirstInputRef = useRef(null)
+  const headerRef = useRef(null)
+  const statsRef = useRef(null)
+  const controlsRef = useRef(null)
+  const tabsRef = useRef(null)
 
   const capitalizeStatus = (status) => {
     if (!status) return "Activo"
@@ -292,6 +296,85 @@ const MembershipAdminDashboard = () => {
     loadPaymentCounts()
     loadPaymentStatus()
   }, [])
+
+  // Implementar sticky header con scroll listener
+  useEffect(() => {
+    if (activeTab !== 'clientes' || loading) return
+
+    const table = document.querySelector('.members-table')
+    const thead = table?.querySelector('thead')
+    if (!table || !thead) return
+
+    let stickyHeader = null
+    let originalHeaderTop = 0
+
+    const calculateHeaderPosition = () => {
+      const tableRect = table.getBoundingClientRect()
+      const theadRect = thead.getBoundingClientRect()
+      originalHeaderTop = theadRect.top + window.scrollY
+      return { tableRect, theadRect }
+    }
+
+    const handleScroll = () => {
+      const { tableRect, theadRect } = calculateHeaderPosition()
+      const scrollTop = window.scrollY || window.pageYOffset
+
+      // Si el header original está fuera de vista hacia arriba
+      if (theadRect.top <= 0 && tableRect.bottom > 100) {
+        // Crear header flotante si no existe
+        if (!stickyHeader) {
+          stickyHeader = thead.cloneNode(true)
+          stickyHeader.style.position = 'fixed'
+          stickyHeader.style.top = '0'
+          stickyHeader.style.left = `${tableRect.left}px`
+          stickyHeader.style.width = `${tableRect.width}px`
+          stickyHeader.style.zIndex = '999'
+          stickyHeader.classList.add('sticky-clone')
+          
+          // Copiar anchos de columnas
+          const originalThs = thead.querySelectorAll('th')
+          const clonedThs = stickyHeader.querySelectorAll('th')
+          originalThs.forEach((th, index) => {
+            if (clonedThs[index]) {
+              clonedThs[index].style.width = `${th.offsetWidth}px`
+            }
+          })
+          
+          document.body.appendChild(stickyHeader)
+        }
+        
+        // Actualizar posición
+        if (stickyHeader) {
+          stickyHeader.style.left = `${tableRect.left}px`
+          stickyHeader.style.width = `${tableRect.width}px`
+          stickyHeader.style.display = 'table-header-group'
+        }
+      } else {
+        // Remover header flotante
+        if (stickyHeader) {
+          stickyHeader.remove()
+          stickyHeader = null
+        }
+      }
+    }
+
+    // Esperar a que la tabla esté completamente renderizada
+    const initTimeout = setTimeout(() => {
+      calculateHeaderPosition()
+      handleScroll()
+      window.addEventListener('scroll', handleScroll)
+      window.addEventListener('resize', handleScroll)
+    }, 100)
+
+    return () => {
+      clearTimeout(initTimeout)
+      window.removeEventListener('scroll', handleScroll)
+      window.removeEventListener('resize', handleScroll)
+      if (stickyHeader) {
+        stickyHeader.remove()
+      }
+    }
+  }, [activeTab, loading, members, searchTerm, statusFilter])
 
   // Generar credenciales de vista previa cuando cambian nombre/apellido
   useEffect(() => {
@@ -845,7 +928,7 @@ const MembershipAdminDashboard = () => {
   return (
     <div className="dashboard-container">
       {/* HEADER */}
-      <div className="dashboard-header enhanced-header">
+      <div ref={headerRef} className="dashboard-header enhanced-header">
         <div className="header-texts">
           <h1 className="header-title">Panel de Administrador</h1>
           <p className="header-subtitle">Gestiona usuarios y membresías de tu plataforma</p>
@@ -864,7 +947,7 @@ const MembershipAdminDashboard = () => {
       </div>
 
       {/* ESTADÍSTICAS */}
-      <div className="stats-grid">
+      <div ref={statsRef} className="stats-grid">
         <div className="stat-card">
           <div className="stat-card-topline" style={{ backgroundColor: "#c17b4a" }}></div>
           <div className="stat-title">Usuarios Totales</div>
@@ -888,7 +971,7 @@ const MembershipAdminDashboard = () => {
       </div>
 
       {/* NAVEGACIÓN DE PESTAÑAS */}
-      <div className="admin-tabs" style={{ 
+      <div ref={tabsRef} className="admin-tabs" style={{ 
         display: "flex", 
         gap: "0.5rem", 
         marginTop: "2rem",
@@ -965,7 +1048,7 @@ const MembershipAdminDashboard = () => {
       {activeTab === "clientes" && (
         <div style={{ marginTop: "2rem", overflow: "visible" }}>
           {/* CONTROLES */}
-          <div className="controls-container enhanced-controls">
+          <div ref={controlsRef} className="controls-container enhanced-controls">
             <div className="controls-inner">
               <div className="search-filter-group enhanced-search-filter">
                 <Search size={18} className="search-icon external-search-icon" />
