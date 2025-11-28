@@ -242,6 +242,34 @@ const InstructorasAdmin = () => {
     }
   };
 
+  // Reactivar instructora (cambiar de no_disponible a disponible)
+  const handleReactivateInstructor = async (instructor) => {
+    try {
+      const response = await fetch(`http://212.227.238.213/api/api/instructoras/${instructor.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          ...instructor,
+          disponibilidad: "disponible"
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Error al reactivar instructora");
+      }
+
+      const data = await response.json();
+      showNotification("Instructora reactivada correctamente", "success");
+      loadInstructoras();
+    } catch (error) {
+      console.error("Error al reactivar instructora:", error);
+      showNotification(error.message || "Error al reactivar instructora", "error");
+    }
+  };
+
   // Funciones para gestión de descansos
   const openDescansosModal = async (instructor) => {
     setSelectedInstructorDescansos(instructor);
@@ -556,7 +584,13 @@ const InstructorasAdmin = () => {
                 </tr>
               ) : (
                 instructoras.map(instructor => (
-                  <tr key={instructor.id}>
+                  <tr 
+                    key={instructor.id}
+                    style={{
+                      opacity: instructor.disponibilidad === "no_disponible" ? 0.5 : 1,
+                      background: instructor.disponibilidad === "no_disponible" ? "#f5f5f5" : "transparent"
+                    }}
+                  >
                     <td style={{ fontWeight: "600" }}>
                       {instructor.nombre} {instructor.apellido}
                     </td>
@@ -568,105 +602,137 @@ const InstructorasAdmin = () => {
                     <td>
                       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", justifyContent: "center" }}>
                         {/* Indicador automático basado en descansos */}
-                        {descansosActivos[instructor.id] ? (
-                          <span 
-                            title={`Descanso programado (${descansosActivos[instructor.id].tipo}):\n${descansosActivos[instructor.id].motivo}\nDesde: ${formatDate(descansosActivos[instructor.id].fecha_inicio)}\nHasta: ${formatDate(descansosActivos[instructor.id].fecha_fin)}`}
-                            style={{
-                              background: "#ff9800",
-                              color: "white",
-                              padding: "0.4rem 0.8rem",
-                              borderRadius: "12px",
-                              fontSize: "0.85rem",
-                              fontWeight: "600",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "0.3rem",
-                              cursor: "help",
-                              whiteSpace: "nowrap",
-                              border: "2px solid #f57c00"
-                            }}
-                          >
-                            <Clock size={14} />
-                            En Descanso
-                          </span>
-                        ) : (
-                          <span 
-                            style={{
-                              background: "#9caf88",
-                              color: "white",
-                              padding: "0.4rem 0.8rem",
-                              borderRadius: "12px",
-                              fontSize: "0.85rem",
-                              fontWeight: "600",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "0.3rem",
-                              whiteSpace: "nowrap",
-                              border: "2px solid #7a9768"
-                            }}
-                          >
-                            ✓ Disponible
-                          </span>
-                        )}
+                        {
+                          instructor.disponibilidad === "no_disponible" ? (
+                            <span className="no-disponible-style">
+                              <Clock size={14} /> No disponible
+                            </span>
+                          ) : descansosActivos[instructor.id] ? (
+                            <span 
+                              title={`Descanso programado (${descansosActivos[instructor.id].tipo}):\n${descansosActivos[instructor.id].motivo}\nDesde: ${formatDate(descansosActivos[instructor.id].fecha_inicio)}\nHasta: ${formatDate(descansosActivos[instructor.id].fecha_fin)}`}
+                              style={{
+                                background: "#ff9800",
+                                color: "white",
+                                padding: "0.4rem 0.8rem",
+                                borderRadius: "12px",
+                                fontSize: "0.85rem",
+                                fontWeight: "600",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "0.3rem",
+                                cursor: "help",
+                                whiteSpace: "nowrap",
+                                border: "2px solid #f57c00"
+                              }}
+                            >
+                              <Clock size={14} />
+                              En Descanso
+                            </span>
+                          ) : (
+                            <span 
+                              style={{
+                                background: "#9caf88",
+                                color: "white",
+                                padding: "0.4rem 0.8rem",
+                                borderRadius: "12px",
+                                fontSize: "0.85rem",
+                                fontWeight: "600",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "0.3rem",
+                                whiteSpace: "nowrap",
+                                border: "2px solid #7a9768"
+                              }}
+                            >
+                              ✓ Disponible
+                            </span>
+                          )
+                        }
                       </div>
                     </td>
                     <td>{formatDate(instructor.fecha_registro)}</td>
                     <td>
                       <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center" }}>
-                        <button
-                          className="btn-icon-action"
-                          onClick={() => openDescansosModal(instructor)}
-                          title="Gestionar Descansos"
-                          style={{
-                            background: "linear-gradient(135deg, #9caf88, #6b8e23)",
-                            color: "white",
-                            border: "none",
-                            padding: "0.5rem",
-                            borderRadius: "8px",
-                            cursor: "pointer",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center"
-                          }}
-                        >
-                          <Calendar size={16} />
-                        </button>
-                        <button
-                          className="btn-icon-action"
-                          onClick={() => openEditInstructorModal(instructor)}
-                          title="Editar"
-                          style={{
-                            background: "linear-gradient(135deg, #c17b4a, #8b5a2b)",
-                            color: "white",
-                            border: "none",
-                            padding: "0.5rem",
-                            borderRadius: "8px",
-                            cursor: "pointer",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center"
-                          }}
-                        >
-                          <Edit size={16} />
-                        </button>
-                        <button
-                          className="btn-icon-action"
-                          onClick={() => openDeleteConfirmModal(instructor)}
-                          title="Eliminar"
-                          style={{
-                            background: "#dc3545",
-                            color: "white",
-                            border: "none",
-                            padding: "0.5rem",
-                            borderRadius: "8px",
-                            cursor: "pointer",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center"
-                          }}
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                        {instructor.disponibilidad === "no_disponible" ? (
+                          <button
+                            className="btn-icon-action"
+                            onClick={() => handleReactivateInstructor(instructor)}
+                            title="Reactivar Instructora"
+                            style={{
+                              background: "linear-gradient(135deg, #4caf50, #2e7d32)",
+                              color: "white",
+                              border: "none",
+                              padding: "0.5rem 1rem",
+                              borderRadius: "8px",
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: "0.5rem",
+                              fontWeight: "600",
+                              fontSize: "0.9rem"
+                            }}
+                          >
+                            ✓ Reactivar
+                          </button>
+                        ) : (
+                          <>
+                            <button
+                              className="btn-icon-action"
+                              onClick={() => openDescansosModal(instructor)}
+                              title="Gestionar Descansos"
+                              style={{
+                                background: "linear-gradient(135deg, #9caf88, #6b8e23)",
+                                color: "white",
+                                border: "none",
+                                padding: "0.5rem",
+                                borderRadius: "8px",
+                                cursor: "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center"
+                              }}
+                            >
+                              <Calendar size={16} />
+                            </button>
+                            <button
+                              className="btn-icon-action"
+                              onClick={() => openEditInstructorModal(instructor)}
+                              title="Editar"
+                              style={{
+                                background: "linear-gradient(135deg, #c17b4a, #8b5a2b)",
+                                color: "white",
+                                border: "none",
+                                padding: "0.5rem",
+                                borderRadius: "8px",
+                                cursor: "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center"
+                              }}
+                            >
+                              <Edit size={16} />
+                            </button>
+                            <button
+                              className="btn-icon-action"
+                              onClick={() => openDeleteConfirmModal(instructor)}
+                              title="Eliminar"
+                              style={{
+                                background: "#dc3545",
+                                color: "white",
+                                border: "none",
+                                padding: "0.5rem",
+                                borderRadius: "8px",
+                                cursor: "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center"
+                              }}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
