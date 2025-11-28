@@ -291,6 +291,71 @@ const CaballosAdmin = () => {
   const renta = caballos.filter(c => c.estatus === "renta").length;
   const mediaRenta = caballos.filter(c => c.estatus === "media_renta").length;
 
+  useEffect(() => {
+    if (loading) return;
+    const table = document.querySelector('.caballos-admin-container .members-table');
+    const thead = table?.querySelector('thead');
+    if (!table || !thead) return;
+
+    let stickyHeader = null;
+
+    const calculateHeaderPosition = () => {
+      const tableRect = table.getBoundingClientRect();
+      const theadRect = thead.getBoundingClientRect();
+      return { tableRect, theadRect };
+    };
+
+    const handleScroll = () => {
+      const { tableRect, theadRect } = calculateHeaderPosition();
+      if (theadRect.top <= 0 && tableRect.bottom > 100) {
+        if (!stickyHeader) {
+          stickyHeader = thead.cloneNode(true);
+          stickyHeader.style.position = 'fixed';
+          stickyHeader.style.top = '0';
+          stickyHeader.style.left = `${tableRect.left}px`;
+          stickyHeader.style.width = `${tableRect.width}px`;
+          stickyHeader.style.zIndex = '999';
+          stickyHeader.classList.add('sticky-clone');
+          // Copiar anchos de columnas
+          const originalThs = thead.querySelectorAll('th');
+          const clonedThs = stickyHeader.querySelectorAll('th');
+          originalThs.forEach((th, index) => {
+            if (clonedThs[index]) {
+              clonedThs[index].style.width = `${th.offsetWidth}px`;
+            }
+          });
+          document.body.appendChild(stickyHeader);
+        }
+        if (stickyHeader) {
+          stickyHeader.style.left = `${tableRect.left}px`;
+          stickyHeader.style.width = `${tableRect.width}px`;
+          stickyHeader.style.display = 'table-header-group';
+        }
+      } else {
+        if (stickyHeader) {
+          stickyHeader.remove();
+          stickyHeader = null;
+        }
+      }
+    };
+
+    const initTimeout = setTimeout(() => {
+      calculateHeaderPosition();
+      handleScroll();
+      window.addEventListener('scroll', handleScroll);
+      window.addEventListener('resize', handleScroll);
+    }, 100);
+
+    return () => {
+      clearTimeout(initTimeout);
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleScroll);
+      if (stickyHeader) {
+        stickyHeader.remove();
+      }
+    };
+  }, [loading, caballos, currentPage]);
+
   return (
     <div className="caballos-admin-container">
       <div className="controls-container enhanced-controls" style={{ marginBottom: "1.5rem" }}>
