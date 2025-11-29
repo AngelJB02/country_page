@@ -3,6 +3,49 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { format } from 'date-fns';
 
+// Función helper para obtener fecha en formato YYYY-MM-DD sin problemas de zona horaria
+// Usa métodos locales (getFullYear, getMonth, getDate) que no se ven afectados por UTC
+const getDateString = (date) => {
+  if (!date) return null;
+  // Si es un objeto Date, extraer año, mes y día directamente usando métodos locales
+  if (date instanceof Date) {
+    // Verificar que el Date sea válido
+    if (isNaN(date.getTime())) {
+      console.error('Fecha inválida:', date);
+      return null;
+    }
+    // Usar métodos locales que no se ven afectados por conversiones UTC
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1; // getMonth() devuelve 0-11
+    const day = date.getDate();
+    
+    // Formatear con padding
+    const monthStr = String(month).padStart(2, '0');
+    const dayStr = String(day).padStart(2, '0');
+    
+    const result = `${year}-${monthStr}-${dayStr}`;
+    
+    // Debug: verificar que la fecha sea correcta
+    console.log('🔍 getDateString:', {
+      date,
+      year,
+      month,
+      day,
+      result,
+      dateString: date.toString(),
+      toISOString: date.toISOString(),
+      toLocaleDateString: date.toLocaleDateString('es-MX')
+    });
+    
+    return result;
+  }
+  // Si ya es un string, devolverlo (asumiendo formato YYYY-MM-DD)
+  if (typeof date === 'string') {
+    return date.split('T')[0];
+  }
+  return null;
+};
+
 // Componentes del calendario
 import { WeeklyCalendar } from './calendario/weekly-calendar';
 import { CalendarHeader } from './calendario/calendar-header';
@@ -31,15 +74,19 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
         const data = await fetchUserBookings(userId);
         setUserBookings(data);
         
-        // Cargar todas las reservas de la   semana para calcular disponibilidad
+        // Cargar todas las reservas de la semana para calcular disponibilidad
         const today = new Date();
+        today.setHours(12, 0, 0, 0); // Establecer a mediodía para evitar problemas de zona horaria
         const weekStart = new Date(today);
         weekStart.setDate(today.getDate() - today.getDay() + 1); // Lunes
+        weekStart.setHours(12, 0, 0, 0);
         const weekEnd = new Date(weekStart);
         weekEnd.setDate(weekStart.getDate() + 6); // Domingo
+        weekEnd.setHours(12, 0, 0, 0);
         
-        const fechaInicio = weekStart.toISOString().split('T')[0];
-        const fechaFin = weekEnd.toISOString().split('T')[0];
+        // Usar getDateString en lugar de toISOString para evitar problemas de zona horaria
+        const fechaInicio = getDateString(weekStart);
+        const fechaFin = getDateString(weekEnd);
         
         const weekData = await fetchWeekBookings(fechaInicio, fechaFin, userId);
         setAllWeekBookings(weekData);
@@ -76,12 +123,17 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
       setUserBookings(data);
       // Refresca reservas de la semana
       const today = new Date();
+      today.setHours(12, 0, 0, 0); // Establecer a mediodía para evitar problemas de zona horaria
       const weekStart = new Date(today);
       weekStart.setDate(today.getDate() - today.getDay() + 1);
+      weekStart.setHours(12, 0, 0, 0);
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekStart.getDate() + 6);
-      const fechaInicio = weekStart.toISOString().split('T')[0];
-      const fechaFin = weekEnd.toISOString().split('T')[0];
+      weekEnd.setHours(12, 0, 0, 0);
+      
+      // Usar getDateString en lugar de toISOString para evitar problemas de zona horaria
+      const fechaInicio = getDateString(weekStart);
+      const fechaFin = getDateString(weekEnd);
       const weekData = await fetchWeekBookings(fechaInicio, fechaFin, userId);
       setAllWeekBookings(weekData);
     } catch (e) {
@@ -145,15 +197,29 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
   const handleConfirm = async () => {
     if (!selectedSlot || !selectedClass) return;
     
-    // Extraer la fecha real del slot seleccionado
+    // Extraer la fecha real del slot seleccionado sin problemas de zona horaria
     const slotDate = selectedSlot.date; // Ya viene del WeeklyCalendar
-    const fechaISO = slotDate ? format(slotDate, 'yyyy-MM-dd') : null;
+    const fechaISO = getDateString(slotDate);
     
     if (!fechaISO) {
       toast.error('Error al obtener la fecha del slot');
       closeModal();
       return;
     }
+    
+    // Debug: verificar la fecha que se está enviando
+    console.log('📅 Fecha del slot (ANTES de enviar):', {
+      slotDate,
+      fechaISO,
+      day: selectedSlot.day,
+      time: selectedSlot.time,
+      slotDateToString: slotDate ? slotDate.toString() : null,
+      slotDateToISOString: slotDate ? slotDate.toISOString() : null,
+      slotDateToLocaleDateString: slotDate ? slotDate.toLocaleDateString('es-MX') : null,
+      slotDateGetFullYear: slotDate ? slotDate.getFullYear() : null,
+      slotDateGetMonth: slotDate ? slotDate.getMonth() : null,
+      slotDateGetDate: slotDate ? slotDate.getDate() : null,
+    });
     
     const [day, time] = selectedSlot.id.split('-');
     try {
@@ -170,20 +236,37 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
         position: "top-right",
         autoClose: 3000,
       });
-      // Refresca reservas
+      // Refresca reservas del usuario
       const data = await fetchUserBookings(userId);
       setUserBookings(data);
       
-      // Refrescar también las reservas de la semana
-      const today = new Date();
-      const weekStart = new Date(today);
-      weekStart.setDate(today.getDate() - today.getDay() + 1);
+      // Refrescar también las reservas de la semana basándose en la fecha del slot seleccionado
+      // Esto asegura que se actualice la semana correcta que se está mostrando en el calendario
+      // Usar getDateString para evitar problemas de zona horaria
+      const slotDateForWeek = slotDate || new Date();
+      const weekStart = new Date(slotDateForWeek);
+      weekStart.setDate(slotDateForWeek.getDate() - slotDateForWeek.getDay() + 1); // Lunes
+      weekStart.setHours(12, 0, 0, 0); // Establecer a mediodía para evitar problemas de zona horaria
       const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekStart.getDate() + 6);
-      const fechaInicio = weekStart.toISOString().split('T')[0];
-      const fechaFin = weekEnd.toISOString().split('T')[0];
+      weekEnd.setDate(weekStart.getDate() + 6); // Domingo
+      weekEnd.setHours(12, 0, 0, 0); // Establecer a mediodía
+      
+      // Usar getDateString en lugar de toISOString para evitar problemas de zona horaria
+      const fechaInicio = getDateString(weekStart);
+      const fechaFin = getDateString(weekEnd);
+      
+      console.log('🔄 Refrescando reservas de la semana:', {
+        slotDate: slotDateForWeek,
+        weekStart,
+        weekEnd,
+        fechaInicio,
+        fechaFin
+      });
+      
       const weekData = await fetchWeekBookings(fechaInicio, fechaFin, userId);
       setAllWeekBookings(weekData);
+      
+      console.log('✅ Reservas de la semana actualizadas:', weekData.length);
     } catch (error) {
       // DEBUG: Ver qué está llegando
       console.log('=== ERROR CAPTURADO ===');
@@ -221,12 +304,61 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
     closeModal();
   };
 
-  const handleCancel = () => {
+  const handleCancel = async () => {
     if (!selectedSlot) return;
-    // Falta endpoint real de cancelación
-    const booking = selectedSlot.bookings.find((b) => b.userId === userId);
-    if (booking) {
-      handleCancelBooking(booking.id);
+    
+    // Buscar la reserva del usuario primero en userBookings, luego en allWeekBookings como respaldo
+    let booking = userBookings.find((b) => {
+      // Solo buscar reservas activas (pendiente o confirmada)
+      if (b.estatus !== 'pendiente' && b.estatus !== 'confirmada') {
+        return false;
+      }
+      // Para reservas dummy
+      if (b.timeSlotId && typeof b.timeSlotId === 'string') {
+        return b.timeSlotId === selectedSlot.id;
+      }
+      // Para reservas reales: comparar fecha y hora exacta
+      if (b.fecha && b.hora_inicio && selectedSlot.date && selectedSlot.time) {
+        const fechaReserva = new Date(b.fecha).toISOString().split('T')[0];
+        const fechaSlot = selectedSlot.date instanceof Date
+          ? selectedSlot.date.toISOString().split('T')[0]
+          : selectedSlot.date.split('T')[0];
+        return fechaReserva === fechaSlot && b.hora_inicio.slice(0,5) === selectedSlot.time;
+      }
+      return false;
+    });
+    
+    // Si no se encuentra en userBookings, buscar en allWeekBookings
+    if (!booking && selectedSlot.date && selectedSlot.time) {
+      const fechaSlot = selectedSlot.date instanceof Date
+        ? selectedSlot.date.toISOString().split('T')[0]
+        : selectedSlot.date.split('T')[0];
+      
+      booking = allWeekBookings.find((b) => {
+        // Solo buscar reservas activas del usuario
+        if (b.cliente_id !== userId || (b.estatus !== 'pendiente' && b.estatus !== 'confirmada')) {
+          return false;
+        }
+        if (b.fecha && b.hora_inicio) {
+          const fechaReserva = b.fecha.split('T')[0];
+          return fechaReserva === fechaSlot && b.hora_inicio.slice(0,5) === selectedSlot.time;
+        }
+        return false;
+      });
+    }
+    
+    if (booking && booking.id) {
+      try {
+        await handleCancelBooking(booking.id);
+      } catch (error) {
+        // El error ya se maneja en handleCancelBooking
+        console.error('Error al cancelar reserva:', error);
+      }
+    } else {
+      toast.error('No se encontró la reserva para cancelar', {
+        position: "top-right",
+        autoClose: 3000,
+      });
     }
     closeModal();
   };
@@ -234,8 +366,8 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
   // Determina si el usuario ya reservó ese slot (solo confirmada/pendiente)
   const isBookedByUser = selectedSlot
     ? userBookings.some(b => {
-        // Excluir reservas canceladas o completadas
-        if (b.estatus === 'cancelada' || b.estatus === 'completada') {
+        // Excluir reservas canceladas (incluyendo cancelada_instructor) o completadas
+        if (b.estatus === 'cancelada' || b.estatus === 'cancelada_instructor' || b.estatus === 'completada') {
           return false;
         }
         // Para reservas dummy
@@ -261,7 +393,7 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
     ? userBookings.some(b => b.estatus === 'pendiente' || b.estatus === 'confirmada')
     : selectedSlot && userType !== 'propietario' && userType !== 'renta' && userType !== 'media_renta'
       ? userBookings.some(b => {
-          if (b.estatus === 'cancelada' || b.estatus === 'completada') {
+          if (b.estatus === 'cancelada' || b.estatus === 'cancelada_instructor' || b.estatus === 'completada') {
             return false;
           }
           if (b.timeSlotId && typeof b.timeSlotId === 'string') {

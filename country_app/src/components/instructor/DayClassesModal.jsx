@@ -1,17 +1,16 @@
 import { Clock, X as XIcon } from "lucide-react"
 import { useState } from "react"
-import { CancelMassModal } from "./CancelMassModal"
+import { CancelIndividualModal } from "./CancelIndividualModal"
 
 function DayClassesModal({ date, classes, onClose, onClassClick, instructoraId, onCancelSuccess }) {
-  const [showCancelModal, setShowCancelModal] = useState(false)
+  const [selectedReserva, setSelectedReserva] = useState(null)
   
   // Filtrar clases canceladas como medida de seguridad adicional
-  const activeClasses = classes.filter(c => c.status !== 'cancelada');
-  
-  // Clases activas (pendientes o confirmadas) que se pueden cancelar
-  const clasesCancelables = classes.filter(c => 
-    c.status === 'pendiente' || c.status === 'confirmada'
-  )
+  // Mostrar todas las clases excepto las canceladas (incluyendo cancelada_instructor)
+  const activeClasses = classes.filter(c => {
+    const status = c.status?.toLowerCase();
+    return status !== 'cancelada' && status !== 'cancelada_instructor';
+  });
   
   return (
     <div style={{
@@ -68,89 +67,103 @@ function DayClassesModal({ date, classes, onClose, onClassClick, instructoraId, 
                 backgroundColor: 'var(--cream)',
                 borderRadius: '8px',
                 border: '1px solid var(--stone-gray)',
-                cursor: 'pointer',
                 transition: 'all 0.2s'
               }}
-              onClick={() => onClassClick(classItem)}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--soft-gray)'
-                e.currentTarget.style.transform = 'translateX(4px)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--cream)'
-                e.currentTarget.style.transform = 'translateX(0)'
-              }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
-                <div>
-                  <p style={{ fontWeight: 'bold', color: 'var(--primary-brown)', marginBottom: '4px' }}>
-                    {classItem.student}
-                  </p>
-                  <p style={{ fontSize: '14px', color: 'var(--secondary-brown)' }}>
-                    {classItem.type} • {classItem.studentAge} años
-                  </p>
-                </div>
-                <span style={{
-                  backgroundColor: classItem.status === 'confirmada' ? 'var(--sage-green)' : 
-                                  classItem.status === 'completada' ? '#5E92F3' : 'var(--soft-gray)',
-                  color: classItem.status === 'pendiente' ? 'var(--charcoal)' : 'white',
-                  padding: '4px 12px',
-                  borderRadius: '12px',
-                  fontSize: '12px',
-                  fontWeight: '600'
-                }}>
-                  {classItem.status}
-                </span>
-              </div>
-              <div style={{ display: 'flex', gap: '16px', fontSize: '14px', color: 'var(--charcoal)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <Clock size={14} />
-                  {classItem.time}
-                </div>
-                <div>
-                  🐴 {classItem.horse}
-                </div>
-                {classItem.attendance !== 'pendiente' && (
-                  <div style={{ 
-                    color: classItem.attendance === 'asistió' ? 'var(--sage-green)' : 'var(--terracotta)',
+              <div 
+                style={{ cursor: 'pointer' }}
+                onClick={() => onClassClick(classItem)}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.opacity = '0.8'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = '1'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
+                  <div>
+                    <p style={{ fontWeight: 'bold', color: 'var(--primary-brown)', marginBottom: '4px' }}>
+                      {classItem.student}
+                    </p>
+                    <p style={{ fontSize: '14px', color: 'var(--secondary-brown)' }}>
+                      {classItem.type} • {classItem.studentAge} años
+                    </p>
+                  </div>
+                  <span style={{
+                    backgroundColor: classItem.status === 'confirmada' ? 'var(--sage-green)' : 
+                                    classItem.status === 'completada' ? '#5E92F3' : 'var(--soft-gray)',
+                    color: classItem.status === 'pendiente' ? 'var(--charcoal)' : 'white',
+                    padding: '4px 12px',
+                    borderRadius: '12px',
+                    fontSize: '12px',
                     fontWeight: '600'
                   }}>
-                    {classItem.attendance === 'asistió' ? '✓ Asistió' : '✗ Faltó'}
+                    {classItem.status}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: '16px', fontSize: '14px', color: 'var(--charcoal)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Clock size={14} />
+                    {classItem.time}
                   </div>
-                )}
+                  <div>
+                    🐴 {classItem.horse || 'Sin asignar'}
+                  </div>
+                  {classItem.attendance !== 'pendiente' && (
+                    <div style={{ 
+                      color: classItem.attendance === 'asistió' ? 'var(--sage-green)' : 'var(--terracotta)',
+                      fontWeight: '600'
+                    }}>
+                      {classItem.attendance === 'asistió' ? '✓ Asistió' : '✗ Faltó'}
+                    </div>
+                  )}
+                </div>
               </div>
+              {(() => {
+                const status = classItem.status?.toLowerCase();
+                const puedeCancelar = (status === 'pendiente' || status === 'confirmada') && instructoraId;
+                return puedeCancelar ? (
+                <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--stone-gray)' }}>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setSelectedReserva({
+                        ...classItem,
+                        date: date,
+                        cliente_id: classItem.cliente_id || classItem.clienteId
+                      })
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '8px',
+                      backgroundColor: '#A63924',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      transition: 'all 0.2s',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#8b2e1f'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#A63924'}
+                  >
+                    <XIcon size={16} />
+                    Cancelar esta reserva
+                  </button>
+                </div>
+                ) : null;
+              })()}
             </div>
           ))}
           </div>
         )}
 
         <div style={{ display: 'flex', gap: '12px', flexDirection: 'column' }}>
-          {clasesCancelables.length > 0 && instructoraId && (
-            <button
-              onClick={() => setShowCancelModal(true)}
-              style={{
-                width: '100%',
-                padding: '12px',
-                backgroundColor: '#A63924',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '16px',
-                fontWeight: '600',
-                transition: 'all 0.2s',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#8b2e1f'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#A63924'}
-            >
-              <XIcon size={18} />
-              Cancelar Reservas
-            </button>
-          )}
           <button
             onClick={onClose}
             style={{
@@ -173,20 +186,16 @@ function DayClassesModal({ date, classes, onClose, onClassClick, instructoraId, 
         </div>
       </div>
 
-      {/* Modal de cancelación masiva */}
-      {showCancelModal && (
-        <CancelMassModal
-          date={date}
-          classes={classes}
-          instructoraId={instructoraId}
-          onClose={() => setShowCancelModal(false)}
-          onCancelSuccess={(result) => {
-            setShowCancelModal(false)
+      {/* Modal de cancelación individual */}
+      {selectedReserva && (
+        <CancelIndividualModal
+          reserva={selectedReserva}
+          onClose={() => setSelectedReserva(null)}
+          onCancelSuccess={() => {
+            setSelectedReserva(null)
             if (onCancelSuccess) {
-              onCancelSuccess(result)
+              onCancelSuccess()
             }
-            // Cerrar también el modal de clases del día
-            onClose()
           }}
         />
       )}

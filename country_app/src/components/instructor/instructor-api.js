@@ -587,3 +587,39 @@ export const cancelarReservasDesdeHora = async (instructoraId, fecha, horaInicio
     throw error;
   }
 };
+
+/**
+ * Cancelar una reserva individual (instructora)
+ * @param {number} reservaId - ID de la reserva
+ * @param {number} clienteId - ID del cliente
+ * @param {string} motivo - Motivo de la cancelación (requerido)
+ * @returns {Promise<Object>}
+ */
+export const cancelarReservaIndividual = async (reservaId, clienteId, motivo) => {
+  if (!motivo || motivo.trim() === '') {
+    throw new Error('El motivo de cancelación es requerido');
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/reservas/${reservaId}/cancel/${clienteId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        motivo_cancelacion: motivo.trim()
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Error al cancelar la reserva');
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error al cancelar reserva individual:', error);
+    throw error;
+  }
+};

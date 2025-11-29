@@ -1,8 +1,10 @@
 // React hooks are provided by the custom hook `useInstructorDashboard` below
 import { Calendar, Users, Clock, Download, Check, X, ChevronLeft, ChevronRight } from "lucide-react"
+import { useState } from "react"
 import { CalendarView } from "./instructor/CalendarView"
 import { DayClassesModal } from "./instructor/DayClassesModal"
 import { AttendanceModal } from "./instructor/atendance-modal"
+import { CancelIndividualModal } from "./instructor/CancelIndividualModal"
 import HorseSelect from "./instructor/HorseSelect"
 import useInstructorDashboard from "./instructor/constants.jsx"
 import LogoutButton from "./LogoutBoton"
@@ -34,6 +36,8 @@ export default function InstructorClases() {
     instructoraInfo,
     recargarClases,
   } = useInstructorDashboard()
+
+  const [selectedReserva, setSelectedReserva] = useState(null)
 
   // Mostrar loading
   if (loading) {
@@ -217,6 +221,7 @@ export default function InstructorClases() {
                       <th>Caballo</th>
                       <th>Estado</th>
                       <th>Asistencia</th>
+                      <th>Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -330,6 +335,47 @@ export default function InstructorClases() {
                             )}
                           </button>
                         </td>
+                        <td>
+                          {(() => {
+                            const status = classItem.status?.toLowerCase();
+                            // Verificar si puede cancelar: debe ser pendiente o confirmada Y tener instructoraInfo
+                            // El backend devuelve instructora.id (no instructora_id)
+                            const puedeCancelar = (status === 'pendiente' || status === 'confirmada') && instructoraInfo?.id;
+                            return puedeCancelar ? (
+                              <button
+                                onClick={() => {
+                                  const [year, month, day] = classItem.date.split('-');
+                                  const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                                  setSelectedReserva({
+                                    ...classItem,
+                                    date: date,
+                                    cliente_id: classItem.cliente_id
+                                  });
+                                }}
+                                style={{
+                                  padding: '6px 12px',
+                                  backgroundColor: '#A63924',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                  fontSize: '13px',
+                                  fontWeight: '600',
+                                  transition: 'all 0.2s',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  gap: '4px'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#8b2e1f'}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#A63924'}
+                              >
+                                <X size={14} />
+                                Cancelar
+                              </button>
+                            ) : null;
+                          })()}
+                        </td>
                       </tr>
                       );
                     })}
@@ -350,24 +396,38 @@ export default function InstructorClases() {
         />
       )}
 
-      {showDateClasses && selectedDate && (
+      {selectedReserva && (
+        <CancelIndividualModal
+          reserva={selectedReserva}
+          onClose={() => setSelectedReserva(null)}
+          onCancelSuccess={() => {
+            setSelectedReserva(null)
+            recargarClases()
+          }}
+        />
+      )}
+
+      {showDateClasses && selectedDate && (() => {
+        const instructoraIdValue = instructoraInfo?.instructora_id || instructoraInfo?.id;
+        return (
         <DayClassesModal
           date={selectedDate}
           classes={dateClasses}
           onClose={() => setShowDateClasses(false)}
           onClassClick={handleClassClickFromModal}
-          instructoraId={instructoraInfo?.id}
+          instructoraId={instructoraIdValue}
           onCancelSuccess={async (result) => {
             // Recargar las clases después de cancelar
             await recargarClases()
             // Mostrar mensaje de éxito
             setToast({ 
-              message: result.message || `Se cancelaron ${result.canceladas} reserva(s) correctamente`, 
+              message: result.message || `Se cancelaron ${result.canceladas || 1} reserva(s) correctamente`, 
               type: 'success' 
             })
           }}
         />
-      )}
+        );
+      })()}
 
       {/* Toast discreto para advertencias */}
       {toast && (

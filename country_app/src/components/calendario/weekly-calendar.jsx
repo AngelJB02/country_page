@@ -7,6 +7,23 @@ import { useState, useEffect } from 'react'
 import './css/weekly-calendar.css'
 import { DateTime } from 'luxon'
 
+// Función helper para obtener fecha en formato YYYY-MM-DD sin problemas de zona horaria
+const getDateString = (date) => {
+  if (!date) return null;
+  // Si es un objeto Date, extraer año, mes y día directamente sin conversiones de zona horaria
+  if (date instanceof Date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+  // Si ya es un string, devolverlo
+  if (typeof date === 'string') {
+    return date.split('T')[0];
+  }
+  return null;
+};
+
 
 export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userBookings = [], allWeekBookings = [], className, claseCupoMax, claseId }) {
   // ⚠️ IMPORTANTE: Todos los hooks deben estar al inicio, antes de cualquier return condicional
@@ -120,7 +137,8 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
     
     timeSlots.forEach((time) => {
       const slotId = `${day}-${time}`;
-      const slotDateStr = realDate ? format(realDate, 'yyyy-MM-dd') : null;
+      // Usar función helper para evitar problemas de zona horaria
+      const slotDateStr = getDateString(realDate);
       
       // Obtener capacidad específica para este slot (ajustada para iniciación)
       const capacity = getCapacityForSlot(day, time, realDate);
@@ -143,9 +161,10 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
       // Bloquear si faltan menos de 2 horas O si la hora de inicio ya pasó (incluso si aún no termina)
       const isWithin2Hours = hoursUntilSlot < 2;
 
-      // Filtrar reservas del usuario para este slot (ocupado si no está cancelada)
+      // Filtrar reservas del usuario para este slot (ocupado si no está cancelada o cancelada por instructor)
       const slotBookings = userBookings.filter((b) => {
-        if (b.estatus === 'cancelada') {
+        // Excluir reservas canceladas (tanto por cliente como por instructor)
+        if (b.estatus === 'cancelada' || b.estatus === 'cancelada_instructor') {
           return false;
         }
         if (b.timeSlotId && typeof b.timeSlotId === 'string') {
@@ -208,8 +227,7 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
 
       const hour = parseInt(time.split(":")[0], 10);
       const isBlocked = userLevel === "Iniciación" && hour >= 17;
-      // Bloquear también si está cancelada por instructor
-      const isCancelledByInstructor = userStatus === 'cancelada_instructor';
+      // NO bloquear si está cancelada por instructor - la reserva se elimina y el slot queda disponible
       slots.push({
         id: slotId,
         day,
@@ -218,7 +236,7 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
         capacity,
         bookings: slotBookings,
         totalBooked: totalBookingsForSlot,
-        isBlocked: isBlocked || isWithin2Hours || hasPassed || isCancelledByInstructor, // Bloquear si: iniciación tarde, <2h, ya pasó, o cancelada por instructor
+        isBlocked: isBlocked || isWithin2Hours || hasPassed, // Bloquear si: iniciación tarde, <2h, ya pasó (NO si está cancelada por instructor)
         isWithin2Hours, // Flag específico para mensaje "muy pronto"
         hasPassed, // Flag específico para mensaje "clase finalizada"
         userStatus, // nuevo: estatus de la reserva del usuario (si existe)
@@ -314,7 +332,8 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
               {slots.map((slot) => {
                 // Determina si el slot ya está reservado por este usuario (solo confirmada/pendiente)
                 // Usar allWeekBookings en lugar de slot.bookings para tener acceso a cliente_id
-                const slotDateStr = slot.date ? format(slot.date, 'yyyy-MM-dd') : null;
+                // Usar función helper para evitar problemas de zona horaria
+                const slotDateStr = getDateString(slot.date);
                 const isBookedByUser = allWeekBookings.some((b) => {
                   if (!b.fecha || !b.hora_inicio || !slotDateStr) return false;
                   

@@ -10,6 +10,7 @@ export function TimeSlotCard({ time, capacity, bookedCount, isBookedByUser, isBl
   const hasSomeBookings = bookedCount > 0 && bookedCount < capacity;
 
   // Estado visual según el estatus de la reserva del usuario
+  // Nota: las reservas canceladas por instructor ya no se consideran como reservadas (isBookedByUser será false)
   let stateClass = isBlocked
     ? 'tsc--blocked'
     : isBookedByUser && (userStatus === 'confirmada' || userStatus === 'pendiente')
@@ -20,15 +21,10 @@ export function TimeSlotCard({ time, capacity, bookedCount, isBookedByUser, isBl
     ? 'tsc--partial'
     : 'tsc--available';
 
-  // Si el usuario tiene reserva completada/cancelada, no marcar como reservado
-  if (isBookedByUser && (userStatus === 'completada' || userStatus === 'cancelada' || userStatus === 'cancelada_instructor')) {
-    if (userStatus === 'completada') {
-      stateClass = 'tsc--attended';
-    } else if (userStatus === 'cancelada_instructor') {
-      stateClass = 'tsc--cancelled-instructor';
-    } else {
-      stateClass = 'tsc--cancelled';
-    }
+  // Si el usuario tiene reserva completada, mostrar estado especial
+  // Las canceladas (incluyendo cancelada_instructor) ya no se muestran como reservadas
+  if (isBookedByUser && userStatus === 'completada') {
+    stateClass = 'tsc--attended';
   }
 
   const handleKeyDown = (e) => {
@@ -41,14 +37,7 @@ export function TimeSlotCard({ time, capacity, bookedCount, isBookedByUser, isBl
   let metaText = null;
   if (isBlocked) {
     // Mensaje específico según el tipo de bloqueo
-    if (userStatus === 'cancelada_instructor') {
-      metaText = (
-        <div className="tsc-cancelled-reason">
-          <div>Cancelada por instructor</div>
-          {motivoCancelacion && <div className="tsc-reason">Motivo: {motivoCancelacion}</div>}
-        </div>
-      );
-    } else if (hasPassed) {
+    if (hasPassed) {
       metaText = 'Clase finalizada';
     } else if (isWithin2Hours) {
       metaText = 'Muy pronto (2h anticipación)';
@@ -57,15 +46,6 @@ export function TimeSlotCard({ time, capacity, bookedCount, isBookedByUser, isBl
     }
   } else if (isBookedByUser && userStatus === 'completada') {
     metaText = 'Ya asististe';
-  } else if (isBookedByUser && userStatus === 'cancelada_instructor') {
-    metaText = (
-      <div className="tsc-cancelled-reason">
-        <div>Cancelada por instructor</div>
-        {motivoCancelacion && <div className="tsc-reason">Motivo: {motivoCancelacion}</div>}
-      </div>
-    );
-  } else if (isBookedByUser && userStatus === 'cancelada') {
-    metaText = 'Cancelada';
   } else if (isBookedByUser) {
     metaText = 'Tu reserva';
   } else if (isFull) {

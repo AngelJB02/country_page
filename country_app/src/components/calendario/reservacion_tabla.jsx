@@ -44,6 +44,7 @@ export function ReservacionTabla({ userBookings = [], onCancelBooking }) {
               statusLabel = 'Cancelada por instructor';
               statusClass = 'mc-booking-status-cancelada-instructor';
             }
+            
             return (
               <li key={b.id} className="mc-booking-item">
                 <div className="mc-booking-info">
