@@ -2,10 +2,11 @@
 import mysql from 'mysql2/promise';
 
 const db = mysql.createPool({
-  host: '212.227.238.213',
+  // Cambiar el host a 212.227.238.213 cuando se pruebe en desarrollo (cambiar a localhost para producción)
+  host: 'localhost',
   user: 'root',
   password: 'ElRefugio2025',
-  database: 'contry_refugiodb',
+  database: 'country_refugiodb',
   waitForConnections: true,
   connectionLimit: 5,
   queueLimit: 0,
