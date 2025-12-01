@@ -67,7 +67,7 @@ const Login = () => {
 
     setIsLoading(true);
     try {
-      const response = await fetch("http://localhost:3001/api/login", {
+      const response = await fetch("http://212.227.238.213/api/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

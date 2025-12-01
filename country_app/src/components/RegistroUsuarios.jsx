@@ -414,7 +414,7 @@ const FormularioUsuario = React.memo(({ onCrearUsuario, loading }) => {
     async (nombre, apellido, customPassword = null) => {
       try {
         const response = await fetch(
-          "http://localhost:3001/api/users/preview-credentials",
+          "http://212.227.238.213/api/api/users/preview-credentials",
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -518,7 +518,7 @@ const FormularioUsuario = React.memo(({ onCrearUsuario, loading }) => {
         // Si el usuario tiene email y NO es sin email, enviar credenciales por correo
         if (formData.email && !withoutEmail && formData.rol === "cliente") {
           try {
-            const emailResponse = await fetch("http://localhost:3001/api/email/send-credentials", {
+            const emailResponse = await fetch("http://212.227.238.213/api/api/email/send-credentials", {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
@@ -1141,7 +1141,7 @@ const TablaUsuarios = React.memo(({ usuarios, loading, onRecargar }) => {
   const actualizarPasswordSilent = useCallback(async (id, password) => {
     try {
       const response = await fetch(
-        `http://localhost:3001/api/users/update-password/${id}`,
+        `http://212.227.238.213/api/api/users/update-password/${id}`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -1158,7 +1158,7 @@ const TablaUsuarios = React.memo(({ usuarios, loading, onRecargar }) => {
   const actualizarCorreoSilent = useCallback(async (id, correo) => {
     try {
       const response = await fetch(
-        `http://localhost:3001/api/users/update-email/${id}`,
+        `http://212.227.238.213/api/api/users/update-email/${id}`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },

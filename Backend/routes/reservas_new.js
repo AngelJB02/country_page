@@ -1317,7 +1317,7 @@ router.put('/:id/cancel/:clienteId', async (req, res) => {
           console.log(`📨 Enviando email de cancelación a ${cliente[0].correo} desde endpoint cancel cliente`);
 
           // Enviar email de cancelación (no bloquea si falla)
-          axios.post('http://localhost:3001/api/email/send-cancellation-notification', emailPayload)
+          axios.post('http://212.227.238.213/api/api/email/send-cancellation-notification', emailPayload)
             .then(() => {
               console.log(`✅ Email de cancelación enviado correctamente a: ${cliente[0].correo}`);
             })
@@ -1805,7 +1805,7 @@ router.put('/instructor/:reservaId/attendance', async (req, res) => {
           };
 
           // Enviar email de cancelación (no bloquea si falla)
-          axios.post('http://localhost:3001/api/email/send-cancellation-notification', emailPayload)
+          axios.post('http://212.227.238.213/api/api/email/send-cancellation-notification', emailPayload)
             .then(() => {
               console.log(`✅ Email de cancelación enviado a: ${cliente[0].correo}`);
             })
@@ -1996,7 +1996,7 @@ router.put('/instructor/:reservaId/status', async (req, res) => {
           };
 
           // Enviar email de cancelación (no bloquea si falla)
-          axios.post('http://localhost:3001/api/email/send-cancellation-notification', emailPayload)
+          axios.post('http://212.227.238.213/api/api/email/send-cancellation-notification', emailPayload)
             .then(() => {
               console.log(`✅ Email de cancelación enviado a: ${cliente[0].correo}`);
             })
@@ -2283,7 +2283,7 @@ router.post('/instructor/cancel-from-time', async (req, res) => {
             console.log(`📨 Enviando email de cancelación a ${cliente[0].correo} con payload:`, emailPayload);
 
             // Enviar email de cancelación (no bloquea si falla)
-            axios.post('http://localhost:3001/api/email/send-cancellation-notification', emailPayload)
+            axios.post('http://212.227.238.213/api/api/email/send-cancellation-notification', emailPayload)
               .then(() => {
                 console.log(`✅ Email de cancelación enviado correctamente a: ${cliente[0].correo}`);
               })

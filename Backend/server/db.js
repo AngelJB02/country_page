@@ -2,7 +2,6 @@
 import mysql from 'mysql2/promise';
 
 const db = mysql.createPool({
-  // Cambiar el host a 212.227.238.213 cuando se pruebe en desarrollo (cambiar a localhost )
   host: 'localhost',
   user: 'root',
   password: 'ElRefugio2025',
