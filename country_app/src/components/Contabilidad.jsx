@@ -821,38 +821,12 @@ const MembershipAdminDashboard = () => {
         loadPaymentCounts()
         loadPaymentStatus()
         
-        // Si el usuario tiene email y NO es sin email, enviar credenciales por correo
-        if (newClient.email && !withoutEmail && result.username && result.password) {
-          try {
-            const emailResponse = await fetch("http://212.227.238.213/api/api/email/send-credentials", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                email: newClient.email,
-                nombre: newClient.nombre,
-                username: result.username,
-                password: result.password,
-                rol: "cliente"
-              })
-            });
-
-            if (emailResponse.ok) {
-              showNotification(
-                `✅ Cliente creado exitosamente. Credenciales enviadas por email a ${newClient.email}`, 
-                "success"
-              );
-            } else {
-              throw new Error("Error al enviar email");
-            }
-          } catch (emailError) {
-            console.error("Error al enviar email:", emailError);
-            showNotification(
-              `⚠️ Cliente creado pero falló el envío de email. Usuario: ${result.username}, Contraseña: ${result.password}`, 
-              "error"
-            );
-          }
+        // El backend ya envía el email automáticamente si el cliente tiene correo
+        if (newClient.email && !withoutEmail) {
+          showNotification(
+            `✅ Cliente creado exitosamente. Credenciales enviadas por email a ${newClient.email}`, 
+            "success"
+          );
         } else if (withoutEmail && result.credentials) {
           // Actualizar las credenciales con las reales del servidor
           setPreviewCredentials({

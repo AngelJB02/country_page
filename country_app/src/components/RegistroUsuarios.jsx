@@ -515,44 +515,15 @@ const FormularioUsuario = React.memo(({ onCrearUsuario, loading }) => {
 
       const resultado = await onCrearUsuario(dataToSend);
       if (resultado.success) {
-        // Si el usuario tiene email y NO es sin email, enviar credenciales por correo
-        if (formData.email && !withoutEmail && formData.rol === "cliente") {
-          try {
-            const emailResponse = await fetch("http://212.227.238.213/api/api/email/send-credentials", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                email: formData.email,
-                nombre: formData.nombre,
-                username: resultado.username,
-                password: resultado.password,
-                rol: formData.rol
-              })
-            });
-
-            if (emailResponse.ok) {
-              toast.success(
-                `✅ Usuario creado exitosamente. Credenciales enviadas por email a ${formData.email}`,
-                {
-                  position: "top-right",
-                  autoClose: 3000,
-                }
-              );
-            } else {
-              throw new Error("Error al enviar email");
+        // El backend ya envía el email automáticamente si el usuario tiene correo
+        if (formData.email && !withoutEmail) {
+          toast.success(
+            `✅ Usuario creado exitosamente. Credenciales enviadas por email a ${formData.email}`,
+            {
+              position: "top-right",
+              autoClose: 3000,
             }
-          } catch (emailError) {
-            console.error("Error al enviar email:", emailError);
-            toast.warning(
-              `⚠️ Usuario creado pero falló el envío de email. Las credenciales son: Usuario: ${resultado.username}, Contraseña: ${resultado.password}`,
-              {
-                position: "top-right",
-                autoClose: 8000,
-              }
-            );
-          }
+          );
         } else if (formData.rol === "cliente" && withoutEmail) {
           toast.success(
             `🔒 Las credenciales NO se enviarán por correo. Debes copiarlas y entregarlas personalmente.`,

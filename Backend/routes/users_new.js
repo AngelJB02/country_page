@@ -433,6 +433,23 @@ router.post('/register-cliente', async (req, res) => {
 
     await connection.commit();
 
+    // Enviar email con credenciales si el cliente tiene correo
+    if (userEmail && userEmail.trim() !== '') {
+      try {
+        await axios.post('http://212.227.238.213/api/api/email/send-credentials', {
+          email: userEmail.trim(),
+          nombre: nombre,
+          username: credentials.username,
+          password: credentials.password,
+          rol: 'cliente'
+        });
+        console.log(`✅ Email de credenciales enviado a: ${userEmail}`);
+      } catch (emailError) {
+        console.error(`⚠️ Error al enviar email de credenciales a ${userEmail}:`, emailError.message);
+        // No bloquear la respuesta si falla el email
+      }
+    }
+
     res.json({
       message: 'Cliente registrado correctamente',
       usuario: {
