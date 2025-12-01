@@ -22,7 +22,7 @@ const ReservasAdmin = () => {
   const loadReservas = async () => {
     setLoading(true);
     try {
-      let url = "http://212.227.238.213/api/api/reservas-admin";
+      let url = "http://localhost:3001/api/reservas-admin";
       const params = new URLSearchParams();
       
       if (filtroTiempo === "dia") {

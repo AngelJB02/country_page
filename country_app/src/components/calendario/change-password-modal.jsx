@@ -46,7 +46,7 @@ export function ChangePasswordModal({ isOpen, onClose }) {
     
     try {
       // Actualizar contraseña enviando la contraseña actual para validación
-      const updateResponse = await fetch(`http://212.227.238.213/api/api/users/update-password/${userData.id}`, {
+      const updateResponse = await fetch(`http://localhost:3001/api/users/update-password/${userData.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -63,7 +63,7 @@ export function ChangePasswordModal({ isOpen, onClose }) {
       }
 
       // Obtener información completa del usuario para el email
-      const userInfoResponse = await fetch(`http://212.227.238.213/api/api/users/${userData.id}`);
+      const userInfoResponse = await fetch(`http://localhost:3001/api/users/${userData.id}`);
       let userEmail = null;
       let userName = userData.nombre;
       let username = localStorage.getItem('username');
@@ -95,7 +95,7 @@ export function ChangePasswordModal({ isOpen, onClose }) {
         });
         
         try {
-          const emailResponse = await fetch('http://212.227.238.213/api/api/email/send-updated-credentials', {
+          const emailResponse = await fetch('http://localhost:3001/api/email/send-updated-credentials', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

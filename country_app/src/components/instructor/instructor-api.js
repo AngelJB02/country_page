@@ -1,5 +1,5 @@
 // API service para el panel de instructoras
-const API_BASE_URL = 'http://212.227.238.213/api/api';
+const API_BASE_URL = 'http://localhost:3001/api';
 
 /**
  * Obtiene las clases/reservas de una instructora usando el usuario_id

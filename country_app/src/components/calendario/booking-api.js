@@ -2,13 +2,13 @@
 // API para reservas: obtiene y crea reservas del usuario
 
 export async function fetchUserBookings(clienteId) {
-  const res = await fetch(`http://212.227.238.213/api/api/reservas/my-reservations/${clienteId}`);
+  const res = await fetch(`http://localhost:3001/api/reservas/my-reservations/${clienteId}`);
   if (!res.ok) throw new Error('Error al obtener reservas');
   return res.json();
 }
 
 export async function createBooking({ cliente_id, clase_id, fecha, hora_inicio }) {
-  const res = await fetch('http://212.227.238.213/api/api/reservas/book', {
+  const res = await fetch('http://localhost:3001/api/reservas/book', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ cliente_id, clase_id, fecha, hora_inicio })
@@ -28,14 +28,14 @@ export async function createBooking({ cliente_id, clase_id, fecha, hora_inicio }
 
 // Obtener todas las reservas de una semana para mostrar disponibilidad
 export async function fetchWeekBookings(fechaInicio, fechaFin, clienteId) {
-  const res = await fetch(`http://212.227.238.213/api/api/reservas/week?fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}&cliente_id=${clienteId}`);
+  const res = await fetch(`http://localhost:3001/api/reservas/week?fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}&cliente_id=${clienteId}`);
   if (!res.ok) throw new Error('Error al obtener reservas de la semana');
   return res.json();
 }
 
 // Cancelar reserva (cambia estatus a cancelada, no elimina)
 export async function cancelBooking(reservaId, clienteId) {
-  const res = await fetch(`http://212.227.238.213/api/api/reservas/${reservaId}/cancel/${clienteId}`, {
+  const res = await fetch(`http://localhost:3001/api/reservas/${reservaId}/cancel/${clienteId}`, {
     method: 'PUT',
   });
   const data = await res.json();

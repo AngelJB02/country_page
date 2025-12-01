@@ -52,7 +52,7 @@ const InstructorasAdmin = () => {
   const loadInstructoras = async () => {
     setLoading(true);
     try {
-      const response = await fetch("http://212.227.238.213/api/api/instructoras");
+      const response = await fetch("http://localhost:3001/api/instructoras");
       if (!response.ok) {
         throw new Error("Error al cargar instructoras");
       }
@@ -80,7 +80,7 @@ const InstructorasAdmin = () => {
         instructorasList.map(async (instructora) => {
           try {
             const response = await fetch(
-              `http://212.227.238.213/api/api/descansos/check/${instructora.id}?fecha=${hoy}`
+              `http://localhost:3001/api/descansos/check/${instructora.id}?fecha=${hoy}`
             );
             if (response.ok) {
               const data = await response.json();
@@ -162,7 +162,7 @@ const InstructorasAdmin = () => {
 
     setCreatingInstructor(true);
     try {
-      const response = await fetch("http://212.227.238.213/api/api/instructoras", {
+      const response = await fetch("http://localhost:3001/api/instructoras", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newInstructor)
@@ -193,7 +193,7 @@ const InstructorasAdmin = () => {
 
     setUpdatingInstructor(true);
     try {
-      const response = await fetch(`http://212.227.238.213/api/api/instructoras/${editingInstructor.id}`, {
+      const response = await fetch(`http://localhost:3001/api/instructoras/${editingInstructor.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(editingInstructor)
@@ -221,7 +221,7 @@ const InstructorasAdmin = () => {
 
     setDeletingInstructor(true);
     try {
-      const response = await fetch(`http://212.227.238.213/api/api/instructoras/${instructorToDelete.id}`, {
+      const response = await fetch(`http://localhost:3001/api/instructoras/${instructorToDelete.id}`, {
         method: "DELETE"
       });
 
@@ -245,7 +245,7 @@ const InstructorasAdmin = () => {
   // Reactivar instructora (cambiar de no_disponible a disponible)
   const handleReactivateInstructor = async (instructor) => {
     try {
-      const response = await fetch(`http://212.227.238.213/api/api/instructoras/${instructor.id}`, {
+      const response = await fetch(`http://localhost:3001/api/instructoras/${instructor.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json"
@@ -286,7 +286,7 @@ const InstructorasAdmin = () => {
   const loadDescansos = async (instructoraId) => {
     setLoadingDescansos(true);
     try {
-      const response = await fetch(`http://212.227.238.213/api/api/descansos/instructora/${instructoraId}`);
+      const response = await fetch(`http://localhost:3001/api/descansos/instructora/${instructoraId}`);
       if (!response.ok) {
         throw new Error("Error al cargar descansos");
       }
@@ -386,7 +386,7 @@ const InstructorasAdmin = () => {
 
       console.log('Enviando descanso:', descansoData); // Debug
 
-      const response = await fetch("http://212.227.238.213/api/api/descansos", {
+      const response = await fetch("http://localhost:3001/api/descansos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(descansoData)
@@ -448,7 +448,7 @@ const InstructorasAdmin = () => {
         })
       };
 
-      const response = await fetch(`http://212.227.238.213/api/api/descansos/${editingDescanso.id}`, {
+      const response = await fetch(`http://localhost:3001/api/descansos/${editingDescanso.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(descansoData)
@@ -476,7 +476,7 @@ const InstructorasAdmin = () => {
     }
 
     try {
-      const response = await fetch(`http://212.227.238.213/api/api/descansos/${descansoId}`, {
+      const response = await fetch(`http://localhost:3001/api/descansos/${descansoId}`, {
         method: "DELETE"
       });
 

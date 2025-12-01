@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-const API_URL = "http://212.227.238.213/api/api/reservas"; 
+const API_URL = "http://localhost:3001/api/reservas"; 
 
 export function useReservas() {
   const [availability, setAvailability] = useState({});
