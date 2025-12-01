@@ -429,6 +429,10 @@ p {
   text-align: center;
   margin-bottom: var(--spacing-lg);
   animation: fadeInUp 0.6s ease;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .section-header h2 {
@@ -438,6 +442,7 @@ p {
   margin-bottom: var(--spacing-sm);
   font-weight: 600;
   position: relative;
+  text-align: center;
 }
 
 .section-header h2::after {
@@ -455,9 +460,10 @@ p {
 .section-header p {
   font-size: 1rem;
   color: var(--charcoal);
-  max-width: 500px;
+  max-width: 700px;
   margin: 0 auto;
   opacity: 0.8;
+  text-align: center;
 }
 
 /* About Section Rústica Mejorada */
