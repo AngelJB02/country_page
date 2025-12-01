@@ -2,7 +2,7 @@ import express from "express";
 import { Resend } from "resend";
 
 const router = express.Router();
-const resend = new Resend("re_h3MUFR11_AMEvhDEbDmza1P89t3fHWkJ5");
+const resend = new Resend("a");
 
 router.post("/send-credentials", async (req, res) => {
   try {
