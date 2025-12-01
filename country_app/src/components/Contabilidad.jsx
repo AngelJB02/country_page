@@ -287,7 +287,11 @@ const MembershipAdminDashboard = () => {
           
           // Calcular próxima fecha de pago y estado
           if (item.ultimo_pago) {
-            const ultimoPago = new Date(item.ultimo_pago);
+            // Parsear fecha en zona horaria local
+            const [year, month, day] = item.ultimo_pago.split('-').map(Number);
+            const ultimoPago = new Date(year, month - 1, day);
+            
+            // Sumar 1 mes
             const proximaFecha = new Date(ultimoPago);
             proximaFecha.setMonth(proximaFecha.getMonth() + 1);
             proximaFecha.setHours(0, 0, 0, 0);
@@ -306,11 +310,17 @@ const MembershipAdminDashboard = () => {
               dias_restantes = diffDays;
             }
             
+            // Formatear próxima fecha manualmente
+            const nextYear = proximaFecha.getFullYear();
+            const nextMonth = String(proximaFecha.getMonth() + 1).padStart(2, '0');
+            const nextDay = String(proximaFecha.getDate()).padStart(2, '0');
+            const proximaFechaStr = `${nextYear}-${nextMonth}-${nextDay}`;
+            
             statusMap[item.cliente_id] = {
               estado_pago: estado_pago,
               dias_restantes: dias_restantes,
               ultimo_pago: item.ultimo_pago,
-              proxima_fecha: proximaFecha.toISOString().split('T')[0]
+              proxima_fecha: proximaFechaStr
             }
           }
         })
@@ -881,12 +891,19 @@ const MembershipAdminDashboard = () => {
           // Calcular próxima fecha de pago: última fecha + 1 mes
           let proximaFecha = "";
           if (u.fecha_pago) {
-            const fechaPago = new Date(u.fecha_pago);
+            // Parsear la fecha en zona horaria local
+            const [year, month, day] = u.fecha_pago.split('-').map(Number);
+            const fechaPago = new Date(year, month - 1, day); // month - 1 porque los meses en JS van de 0-11
+            
             if (!isNaN(fechaPago.getTime())) {
               // Sumar 1 mes
               fechaPago.setMonth(fechaPago.getMonth() + 1);
-              // Formatear como YYYY-MM-DD
-              proximaFecha = fechaPago.toISOString().split('T')[0];
+              
+              // Formatear como YYYY-MM-DD manualmente para evitar problemas de zona horaria
+              const nextYear = fechaPago.getFullYear();
+              const nextMonth = String(fechaPago.getMonth() + 1).padStart(2, '0');
+              const nextDay = String(fechaPago.getDate()).padStart(2, '0');
+              proximaFecha = `${nextYear}-${nextMonth}-${nextDay}`;
             }
           }
           
