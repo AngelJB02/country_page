@@ -278,11 +278,40 @@ const MembershipAdminDashboard = () => {
       if (response.ok) {
         const status = await response.json()
         const statusMap = {}
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
+        
         status.forEach(item => {
-          statusMap[item.id] = {
-            estado_pago: item.estado_pago,
-            dias_restantes: item.dias_restantes,
-            proxima_fecha: item.proxima_fecha
+          let estado_pago = 'al_dia';
+          let dias_restantes = null;
+          
+          // Calcular próxima fecha de pago y estado
+          if (item.ultimo_pago) {
+            const ultimoPago = new Date(item.ultimo_pago);
+            const proximaFecha = new Date(ultimoPago);
+            proximaFecha.setMonth(proximaFecha.getMonth() + 1);
+            proximaFecha.setHours(0, 0, 0, 0);
+            
+            const diffTime = proximaFecha - hoy;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays < 0) {
+              estado_pago = 'vencido';
+              dias_restantes = diffDays; // Negativo
+            } else if (diffDays <= 7) {
+              estado_pago = 'proximo_vencer';
+              dias_restantes = diffDays;
+            } else {
+              estado_pago = 'al_dia';
+              dias_restantes = diffDays;
+            }
+            
+            statusMap[item.cliente_id] = {
+              estado_pago: estado_pago,
+              dias_restantes: dias_restantes,
+              ultimo_pago: item.ultimo_pago,
+              proxima_fecha: proximaFecha.toISOString().split('T')[0]
+            }
           }
         })
         setPaymentStatus(statusMap)
@@ -848,17 +877,31 @@ const MembershipAdminDashboard = () => {
     fetch("http://212.227.238.213/api/api/users/users-with-payments")
       .then((res) => res.json())
       .then((data) => {
-        const mapped = data.map((u) => ({
-          id: u.id,
-          name: u.nombre + (u.apellido ? " " + u.apellido : ""),
-          email: u.email || "",
-          status: capitalizeStatus(u.estatus),
-          monthlyFee: u.monto || 0,
-          paymentDate: "",
-          lastPaymentDate: u.fecha_pago || "",
-          proximaFecha: u.proxima_fecha || "",
-          rol: u.rol || "",
-        }))
+        const mapped = data.map((u) => {
+          // Calcular próxima fecha de pago: última fecha + 1 mes
+          let proximaFecha = "";
+          if (u.fecha_pago) {
+            const fechaPago = new Date(u.fecha_pago);
+            if (!isNaN(fechaPago.getTime())) {
+              // Sumar 1 mes
+              fechaPago.setMonth(fechaPago.getMonth() + 1);
+              // Formatear como YYYY-MM-DD
+              proximaFecha = fechaPago.toISOString().split('T')[0];
+            }
+          }
+          
+          return {
+            id: u.id,
+            name: u.nombre + (u.apellido ? " " + u.apellido : ""),
+            email: u.email || "",
+            status: capitalizeStatus(u.estatus),
+            monthlyFee: u.monto || 0,
+            paymentDate: "",
+            lastPaymentDate: u.fecha_pago || "",
+            proximaFecha: proximaFecha,
+            rol: u.rol || "",
+          };
+        })
         setMembers(mapped)
         setLoading(false)
       })
