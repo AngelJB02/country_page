@@ -744,6 +744,7 @@ const MembershipAdminDashboard = () => {
       const clientData = {
         nombre: newClient.nombre,
         apellido: newClient.apellido,
+        email: withoutEmail ? undefined : newClient.email,
         correo: withoutEmail ? undefined : newClient.email,
         edad: newClient.edad || null,
         telefono: newClient.telefono || null,
