@@ -10,6 +10,9 @@ export function ChangePasswordModal({ isOpen, onClose }) {
   const [newPass, setNewPass] = useState('')
   const [confirmPass, setConfirmPass] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showOldPass, setShowOldPass] = useState(false)
+  const [showNewPass, setShowNewPass] = useState(false)
+  const [showConfirmPass, setShowConfirmPass] = useState(false)
 
   if (!isOpen) return null
 
@@ -151,17 +154,95 @@ export function ChangePasswordModal({ isOpen, onClose }) {
         </div>
 
         <div className="bm-body">
-          <div className="bm-row" style={{flexDirection:'column',gap:8}}>
+          <div className="bm-password-field">
             <label className="bm-label">Contraseña actual</label>
-            <input className="bm-value" type="password" value={oldPass} onChange={(e)=>setOldPass(e.target.value)} />
+            <div className="bm-password-input-wrapper">
+              <input 
+                className="bm-password-input" 
+                type={showOldPass ? "text" : "password"} 
+                value={oldPass} 
+                onChange={(e)=>setOldPass(e.target.value)}
+                placeholder="Ingresa tu contraseña actual"
+              />
+              <button
+                type="button"
+                className="bm-password-toggle"
+                onClick={() => setShowOldPass(!showOldPass)}
+                aria-label={showOldPass ? "Ocultar contraseña" : "Mostrar contraseña"}
+              >
+                {showOldPass ? (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                  </svg>
+                ) : (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                )}
+              </button>
+            </div>
           </div>
-          <div className="bm-row" style={{flexDirection:'column',gap:8}}>
+          <div className="bm-password-field">
             <label className="bm-label">Nueva contraseña</label>
-            <input className="bm-value" type="password" value={newPass} onChange={(e)=>setNewPass(e.target.value)} />
+            <div className="bm-password-input-wrapper">
+              <input 
+                className="bm-password-input" 
+                type={showNewPass ? "text" : "password"} 
+                value={newPass} 
+                onChange={(e)=>setNewPass(e.target.value)}
+                placeholder="Mínimo 8 caracteres"
+              />
+              <button
+                type="button"
+                className="bm-password-toggle"
+                onClick={() => setShowNewPass(!showNewPass)}
+                aria-label={showNewPass ? "Ocultar contraseña" : "Mostrar contraseña"}
+              >
+                {showNewPass ? (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                  </svg>
+                ) : (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                )}
+              </button>
+            </div>
           </div>
-          <div className="bm-row" style={{flexDirection:'column',gap:8}}>
+          <div className="bm-password-field">
             <label className="bm-label">Confirmar contraseña</label>
-            <input className="bm-value" type="password" value={confirmPass} onChange={(e)=>setConfirmPass(e.target.value)} />
+            <div className="bm-password-input-wrapper">
+              <input 
+                className="bm-password-input" 
+                type={showConfirmPass ? "text" : "password"} 
+                value={confirmPass} 
+                onChange={(e)=>setConfirmPass(e.target.value)}
+                placeholder="Confirma tu nueva contraseña"
+              />
+              <button
+                type="button"
+                className="bm-password-toggle"
+                onClick={() => setShowConfirmPass(!showConfirmPass)}
+                aria-label={showConfirmPass ? "Ocultar contraseña" : "Mostrar contraseña"}
+              >
+                {showConfirmPass ? (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                  </svg>
+                ) : (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                )}
+              </button>
+            </div>
           </div>
         </div>
 

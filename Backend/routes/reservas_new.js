@@ -1119,6 +1119,48 @@ router.post('/book', async (req, res) => {
       tipoCliente === 'media_renta' ? 'media_renta' : 'normal'
     ]);
 
+    // Enviar email de confirmación si el cliente tiene correo
+    try {
+      const [clienteData] = await db.query(`
+        SELECT nombre, apellido, correo FROM usuarios WHERE id = ?
+      `, [cliente_id]);
+
+      if (clienteData.length > 0 && clienteData[0].correo && clienteData[0].correo.trim() !== '') {
+        // Obtener nombre de la instructora si existe
+        let instructoraNombre = null;
+        if (instructora_id) {
+          const [instructoraData] = await db.query(`
+            SELECT i.nombre, i.apellido 
+            FROM instructoras inst
+            JOIN usuarios i ON inst.usuario_id = i.id
+            WHERE inst.id = ?
+          `, [instructora_id]);
+          
+          if (instructoraData.length > 0) {
+            instructoraNombre = `${instructoraData[0].nombre} ${instructoraData[0].apellido}`;
+          }
+        }
+
+        const tipoReserva = tipoCliente === 'propietario' ? 'propietario' : 
+                           tipoCliente === 'renta' ? 'renta' :
+                           tipoCliente === 'media_renta' ? 'media_renta' : null;
+
+        await axios.post('http://212.227.238.213/api/api/email/send-reservation-confirmation', {
+          email: clienteData[0].correo.trim(),
+          nombre: `${clienteData[0].nombre} ${clienteData[0].apellido}`,
+          fechaReserva: fecha,
+          horaInicio: hora_inicio.slice(0, 5),
+          horaFin: hora_fin.slice(0, 5),
+          instructor: instructoraNombre,
+          tipoReserva: tipoReserva
+        });
+        console.log(`✅ Email de confirmación de reserva enviado a: ${clienteData[0].correo}`);
+      }
+    } catch (emailError) {
+      console.error(`⚠️ Error al enviar email de confirmación de reserva:`, emailError.message);
+      // No bloquear la respuesta si falla el email
+    }
+
     res.json({
       message: 'Reserva creada correctamente',
       id: result.insertId,

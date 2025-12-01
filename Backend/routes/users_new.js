@@ -283,6 +283,23 @@ router.post('/register', async (req, res) => {
       connection.release();
     }
 
+    // Enviar email con credenciales si el usuario tiene correo
+    if (correo && correo.trim() !== '') {
+      try {
+        await axios.post('http://212.227.238.213/api/api/email/send-credentials', {
+          email: correo.trim(),
+          nombre: nombre,
+          username: username,
+          password: password,
+          rol: rol
+        });
+        console.log(`✅ Email de credenciales enviado a: ${correo}`);
+      } catch (emailError) {
+        console.error(`⚠️ Error al enviar email de credenciales a ${correo}:`, emailError.message);
+        // No bloquear la respuesta si falla el email
+      }
+    }
+
     res.json({
       message: 'Usuario registrado correctamente',
       id: result.insertId,
@@ -510,6 +527,18 @@ router.patch('/update-password/:id', async (req, res) => {
       }
     }
 
+    // Obtener datos completos del usuario antes de actualizar
+    const [userRows] = await db.query(
+      "SELECT nombre, apellido, correo, username FROM usuarios WHERE id=?",
+      [id]
+    );
+
+    if (userRows.length === 0) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    const user = userRows[0];
+
     // Actualizar la contraseña
     const [result] = await db.query(
       "UPDATE usuarios SET contrasena=? WHERE id=?",
@@ -518,6 +547,22 @@ router.patch('/update-password/:id', async (req, res) => {
 
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    // Enviar email con credenciales actualizadas si el usuario tiene correo
+    if (user.correo && user.correo.trim() !== '') {
+      try {
+        await axios.post('http://212.227.238.213/api/api/email/send-updated-credentials', {
+          email: user.correo.trim(),
+          nombre: `${user.nombre} ${user.apellido || ''}`.trim(),
+          username: user.username,
+          newPassword: password
+        });
+        console.log(`✅ Email de credenciales actualizadas enviado a: ${user.correo}`);
+      } catch (emailError) {
+        console.error(`⚠️ Error al enviar email de credenciales actualizadas a ${user.correo}:`, emailError.message);
+        // No bloquear la respuesta si falla el email
+      }
     }
 
     res.json({ message: 'Contraseña actualizada correctamente' });

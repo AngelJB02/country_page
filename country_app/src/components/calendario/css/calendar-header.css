@@ -73,12 +73,40 @@
 @media (max-width: 640px) {
 	.ch-container {
 		padding: 16px 20px;
+		flex-direction: column;
+		gap: 16px;
 	}
 
 	.ch-info {
 		position: static;
 		transform: none;
-		margin: 0 auto 8px auto;
+		margin: 0;
+		width: 100%;
+	}
+
+	.ch-title {
+		font-size: 28px;
+	}
+
+	.ch-welcome {
+		font-size: 16px;
+	}
+
+	.ch-subtitle {
+		font-size: 14px;
+		padding: 3px 8px;
+	}
+
+	.ch-logout-btn,
+	.ch-change-btn {
+		width: 100%;
+		justify-content: center;
+		margin-right: 0;
+		font-size: 16px;
+	}
+
+	.ch-change-btn {
+		margin-bottom: 8px;
 	}
 }
 
