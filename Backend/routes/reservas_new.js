@@ -1014,6 +1014,9 @@ router.post('/book', async (req, res) => {
 
     if (!esIniciacion) {
       // Para clases que NO son iniciación: buscar si hay una instructora que ya tiene alumnos en este slot
+      const diaSemanaMySQL = getDiaSemanaMySQL(fecha);
+      const fechaMySQL = formatDateForMySQL(fecha);
+      
       const [instructoraActual] = await db.query(`
         SELECT DISTINCT r.instructora_id, COUNT(*) as alumnos_en_slot
         FROM reservas r
@@ -1025,12 +1028,17 @@ router.post('/book', async (req, res) => {
           AND r.estatus IN ('pendiente','confirmada')
           AND i.disponibilidad = 'disponible'
           AND r.instructora_id NOT IN (
-            SELECT d.instructora_id FROM descansos d WHERE ? BETWEEN d.fecha_inicio AND d.fecha_fin
+            SELECT d.instructora_id FROM descansos d 
+            WHERE (
+              (d.es_recurrente = 1 AND d.dia_semana = ?)
+              OR
+              (d.es_recurrente = 0 AND ? BETWEEN d.fecha_inicio AND d.fecha_fin)
+            )
           )
         GROUP BY r.instructora_id
         HAVING alumnos_en_slot < ?
         LIMIT 1
-      `, [clase_id, formatDateForMySQL(fecha), formatTimeForMySQL(hora_inicio), clase_id, fecha, infoClase.cupo_max]);
+      `, [clase_id, fechaMySQL, formatTimeForMySQL(hora_inicio), clase_id, diaSemanaMySQL, fechaMySQL, infoClase.cupo_max]);
 
       // Si hay una instructora que ya tiene alumnos en este slot y clase específica, asignarle
       if (instructoraActual.length > 0) {
@@ -1045,6 +1053,10 @@ router.post('/book', async (req, res) => {
     if (!instructora_id) {
       // Si no hay nadie en el slot, buscar TODAS las instructoras disponibles
       // EXCLUIR instructoras que YA tengan CUALQUIER clase en este horario (sin importar categoría)
+      // EXCLUIR instructoras en descanso (tanto recurrentes como no recurrentes)
+      const diaSemanaMySQL = getDiaSemanaMySQL(fecha);
+      const fechaMySQL = formatDateForMySQL(fecha);
+      
       const [candidatas] = await db.query(`
         SELECT i.id as instructora_id, i.nombre, i.apellido,
           (SELECT COUNT(*) FROM reservas r2 
@@ -1061,7 +1073,12 @@ router.post('/book', async (req, res) => {
         JOIN instructora_clase ic ON i.id = ic.instructora_id AND ic.clase_id = ? AND ic.activo = 1
         WHERE i.disponibilidad = 'disponible'
           AND i.id NOT IN (
-            SELECT d.instructora_id FROM descansos d WHERE ? BETWEEN d.fecha_inicio AND d.fecha_fin
+            SELECT d.instructora_id FROM descansos d 
+            WHERE (
+              (d.es_recurrente = 1 AND d.dia_semana = ?)
+              OR
+              (d.es_recurrente = 0 AND ? BETWEEN d.fecha_inicio AND d.fecha_fin)
+            )
           )
           AND i.id NOT IN (
             SELECT r.instructora_id FROM reservas r 
@@ -1074,7 +1091,8 @@ router.post('/book', async (req, res) => {
         fecha, fecha, fecha, fecha, // para calcular semana de la reserva
         fecha, hora_inicio, hora_fin, // para detectar clases consecutivas
         clase_id,
-        fecha,
+        diaSemanaMySQL, // para descansos recurrentes
+        fechaMySQL, // para descansos no recurrentes
         fecha,
         hora_inicio
       ]);
