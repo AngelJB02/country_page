@@ -11,24 +11,46 @@ function formatearFecha(fechaReserva) {
   // Si la fecha viene en formato YYYY-MM-DD, parsearla manualmente
   if (/^\d{4}-\d{2}-\d{2}$/.test(fechaReserva)) {
     const [year, month, day] = fechaReserva.split('-').map(Number);
-    const fecha = new Date(year, month - 1, day); // month - 1 porque Date usa 0-11 para meses
+    // Crear fecha a mediodía para evitar problemas de zona horaria
+    const fecha = new Date(year, month - 1, day, 12, 0, 0);
     return fecha.toLocaleDateString('es-ES', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
-      day: 'numeric',
-      timeZone: 'America/Cancun' // Especificar zona horaria
+      day: 'numeric'
     });
   }
   
-  // Fallback si el formato no es el esperado
+  // Si es un Date object o timestamp
+  if (fechaReserva instanceof Date) {
+    return fechaReserva.toLocaleDateString('es-ES', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  }
+  
+  // Fallback: intentar parsear con split de 'T' si viene del formato ISO
+  const fechaStr = String(fechaReserva).split('T')[0];
+  if (/^\d{4}-\d{2}-\d{2}$/.test(fechaStr)) {
+    const [year, month, day] = fechaStr.split('-').map(Number);
+    const fecha = new Date(year, month - 1, day, 12, 0, 0);
+    return fecha.toLocaleDateString('es-ES', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  }
+  
+  // Último fallback
   const fecha = new Date(fechaReserva);
   return fecha.toLocaleDateString('es-ES', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
-    day: 'numeric',
-    timeZone: 'America/Cancun'
+    day: 'numeric'
   });
 }
 
