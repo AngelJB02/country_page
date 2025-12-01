@@ -192,26 +192,11 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
           );
           const esEstatusValido = (b.estatus === 'pendiente' || b.estatus === 'confirmada');
           
-          // Debug: ver qué reservas se están considerando
-          if (matchesSlot) {
-            console.log(`🔍 Reserva en slot ${day}-${time}:`, {
-              id: b.id,
-              estatus: b.estatus,
-              esEstatusValido,
-              clase: b.clase_nombre
-            });
-          }
-          
           // Solo contar si el estatus es 'pendiente' o 'confirmada'
           return matchesSlot && esEstatusValido;
         }
         return false;
       }).length;
-      
-      // Debug: mostrar el resultado del conteo
-      if (totalBookingsForSlot > 0) {
-        console.log(`✅ Total válidas en ${day}-${time}: ${totalBookingsForSlot}`);
-      }
 
       // Buscar si el usuario tiene una reserva completada o cancelada en este slot
       let userStatus = null;
@@ -344,26 +329,8 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
                     b.clase_nombre === className
                   );
                   
-                  if (matchesSlot) {
-                    console.log('🔍 Reserva en este slot:', {
-                      cliente_id: b.cliente_id,
-                      userId: userId,
-                      coincide: b.cliente_id === userId,
-                      estatus: b.estatus
-                    });
-                  }
-                  
                   return matchesSlot && b.cliente_id === userId && (b.estatus === 'confirmada' || b.estatus === 'pendiente');
                 });
-                
-                // Debug: verificar totalBooked
-                if (slot.totalBooked > 0 || slot.bookings.length > 0) {
-                  console.log(`📊 Slot ${slot.day}-${slot.time}:`, {
-                    totalBooked: slot.totalBooked,
-                    bookingsLength: slot.bookings.length,
-                    usando: slot.totalBooked
-                  });
-                }
                 
                 return (
                   <TimeSlotCard

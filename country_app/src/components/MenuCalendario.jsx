@@ -207,20 +207,6 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
       return;
     }
     
-    // Debug: verificar la fecha que se está enviando
-    console.log('📅 Fecha del slot (ANTES de enviar):', {
-      slotDate,
-      fechaISO,
-      day: selectedSlot.day,
-      time: selectedSlot.time,
-      slotDateToString: slotDate ? slotDate.toString() : null,
-      slotDateToISOString: slotDate ? slotDate.toISOString() : null,
-      slotDateToLocaleDateString: slotDate ? slotDate.toLocaleDateString('es-MX') : null,
-      slotDateGetFullYear: slotDate ? slotDate.getFullYear() : null,
-      slotDateGetMonth: slotDate ? slotDate.getMonth() : null,
-      slotDateGetDate: slotDate ? slotDate.getDate() : null,
-    });
-    
     const [day, time] = selectedSlot.id.split('-');
     try {
       const reservaCreada = await createBooking({
@@ -255,18 +241,8 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
       const fechaInicio = getDateString(weekStart);
       const fechaFin = getDateString(weekEnd);
       
-      console.log('🔄 Refrescando reservas de la semana:', {
-        slotDate: slotDateForWeek,
-        weekStart,
-        weekEnd,
-        fechaInicio,
-        fechaFin
-      });
-      
       const weekData = await fetchWeekBookings(fechaInicio, fechaFin, userId);
       setAllWeekBookings(weekData);
-      
-      console.log('✅ Reservas de la semana actualizadas:', weekData.length);
     } catch (error) {
       // DEBUG: Ver qué está llegando
       console.log('=== ERROR CAPTURADO ===');

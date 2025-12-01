@@ -8,12 +8,16 @@ export function TimeSlotCard({ time, capacity, bookedCount, isBookedByUser, isBl
   const isFull = bookedCount >= capacity;
   const availableSpots = capacity - bookedCount;
   const hasSomeBookings = bookedCount > 0 && bookedCount < capacity;
+  
+  // ⚠️ IMPORTANTE: userStatus indica si el USUARIO tiene una reserva en este slot
+  // Si userStatus es 'confirmada' o 'pendiente', significa que el usuario tiene reserva
+  const userHasBooking = userStatus === 'confirmada' || userStatus === 'pendiente';
 
   // Estado visual según el estatus de la reserva del usuario
-  // Nota: las reservas canceladas por instructor ya no se consideran como reservadas (isBookedByUser será false)
+  // PRIORIDAD: Si userStatus indica que el usuario tiene reserva, mostrar como 'booked' independientemente de isBookedByUser
   let stateClass = isBlocked
     ? 'tsc--blocked'
-    : isBookedByUser && (userStatus === 'confirmada' || userStatus === 'pendiente')
+    : userHasBooking
     ? 'tsc--booked'
     : isFull
     ? 'tsc--full'
@@ -44,9 +48,9 @@ export function TimeSlotCard({ time, capacity, bookedCount, isBookedByUser, isBl
     } else {
       metaText = 'Bloqueado';
     }
-  } else if (isBookedByUser && userStatus === 'completada') {
+  } else if (userStatus === 'completada') {
     metaText = 'Ya asististe';
-  } else if (isBookedByUser) {
+  } else if (userHasBooking) {
     metaText = 'Tu reserva';
   } else if (isFull) {
     metaText = 'Completo';
@@ -79,7 +83,7 @@ export function TimeSlotCard({ time, capacity, bookedCount, isBookedByUser, isBl
 
         <div className="tsc-meta">
           {metaText}
-          {isBookedByUser && instructoraNombre && (
+          {userHasBooking && instructoraNombre && (
             <div className="tsc-instructora">Instructora: {instructoraNombre}</div>
           )}
         </div>
