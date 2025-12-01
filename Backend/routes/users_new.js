@@ -838,30 +838,59 @@ router.get('/payment-status', async (req, res) => {
         c.monto,
         c.fecha_pago,
         c.concepto,
-        c.estatus_pago
+        c.estatus_pago,
+        DATE_ADD(c.fecha_pago, INTERVAL 1 MONTH) AS proxima_fecha_pago,
+        DATEDIFF(CURDATE(), DATE_ADD(c.fecha_pago, INTERVAL 1 MONTH)) AS dias_vencido
       FROM usuarios u
       LEFT JOIN contabilidad c ON u.id = c.cliente_id
-      WHERE c.id = (
-        SELECT MAX(c2.id) 
-        FROM contabilidad c2 
-        WHERE c2.cliente_id = u.id
+      WHERE u.rol = 'cliente' AND (
+        c.id = (
+          SELECT MAX(c2.id) 
+          FROM contabilidad c2 
+          WHERE c2.cliente_id = u.id
+        )
+        OR c.id IS NULL
       )
-      OR c.id IS NULL
       ORDER BY c.fecha_pago DESC
     `;
 
     const [rows] = await db.query(query);
 
-    const paymentStatus = rows.map(row => ({
-      cliente_id: row.cliente_id,
-      nombre: row.nombre,
-      apellido: row.apellido,
-      email: row.email,
-      monto: row.monto,
-      fecha_pago: row.fecha_pago ? formatDateForDisplay(row.fecha_pago) : null,
-      concepto: row.concepto,
-      estatus_pago: row.estatus_pago
-    }));
+    const paymentStatus = rows.map(row => {
+      let estado_pago = 'al_dia';
+      let dias_restantes = null;
+      
+      if (row.fecha_pago && row.proxima_fecha_pago) {
+        const diasVencido = row.dias_vencido;
+        
+        if (diasVencido > 0) {
+          // Ya pasó la fecha de pago
+          estado_pago = 'vencido';
+          dias_restantes = diasVencido * -1; // Negativo indica días vencidos
+        } else if (diasVencido >= -7 && diasVencido < 0) {
+          // Próximo a vencer (menos de 7 días)
+          estado_pago = 'proximo_vencer';
+          dias_restantes = Math.abs(diasVencido);
+        } else {
+          estado_pago = 'al_dia';
+          dias_restantes = Math.abs(diasVencido);
+        }
+      }
+      
+      return {
+        cliente_id: row.cliente_id,
+        nombre: row.nombre,
+        apellido: row.apellido,
+        email: row.email,
+        monto: row.monto,
+        ultimo_pago: row.fecha_pago ? formatDateForDisplay(row.fecha_pago) : null,
+        proxima_fecha: row.proxima_fecha_pago ? formatDateForDisplay(row.proxima_fecha_pago) : null,
+        concepto: row.concepto,
+        estatus_pago: row.estatus_pago,
+        estado_pago: estado_pago,
+        dias_restantes: dias_restantes
+      };
+    });
 
     res.json(paymentStatus);
   } catch (err) {

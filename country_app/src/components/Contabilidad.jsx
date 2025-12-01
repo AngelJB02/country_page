@@ -38,6 +38,7 @@ const MembershipAdminDashboard = () => {
   const [creatingClient, setCreatingClient] = useState(false)
   const [paymentCounts, setPaymentCounts] = useState({})
   const [paymentStatus, setPaymentStatus] = useState({})
+  const [showOverdueFilter, setShowOverdueFilter] = useState(false)
   const [withoutEmail, setWithoutEmail] = useState(false)
   const [previewCredentials, setPreviewCredentials] = useState({ username: "", password: "" })
   const [credentialsModalOpen, setCredentialsModalOpen] = useState(false)
@@ -452,9 +453,13 @@ const MembershipAdminDashboard = () => {
   const filteredMembers = members
     .filter((member) => member.rol === "cliente")
     .filter(
-      (member) =>
-        member.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-        (statusFilter === "" || normalize(member.status) === normalize(statusFilter)),
+      (member) => {
+        const matchesSearch = member.name.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesStatus = statusFilter === "" || normalize(member.status) === normalize(statusFilter);
+        const matchesOverdue = showOverdueFilter ? paymentStatus[member.id]?.estado_pago === "vencido" : true;
+        
+        return matchesSearch && matchesStatus && matchesOverdue;
+      }
     )
 
   // Calcular paginación
@@ -466,7 +471,7 @@ const MembershipAdminDashboard = () => {
   // Resetear a la primera página cuando cambian los filtros
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchTerm, statusFilter])
+  }, [searchTerm, statusFilter, showOverdueFilter])
 
   const openModal = (member) => {
     setSelectedMember(member)
@@ -1079,6 +1084,71 @@ const MembershipAdminDashboard = () => {
                     <option value="Pendiente">Pendiente</option>
                   </select>
                 </div>
+                <button
+                  onClick={() => setShowOverdueFilter(!showOverdueFilter)}
+                  style={{
+                    padding: "0.7rem 1.5rem",
+                    background: showOverdueFilter 
+                      ? "linear-gradient(135deg, #38a169 0%, #2f855a 100%)" 
+                      : "linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)",
+                    color: "white",
+                    border: showOverdueFilter ? "2px solid #68d391" : "2px solid transparent",
+                    borderRadius: "8px",
+                    fontWeight: "700",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    boxShadow: showOverdueFilter 
+                      ? "0 4px 12px rgba(56,161,105,0.4), inset 0 2px 4px rgba(255,255,255,0.2)" 
+                      : "0 2px 8px rgba(255,107,107,0.3)",
+                    transition: "all 0.3s ease",
+                    position: "relative",
+                    overflow: "hidden"
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "translateY(-2px)";
+                    e.currentTarget.style.boxShadow = showOverdueFilter 
+                      ? "0 6px 16px rgba(56,161,105,0.5), inset 0 2px 4px rgba(255,255,255,0.2)"
+                      : "0 4px 12px rgba(255,107,107,0.4)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "translateY(0)";
+                    e.currentTarget.style.boxShadow = showOverdueFilter 
+                      ? "0 4px 12px rgba(56,161,105,0.4), inset 0 2px 4px rgba(255,255,255,0.2)"
+                      : "0 2px 8px rgba(255,107,107,0.3)";
+                  }}
+                >
+                  {showOverdueFilter ? (
+                    <>
+                      <CheckCircle size={18} />
+                      <span>Filtro Activo</span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertTriangle size={18} />
+                      <span>Mostrar Vencidos</span>
+                    </>
+                  )}
+                  {(() => {
+                    const count = members.filter(m => 
+                      m.rol === "cliente" && paymentStatus[m.id]?.estado_pago === "vencido"
+                    ).length;
+                    return count > 0 ? (
+                      <span style={{
+                        background: showOverdueFilter 
+                          ? "rgba(255,255,255,0.25)" 
+                          : "rgba(255,255,255,0.3)",
+                        padding: "0.2rem 0.6rem",
+                        borderRadius: "12px",
+                        fontSize: "0.85rem",
+                        fontWeight: "700",
+                        minWidth: "24px",
+                        textAlign: "center"
+                      }}>{count}</span>
+                    ) : null;
+                  })()}
+                </button>
               </div>
             </div>
           </div>
