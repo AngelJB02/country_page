@@ -726,13 +726,14 @@ router.get('/my-reservations/:clienteId', async (req, res) => {
   const { clienteId } = req.params;
 
    try {
-    // Actualizar reservas pasadas a completadas automáticamente (usando zona horaria Cancún)
+    // Actualizar reservas pasadas a completadas automáticamente
+    // Como MySQL ya está en zona horaria de Cancún, no necesitamos CONVERT_TZ
     await db.query(`
       UPDATE reservas 
       SET estatus = 'completada'
       WHERE cliente_id = ?
       AND estatus IN ('pendiente', 'confirmada')
-      AND CONVERT_TZ(CONCAT(fecha, ' ', hora_fin), '+00:00', 'America/Cancun') < CONVERT_TZ(NOW(), @@session.time_zone, 'America/Cancun')
+      AND CONCAT(fecha, ' ', hora_fin) < NOW()
     `, [clienteId]);
 
     const query = `
@@ -1141,6 +1142,29 @@ router.get('/week', async (req, res) => {
 
     // Si se proporciona cliente_id, actualizar sus reservas pasadas a completadas
     if (cliente_id) {
+      // Verificar hora actual de MySQL
+      const [timeCheck] = await db.query('SELECT NOW() as hora_actual');
+      console.log('\n=== COMPROBACIÓN DE RESERVAS COMPLETADAS ===');
+      console.log('🕐 Hora actual MySQL:', timeCheck[0].hora_actual);
+      
+      // Ver qué reservas se van a actualizar ANTES de hacerlo
+      const [reservasACompletar] = await db.query(`
+        SELECT id, fecha, hora_inicio, hora_fin, 
+               CONCAT(fecha, ' ', hora_fin) as fecha_hora_fin,
+               estatus
+        FROM reservas
+        WHERE cliente_id = ?
+        AND estatus IN ('pendiente', 'confirmada')
+        AND CONCAT(fecha, ' ', hora_fin) < NOW()
+      `, [cliente_id]);
+      
+      if (reservasACompletar.length > 0) {
+        console.log('📋 Reservas que se marcarán como completadas:', reservasACompletar);
+      } else {
+        console.log('✅ No hay reservas para marcar como completadas');
+      }
+      console.log('==========================================\n');
+      
       await db.query(`
         UPDATE reservas 
         SET estatus = 'completada'
