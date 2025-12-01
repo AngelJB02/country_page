@@ -298,14 +298,31 @@ router.post("/send-reservation-confirmation", async (req, res) => {
         .json({ error: "Campos requeridos: email, nombre, fechaReserva, horaInicio, horaFin" });
     }
 
-    // Formatear fecha
-    const fecha = new Date(fechaReserva);
-    const fechaFormateada = fecha.toLocaleDateString('es-ES', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+    // Formatear fecha - parsear manualmente para evitar problemas de zona horaria
+    // La fecha viene en formato YYYY-MM-DD, parsearla directamente
+    let fechaFormateada;
+    if (fechaReserva && /^\d{4}-\d{2}-\d{2}$/.test(fechaReserva)) {
+      // Parsear la fecha manualmente para evitar problemas de zona horaria
+      const [year, month, day] = fechaReserva.split('-').map(Number);
+      const fecha = new Date(year, month - 1, day); // month - 1 porque Date usa 0-11 para meses
+      fechaFormateada = fecha.toLocaleDateString('es-ES', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        timeZone: 'America/Cancun' // Especificar zona horaria
+      });
+    } else {
+      // Fallback si el formato no es el esperado
+      const fecha = new Date(fechaReserva);
+      fechaFormateada = fecha.toLocaleDateString('es-ES', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        timeZone: 'America/Cancun'
+      });
+    }
 
     // Formatear tipo de reserva de manera amigable
     const tipoReservaAmigable = tipoReserva === 'propietario' ? 'Propietario' :
@@ -462,14 +479,31 @@ router.post("/send-cancellation-notification", async (req, res) => {
         .json({ error: "Campos requeridos: email, nombre, fechaReserva, horaInicio, horaFin" });
     }
 
-    // Formatear fecha
-    const fecha = new Date(fechaReserva);
-    const fechaFormateada = fecha.toLocaleDateString('es-ES', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+    // Formatear fecha - parsear manualmente para evitar problemas de zona horaria
+    // La fecha viene en formato YYYY-MM-DD, parsearla directamente
+    let fechaFormateada;
+    if (fechaReserva && /^\d{4}-\d{2}-\d{2}$/.test(fechaReserva)) {
+      // Parsear la fecha manualmente para evitar problemas de zona horaria
+      const [year, month, day] = fechaReserva.split('-').map(Number);
+      const fecha = new Date(year, month - 1, day); // month - 1 porque Date usa 0-11 para meses
+      fechaFormateada = fecha.toLocaleDateString('es-ES', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        timeZone: 'America/Cancun' // Especificar zona horaria
+      });
+    } else {
+      // Fallback si el formato no es el esperado
+      const fecha = new Date(fechaReserva);
+      fechaFormateada = fecha.toLocaleDateString('es-ES', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        timeZone: 'America/Cancun'
+      });
+    }
 
     const response = await resend.emails.send({
       from: "EL REFUGIO <noreply@elrefugiocountryclub.com>",
