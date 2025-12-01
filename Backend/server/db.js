@@ -3,9 +3,12 @@ import mysql from 'mysql2/promise';
 
 const db = mysql.createPool({
   host: '212.227.238.213',
-  user: 'dev_user',
-  password: 'elrefugio2025desarrollo',
+  user: 'root',
+  password: 'ElRefugio2025',
   database: 'contry_refugiodb',
+  waitForConnections: true,
+  connectionLimit: 5,
+  queueLimit: 0,
   waitForConnections: true,
   connectionLimit: 5,
   queueLimit: 0,
