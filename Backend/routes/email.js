@@ -2,7 +2,7 @@ import express from "express";
 import { Resend } from "resend";
 
 const router = express.Router();
-const resend = new Resend("a");
+const resend = new Resend("re_h3MUFR11_AMEvhDEbDmza1P89t3fHWkJ5");
 
 router.post("/send-credentials", async (req, res) => {
   try {
@@ -16,9 +16,9 @@ router.post("/send-credentials", async (req, res) => {
     }
 
     const response = await resend.emails.send({
-      from: "Acme <onboarding@resend.dev>",
+      from: "EL REFUGIO <noreply@elrefugiocountryclub.com>",
       to: usuarioData.email,
-      subject: "Tus credenciales de acceso - EL REFUGIO (DESARROLLO)",
+      subject: "Tus credenciales de acceso - EL REFUGIO",
       html: `<!DOCTYPE html>
 <html>
 <head>
@@ -124,8 +124,8 @@ router.post("/send-credentials", async (req, res) => {
               <p style="margin:0 0 6px 0; color:#ffffff; font-size:14px; font-weight:600;">
                 EL REFUGIO
               </p>
-              <p style="margin:0 0 12px 0; color:rgba(255,255,255,0.7); font-size:12px;">
-                © ${new Date().getFullYear()} Todos los derechos reservados
+              <p style="margin:0; color:rgba(255,255,255,0.7); font-size:12px;">
+                © 2025 Todos los derechos reservados
               </p>
             </td>
           </tr>
@@ -158,9 +158,9 @@ router.post("/send-updated-credentials", async (req, res) => {
     }
 
     const response = await resend.emails.send({
-      from: "Acme <onboarding@resend.dev>",
+      from: "EL REFUGIO <noreply@elrefugiocountryclub.com>",
       to: email,
-      subject: "Contraseña actualizada - EL REFUGIO (DESARROLLO)",
+      subject: "Contraseña actualizada - EL REFUGIO",
       html: `<!DOCTYPE html>
 <html>
 <head>
@@ -262,11 +262,11 @@ router.post("/send-updated-credentials", async (req, res) => {
           <!-- Footer -->
           <tr>
             <td style="background:#2d2d2d; padding:28px 40px; text-align:center;">
-              <p style="margin:0 0 6px 0; color:#ffffff; font-size:14px; font-weight:600;">
+              <p style="margin:0; color:#ffffff; font-size:14px; font-weight:600;">
                 EL REFUGIO
               </p>
-              <p style="margin:0 0 12px 0; color:rgba(255,255,255,0.7); font-size:12px;">
-                © ${new Date().getFullYear()} Todos los derechos reservados
+              <p style="margin:0; color:rgba(255,255,255,0.7); font-size:12px;">
+                © 2025 Todos los derechos reservados
               </p>
             </td>
           </tr>
@@ -314,7 +314,7 @@ router.post("/send-reservation-confirmation", async (req, res) => {
                                 'Clase Regular';
 
     const response = await resend.emails.send({
-      from: "Acme <onboarding@resend.dev>",
+      from: "EL REFUGIO <noreply@elrefugiocountryclub.com>",
       to: email,
       subject: "Confirmación de Reserva - EL REFUGIO",
       html: `<!DOCTYPE html>
@@ -426,14 +426,11 @@ router.post("/send-reservation-confirmation", async (req, res) => {
           <!-- Footer -->
           <tr>
             <td style="background:#2d2d2d; padding:28px 40px; text-align:center;">
-              <p style="margin:0 0 6px 0; color:#ffffff; font-size:14px; font-weight:600;">
+              <p style="margin:0; color:#ffffff; font-size:14px; font-weight:600;">
                 EL REFUGIO
               </p>
-              <p style="margin:0 0 12px 0; color:rgba(255,255,255,0.7); font-size:12px;">
-                © ${new Date().getFullYear()} Todos los derechos reservados
-              </p>
-              <p style="margin:0; color:rgba(255,255,255,0.7); font-size:11px;">
-                ¿Necesitas ayuda? Contactanos al teléfono: [TELEFONO] | Email: [EMAIL]
+              <p style="margin:0; color:rgba(255,255,255,0.7); font-size:12px;">
+                © 2025 Todos los derechos reservados
               </p>
             </td>
           </tr>
@@ -475,7 +472,7 @@ router.post("/send-cancellation-notification", async (req, res) => {
     });
 
     const response = await resend.emails.send({
-      from: "Acme <onboarding@resend.dev>",
+      from: "EL REFUGIO <noreply@elrefugiocountryclub.com>",
       to: email,
       subject: "Cancelación de Reserva - EL REFUGIO",
       html: `<!DOCTYPE html>
@@ -598,14 +595,11 @@ router.post("/send-cancellation-notification", async (req, res) => {
           <!-- Footer -->
           <tr>
             <td style="background:#2d2d2d; padding:28px 40px; text-align:center;">
-              <p style="margin:0 0 6px 0; color:#ffffff; font-size:14px; font-weight:600;">
+              <p style="margin:0; color:#ffffff; font-size:14px; font-weight:600;">
                 EL REFUGIO
               </p>
-              <p style="margin:0 0 12px 0; color:rgba(255,255,255,0.7); font-size:12px;">
-                © ${new Date().getFullYear()} Todos los derechos reservados
-              </p>
-              <p style="margin:0; color:rgba(255,255,255,0.7); font-size:11px;">
-                ¿Necesitas ayuda? Contactanos al teléfono: [TELEFONO] | Email: [EMAIL]
+              <p style="margin:0; color:rgba(255,255,255,0.7); font-size:12px;">
+                © 2025 Todos los derechos reservados
               </p>
             </td>
           </tr>
