@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { format } from 'date-fns';
@@ -66,6 +66,18 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [classes, setClasses] = useState([]);
+  
+  // Función para cargar reservas de una semana específica
+  const loadWeekBookings = useCallback(async (weekStart, weekEnd) => {
+    try {
+      const fechaInicio = getDateString(weekStart);
+      const fechaFin = getDateString(weekEnd);
+      const weekData = await fetchWeekBookings(fechaInicio, fechaFin, userId);
+      setAllWeekBookings(weekData);
+    } catch (e) {
+      console.error('Error al cargar reservas de la semana:', e);
+    }
+  }, [userId]);
 
   useEffect(() => {
     async function loadBookings() {
@@ -470,6 +482,7 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
                 className={clase.nombre}
                 claseCupoMax={clase.cupo_max}
                 claseId={clase.id}
+                onWeekChange={loadWeekBookings}
               />
             </div>
           );

@@ -3,7 +3,7 @@ import { TimeSlotCard } from './time-slot-card';
 import { getCurrentWeek, formatDayLabel } from './utils/week';
 import { format, addDays, isBefore, startOfDay } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import './css/weekly-calendar.css'
 import { DateTime } from 'luxon'
 
@@ -25,7 +25,7 @@ const getDateString = (date) => {
 };
 
 
-export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userBookings = [], allWeekBookings = [], className, claseCupoMax, claseId }) {
+export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userBookings = [], allWeekBookings = [], className, claseCupoMax, claseId, onWeekChange }) {
   // ⚠️ IMPORTANTE: Todos los hooks deben estar al inicio, antes de cualquier return condicional
   
   // Estados para horarios dinámicos desde la base de datos
@@ -35,6 +35,7 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
   
   // fecha base para la semana mostrada (permite navegar semanas)
   const [currentDate, setCurrentDate] = useState(new Date());
+  const lastWeekRef = useRef(null);
   
   // Cargar horarios desde la base de datos
   useEffect(() => {
@@ -65,6 +66,25 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
     
     fetchSchedule();
   }, [className]);
+  
+  // Notificar cuando cambie la semana
+  useEffect(() => {
+    if (onWeekChange) {
+      const weekStart = new Date(currentDate);
+      weekStart.setDate(currentDate.getDate() - currentDate.getDay() + 1); // Lunes
+      weekStart.setHours(12, 0, 0, 0);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6); // Domingo
+      weekEnd.setHours(12, 0, 0, 0);
+      
+      // Solo llamar si la semana cambió
+      const weekKey = `${weekStart.getTime()}-${weekEnd.getTime()}`;
+      if (lastWeekRef.current !== weekKey) {
+        lastWeekRef.current = weekKey;
+        onWeekChange(weekStart, weekEnd);
+      }
+    }
+  }, [currentDate, onWeekChange]);
 
   // Ya no necesitamos cargar capacidades ajustadas por fecha
   // El endpoint /api/horarios/clase ya devuelve la capacidad ajustada según descansos fijos
