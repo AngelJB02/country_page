@@ -460,7 +460,7 @@ router.post("/send-reservation-confirmation", async (req, res) => {
 
               <!-- Botón -->
               <div style="text-align:center; margin-bottom:28px;">
-                <a href="https://elrefugiocountryclub.com" style="display:inline-block; background:linear-gradient(135deg,#8b6f4e 0%,#a68968 100%); color:#ffffff; text-decoration:none; padding:14px 40px; border-radius:8px; font-size:15px; font-weight:600; box-shadow:0 4px 12px rgba(139,111,78,0.3);">
+                <a href="https://elrefugiocountryclub.com/login" style="display:inline-block; background:linear-gradient(135deg,#8b6f4e 0%,#a68968 100%); color:#ffffff; text-decoration:none; padding:14px 40px; border-radius:8px; font-size:15px; font-weight:600; box-shadow:0 4px 12px rgba(139,111,78,0.3);">
                   Ver Mi Reserva
                 </a>
               </div>
