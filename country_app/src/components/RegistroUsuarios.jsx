@@ -414,7 +414,7 @@ const FormularioUsuario = React.memo(({ onCrearUsuario, loading }) => {
     async (nombre, apellido, customPassword = null) => {
       try {
         const response = await fetch(
-          "http://212.227.238.213/api/api/users/preview-credentials",
+          "https://elrefugiocountryclub.com/api/api/users/preview-credentials",
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -1112,7 +1112,7 @@ const TablaUsuarios = React.memo(({ usuarios, loading, onRecargar }) => {
   const actualizarPasswordSilent = useCallback(async (id, password) => {
     try {
       const response = await fetch(
-        `http://212.227.238.213/api/api/users/update-password/${id}`,
+        `https://elrefugiocountryclub.com/api/api/users/update-password/${id}`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -1129,7 +1129,7 @@ const TablaUsuarios = React.memo(({ usuarios, loading, onRecargar }) => {
   const actualizarCorreoSilent = useCallback(async (id, correo) => {
     try {
       const response = await fetch(
-        `http://212.227.238.213/api/api/users/update-email/${id}`,
+        `https://elrefugiocountryclub.com/api/api/users/update-email/${id}`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
