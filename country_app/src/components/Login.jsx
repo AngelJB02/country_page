@@ -87,9 +87,13 @@ const Login = () => {
 
       // Manejo de estados
       if (response.ok && data.user) {
+        console.log('✅ Login exitoso, datos recibidos:', data.user);
+        
         // SIEMPRE limpiar y actualizar localStorage con datos frescos del backend
         localStorage.removeItem("user");
         localStorage.setItem("user", JSON.stringify(data.user));
+        
+        console.log('💾 Usuario guardado en localStorage:', localStorage.getItem("user"));
         
         const estado = (data.user.estatus || "").toLowerCase();
         if (estado === "activo") {
