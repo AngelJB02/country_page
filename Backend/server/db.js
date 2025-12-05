@@ -1,6 +1,16 @@
 // server/db.js
 import mysql from 'mysql2/promise';
 
+// Credenciales para desarrollo
+// host: 212.227.238.213
+// user: dev_user
+// password: elrefugio2025desarrollo
+//
+// Credenciales para producción
+// host: localhost
+// user: root
+// password: ElRefugio2025
+
 const db = mysql.createPool({
   host: 'localhost',
   user: 'root',

@@ -87,10 +87,13 @@ const Login = () => {
 
       // Manejo de estados
       if (response.ok && data.user) {
+        // SIEMPRE limpiar y actualizar localStorage con datos frescos del backend
+        localStorage.removeItem("user");
+        localStorage.setItem("user", JSON.stringify(data.user));
+        
         const estado = (data.user.estatus || "").toLowerCase();
         if (estado === "activo") {
           setShowSuccess(true);
-          localStorage.setItem("user", JSON.stringify(data.user));
           setEstadoMsg("");
           setTimeout(() => {
             const redirectPath = getRedirectRoute(data.user.rol);
@@ -99,7 +102,6 @@ const Login = () => {
         } else if (estado === "inactivo") {
           setShowSuccess(true);
           setEstadoMsg("⚠️ Tu cuenta está inactiva. Comunícate con el administrador.");
-          localStorage.setItem("user", JSON.stringify(data.user));
           setTimeout(() => {
             const redirectPath = getRedirectRoute(data.user.rol);
             navigate(redirectPath);

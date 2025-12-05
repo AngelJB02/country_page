@@ -50,6 +50,7 @@ const getDateString = (date) => {
 import { WeeklyCalendar } from './calendario/weekly-calendar';
 import { CalendarHeader } from './calendario/calendar-header';
 import { BookingModal } from './calendario/booking-modal';
+import { SessionUpdateModal } from './calendario/session-update-modal';
 
 // Contexto
 // import { BookingProvider, useBookings } from './calendario/lib/booking-context';
@@ -66,6 +67,7 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [classes, setClasses] = useState([]);
+  const [sessionModal, setSessionModal] = useState({ isOpen: false, type: null });
   
   // Función para cargar reservas de una semana específica
   const loadWeekBookings = useCallback(async (weekStart, weekEnd) => {
@@ -209,6 +211,81 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
   const handleConfirm = async () => {
     if (!selectedSlot || !selectedClass) return;
     
+    // VALIDACIÓN DE USUARIO: Verificar que los datos del localStorage coincidan con la BD
+    try {
+      const userLocal = JSON.parse(localStorage.getItem('user'));
+      const userIdLocal = userLocal?.id;
+      const nombreLocal = userLocal?.nombre;
+
+      if (!userIdLocal || !nombreLocal) {
+        throw new Error('Datos de sesión incompletos');
+      }
+
+      // Consultar el usuario en el backend
+      const res = await fetch(`https://elrefugiocountryclub.com/api/users/${userIdLocal}`);
+      
+      console.log('🌐 Response status:', res.status);
+      console.log('🌐 Response ok:', res.ok);
+      
+      if (!res.ok) {
+        throw new Error('Usuario no encontrado en la base de datos');
+      }
+
+      const userBD = await res.json();
+      console.log('📦 userBD completo:', userBD);
+
+      // El backend devuelve {usuario: {...}, pagos: [...]}
+      const usuarioBD = userBD.usuario;
+      const nombreBD = usuarioBD?.nombre;
+      const tipoNivelBD = usuarioBD?.tipo_nivel;
+
+      // Debug: Ver qué se está comparando
+      console.log('🔍 VALIDACIÓN DE USUARIO:');
+      console.log('   localStorage nombre:', nombreLocal);
+      console.log('   BD nombre:', nombreBD);
+      console.log('   localStorage tipo_nivel:', userLocal?.tipo_nivel);
+      console.log('   BD tipo_nivel:', tipoNivelBD);
+
+      // Comparar nombre - si no coincide, desloguear (cambio de usuario)
+      if (nombreBD !== nombreLocal) {
+        localStorage.removeItem('user');
+        sessionStorage.removeItem('user');
+        setSessionModal({ isOpen: true, type: 'sessionExpired' });
+        return;
+      }
+
+      // Comparar tipo_nivel - si no coincide, actualizar localStorage y refrescar
+      if (tipoNivelBD !== userLocal?.tipo_nivel) {
+        console.log('⚠️ tipo_nivel desactualizado, actualizando localStorage...');
+        
+        // Actualizar localStorage con todos los datos frescos del backend
+        const usuarioActualizado = {
+          id: usuarioBD.id,
+          nombre: usuarioBD.nombre,
+          rol: usuarioBD.rol,
+          estatus: usuarioBD.estatus,
+          tipo_cliente: usuarioBD.tipo_cliente,
+          tipo_nivel: usuarioBD.tipo_nivel
+        };
+        
+        localStorage.setItem('user', JSON.stringify(usuarioActualizado));
+        
+        setSessionModal({ isOpen: true, type: 'levelUpdate' });
+        
+        return;
+      }
+    } catch (error) {
+      console.error('Error en validación de usuario:', error);
+      
+      // Eliminar específicamente el usuario del storage
+      localStorage.removeItem('user');
+      sessionStorage.removeItem('user');
+      
+      setSessionModal({ isOpen: true, type: 'sessionError' });
+      
+      return;
+    }
+
     // Extraer la fecha real del slot seleccionado sin problemas de zona horaria
     const slotDate = selectedSlot.date; // Ya viene del WeeklyCalendar
     const fechaISO = getDateString(slotDate);
@@ -499,6 +576,18 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
         hasBookingForDay={hasBookingForDay}
         hasBookingWithin24h={hasBookingWithin24h}
         userName={userName}
+      />
+
+      <SessionUpdateModal 
+        isOpen={sessionModal.isOpen}
+        type={sessionModal.type}
+        onClose={() => {
+          if (sessionModal.type === 'levelUpdate') {
+            window.location.reload();
+          } else {
+            window.location.href = '/login';
+          }
+        }}
       />
     </>
   );
