@@ -92,7 +92,10 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
         const today = new Date();
         today.setHours(12, 0, 0, 0); // Establecer a mediodía para evitar problemas de zona horaria
         const weekStart = new Date(today);
-        weekStart.setDate(today.getDate() - today.getDay() + 1); // Lunes
+        // Calcular el lunes de la semana actual correctamente
+        const dayOfWeekToday = today.getDay();
+        const daysToMondayToday = dayOfWeekToday === 0 ? 6 : dayOfWeekToday - 1;
+        weekStart.setDate(today.getDate() - daysToMondayToday); // Lunes
         weekStart.setHours(12, 0, 0, 0);
         const weekEnd = new Date(weekStart);
         weekEnd.setDate(weekStart.getDate() + 6); // Domingo
@@ -139,7 +142,10 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
       const today = new Date();
       today.setHours(12, 0, 0, 0); // Establecer a mediodía para evitar problemas de zona horaria
       const weekStart = new Date(today);
-      weekStart.setDate(today.getDate() - today.getDay() + 1);
+      // Calcular el lunes de la semana actual correctamente
+      const dayOfWeekToday = today.getDay();
+      const daysToMondayToday = dayOfWeekToday === 0 ? 6 : dayOfWeekToday - 1;
+      weekStart.setDate(today.getDate() - daysToMondayToday);
       weekStart.setHours(12, 0, 0, 0);
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekStart.getDate() + 6);
@@ -337,7 +343,13 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
       // Usar getDateString para evitar problemas de zona horaria
       const slotDateForWeek = slotDate || new Date();
       const weekStart = new Date(slotDateForWeek);
-      weekStart.setDate(slotDateForWeek.getDate() - slotDateForWeek.getDay() + 1); // Lunes
+      // Calcular el lunes de la semana actual
+      // Si es domingo (getDay() = 0), retroceder 6 días para llegar al lunes
+      // Si es lunes (getDay() = 1), no hacer nada
+      // Si es martes (getDay() = 2), retroceder 1 día, etc.
+      const dayOfWeek = slotDateForWeek.getDay();
+      const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Si es domingo, retroceder 6 días
+      weekStart.setDate(slotDateForWeek.getDate() - daysToMonday); // Lunes de la semana actual
       weekStart.setHours(12, 0, 0, 0); // Establecer a mediodía para evitar problemas de zona horaria
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekStart.getDate() + 6); // Domingo

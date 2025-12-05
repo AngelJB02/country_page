@@ -71,7 +71,10 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
   useEffect(() => {
     if (onWeekChange) {
       const weekStart = new Date(currentDate);
-      weekStart.setDate(currentDate.getDate() - currentDate.getDay() + 1); // Lunes
+      // Calcular el lunes de la semana actual correctamente
+      const dayOfWeek = currentDate.getDay();
+      const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Si es domingo, retroceder 6 días
+      weekStart.setDate(currentDate.getDate() - daysToMonday); // Lunes
       weekStart.setHours(12, 0, 0, 0);
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekStart.getDate() + 6); // Domingo
