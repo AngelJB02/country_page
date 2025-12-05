@@ -28,7 +28,8 @@ export async function createBooking({ cliente_id, clase_id, fecha, hora_inicio }
 
 // Obtener todas las reservas de una semana para mostrar disponibilidad
 export async function fetchWeekBookings(fechaInicio, fechaFin, clienteId) {
-  const res = await fetch(`https://elrefugiocountryclub.com/api/api/reservas/week?fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}&cliente_id=${clienteId}`);
+  // No enviar cliente_id para obtener TODAS las reservas de la semana y calcular cupos correctamente
+  const res = await fetch(`https://elrefugiocountryclub.com/api/api/reservas/week?fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}`);
   if (!res.ok) throw new Error('Error al obtener reservas de la semana');
   return res.json();
 }
