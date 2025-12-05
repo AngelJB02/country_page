@@ -227,8 +227,12 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
       console.log('🌐 Response status:', res.status);
       console.log('🌐 Response ok:', res.ok);
       
-      if (!res.ok) {
-        throw new Error('Usuario no encontrado en la base de datos');
+      // Si el usuario no existe en la BD (404), desloguear
+      if (res.status === 404 || !res.ok) {
+        localStorage.removeItem('user');
+        sessionStorage.removeItem('user');
+        setSessionModal({ isOpen: true, type: 'sessionExpired' });
+        return;
       }
 
       const userBD = await res.json();
@@ -236,6 +240,15 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
 
       // El backend devuelve {usuario: {...}, pagos: [...]}
       const usuarioBD = userBD.usuario;
+      
+      // Si no existe el objeto usuario, desloguear
+      if (!usuarioBD) {
+        localStorage.removeItem('user');
+        sessionStorage.removeItem('user');
+        setSessionModal({ isOpen: true, type: 'sessionExpired' });
+        return;
+      }
+      
       const nombreBD = usuarioBD?.nombre;
       const tipoNivelBD = usuarioBD?.tipo_nivel;
 
