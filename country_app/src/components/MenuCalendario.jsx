@@ -324,6 +324,10 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
         position: "top-right",
         autoClose: 3000,
       });
+      
+      // Esperar un momento para que el backend procese la reserva
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       // Refresca reservas del usuario
       const data = await fetchUserBookings(userId);
       setUserBookings(data);
