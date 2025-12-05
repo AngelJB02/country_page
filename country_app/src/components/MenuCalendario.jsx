@@ -358,6 +358,15 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
       if (error.response && error.response.data) {
         const { error: errorMsg, razon } = error.response.data;
         
+        // Si el error es "Cliente no encontrado", significa que el ID en localStorage no existe en la BD
+        if (errorMsg === 'Cliente no encontrado') {
+          localStorage.removeItem('user');
+          sessionStorage.removeItem('user');
+          closeModal();
+          setSessionModal({ isOpen: true, type: 'sessionExpired' });
+          return;
+        }
+        
         // Si hay una razón específica, mostrarla
         if (razon) {
           toast.warning(`${errorMsg}: ${razon}`, {
