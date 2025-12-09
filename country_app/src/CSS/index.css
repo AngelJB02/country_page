@@ -32,6 +32,12 @@ section {
   overflow-x: hidden;
 }
 
+/* Excepción: Permitir scroll horizontal en contenedores de tabla */
+.table-container {
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
 .container {
   max-width: 1600px;
   margin: 0 auto;
