@@ -142,6 +142,7 @@ router.get('/users-with-payments', async (req, res) => {
         u.correo AS email,
         u.rol,
         u.estatus,
+        u.tipo_nivel,
         u.fecha_registro,
         COALESCE(c.monto, 0) AS monto,
         c.fecha_pago,
@@ -630,6 +631,47 @@ router.patch('/update-status/:id', async (req, res) => {
     }
 
     res.status(500).json({ error: 'Error al actualizar estado del usuario' });
+  }
+});
+
+// Actualizar nivel del usuario
+router.patch('/update-nivel/:id', async (req, res) => {
+  const { id } = req.params;
+  const { tipo_nivel } = req.body;
+
+  // Validar que el campo tipo_nivel esté presente
+  if (tipo_nivel === undefined || tipo_nivel === null) {
+    return res.status(400).json({ error: 'El campo tipo_nivel es requerido' });
+  }
+
+  // Permitir vacío o validar niveles válidos
+  const nivelesValidos = ['', 'iniciacion', 'paseo', 'intermedio', 'avanzado'];
+  if (!nivelesValidos.includes(tipo_nivel.toLowerCase())) {
+    return res.status(400).json({ 
+      error: `El nivel proporcionado no es válido. Valores permitidos: ${nivelesValidos.filter(n => n).join(', ')} o vacío` 
+    });
+  }
+
+  try {
+    const [result] = await db.query(
+      "UPDATE usuarios SET tipo_nivel=? WHERE id=?",
+      [tipo_nivel.toLowerCase() || null, id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    res.json({ message: 'Nivel actualizado correctamente', tipo_nivel: tipo_nivel.toLowerCase() || null });
+  } catch (err) {
+    console.error('Error al actualizar nivel:', err);
+
+    // Manejar errores específicos de la base de datos
+    if (err.code === 'ER_BAD_FIELD_ERROR') {
+      return res.status(400).json({ error: 'Error en el campo proporcionado' });
+    }
+
+    res.status(500).json({ error: 'Error al actualizar nivel del usuario' });
   }
 });
 

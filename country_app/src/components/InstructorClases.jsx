@@ -1,7 +1,7 @@
 // React hooks are provided by the custom hook `useInstructorDashboard` below
 import { Calendar, Users, Clock, Download, Check, X, ChevronLeft, ChevronRight } from "lucide-react"
 import { useState } from "react"
-import { CalendarView } from "./instructor/CalendarView"
+import CalendarView from "./instructor/CalendarView"
 import { DayClassesModal } from "./instructor/DayClassesModal"
 import { AttendanceModal } from "./instructor/atendance-modal"
 import { CancelIndividualModal } from "./instructor/CancelIndividualModal"

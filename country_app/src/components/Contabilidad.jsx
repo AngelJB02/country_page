@@ -891,6 +891,7 @@ const MembershipAdminDashboard = () => {
             lastPaymentDate: u.fecha_pago || "",
             proximaFecha: proximaFecha,
             rol: u.rol || "",
+            tipo_nivel: u.tipo_nivel || "",
           };
         })
         setMembers(mapped)
@@ -1218,6 +1219,7 @@ const MembershipAdminDashboard = () => {
                       <th>Nombre</th>
                       <th>Email</th>
                       <th>Estado</th>
+                      <th>Nivel</th>
                       <th>Mensualidad</th>
                       <th>Último Pago</th>
                       <th>Próximo Pago</th>
@@ -1323,6 +1325,52 @@ const MembershipAdminDashboard = () => {
                               <option value="Inactivo">Inactivo</option>
                               <option value="Bloqueado">Bloqueado</option>
                               <option value="Pendiente">Pendiente</option>
+                            </select>
+                          </td>
+                          <td>
+                            <select
+                              value={member.tipo_nivel || ""}
+                              onChange={async (e) => {
+                                const newNivel = e.target.value;
+                                try {
+                                  const response = await fetch(`https://elrefugiocountryclub.com/api/api/users/update-nivel/${member.id}`,
+                                    {
+                                      method: "PATCH",
+                                      headers: { "Content-Type": "application/json" },
+                                      body: JSON.stringify({ tipo_nivel: newNivel }),
+                                    }
+                                  );
+                                  if (response.ok) {
+                                    setMembers((prev) =>
+                                      prev.map((m) => (m.id === member.id ? { ...m, tipo_nivel: newNivel } : m))
+                                    );
+                                    showNotification("Nivel actualizado correctamente", "success");
+                                  } else {
+                                    const error = await response.json();
+                                    showNotification("Error al actualizar el nivel: " + (error?.error ?? "Error desconocido"), "error");
+                                  }
+                                } catch {
+                                  showNotification("Error de conexión. Inténtalo de nuevo.", "error");
+                                }
+                              }}
+                              className="status-filter"
+                              style={{
+                                padding: "0.5rem 1rem",
+                                border: "2px solid var(--terracotta)",
+                                borderRadius: "8px",
+                                background: "white",
+                                color: "var(--primary-brown)",
+                                fontWeight: "500",
+                                minWidth: "120px",
+                                cursor: "pointer",
+                                transition: "all 0.2s ease"
+                              }}
+                            >
+                              <option value="">Seleccione un nivel</option>
+                              <option value="iniciacion">Iniciación</option>
+                              <option value="paseo">Paseo</option>
+                              <option value="intermedio">Intermedio</option>
+                              <option value="avanzado">Avanzado</option>
                             </select>
                           </td>
                           <td style={{ fontWeight: "600", color: "var(--primary-brown)" }}>${formatCurrency(member.monthlyFee)}</td>

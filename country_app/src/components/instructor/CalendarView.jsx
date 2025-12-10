@@ -110,68 +110,67 @@ function CalendarView({ classes, onDateClick }) {
   ]
 
   return (
-    <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '12px', boxShadow: 'var(--soft-shadow)' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-        <button
-          onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
-          className="btn-outline-v2"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '40px',
-            height: '40px',
-            padding: '0'
-          }}
-        >
-          <ChevronLeft size={20} />
-        </button>
-        
-        <h3 style={{ 
-          fontSize: '24px', 
-          fontWeight: 'bold', 
-          color: 'var(--primary-brown)',
-          fontFamily: 'var(--font-serif)'
-        }}>
-          {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
-        </h3>
-        
-        <button
-          onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
-          className="btn-outline-v2"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '40px',
-            height: '40px',
-            padding: '0'
-          }}
-        >
-          <ChevronRight size={20} />
-        </button>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '8px', marginBottom: '16px' }}>
-        {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(day => (
-          <div key={day} style={{ 
-            textAlign: 'center', 
+    <div className="calendar-responsive-container">
+      <div style={{ backgroundColor: 'white', padding: '32px', borderRadius: '12px', boxShadow: 'var(--soft-shadow)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+          <button
+            onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
+            className="btn-outline-v2"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '40px',
+              height: '40px',
+              padding: '0'
+            }}
+          >
+            <ChevronLeft size={20} />
+          </button>
+          <h3 style={{ 
+            fontSize: '24px', 
             fontWeight: 'bold', 
-            color: 'var(--primary-brown)', 
-            padding: '12px',
-            fontSize: '14px',
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px'
+            color: 'var(--primary-brown)',
+            fontFamily: 'var(--font-serif)'
           }}>
-            {day}
-          </div>
-        ))}
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '8px' }}>
-        {days}
+            {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+          </h3>
+          <button
+            onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
+            className="btn-outline-v2"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '40px',
+              height: '40px',
+              padding: '0'
+            }}
+          >
+            <ChevronRight size={20} />
+          </button>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '8px', marginBottom: '16px' }}>
+          {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(day => (
+            <div key={day} style={{ 
+              textAlign: 'center', 
+              fontWeight: 'bold', 
+              color: 'var(--primary-brown)', 
+              padding: '12px',
+              fontSize: '14px',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px'
+            }}>
+              {day}
+            </div>
+          ))}
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '8px' }}>
+          {days}
+        </div>
       </div>
     </div>
   )
 }
-export { CalendarView }
+
+export default CalendarView;
