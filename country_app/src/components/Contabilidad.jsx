@@ -364,30 +364,54 @@ const MembershipAdminDashboard = () => {
         // Crear header flotante si no existe
         if (!stickyHeader) {
           stickyHeader = thead.cloneNode(true)
+          // fixed para que quede en top del viewport
           stickyHeader.style.position = 'fixed'
           stickyHeader.style.top = '0'
-          stickyHeader.style.left = `${tableRect.left}px`
-          stickyHeader.style.width = `${tableRect.width}px`
+          // ancho/left los calculamos dinámicamente con getBoundingClientRect
           stickyHeader.style.zIndex = '999'
           stickyHeader.classList.add('sticky-clone')
           
-          // Copiar anchos de columnas
+          // Forzar que el clone se renderice como tabla para respetar celdas
+          stickyHeader.style.display = 'table'
+          // Copiar estilos de table-layout si aplica
+          try {
+            const computed = window.getComputedStyle(table)
+            if (computed && computed.tableLayout) {
+              stickyHeader.style.tableLayout = computed.tableLayout
+            }
+          } catch (e) {}
+
+          // Copiar anchos iniciales usando getBoundingClientRect (más preciso)
           const originalThs = thead.querySelectorAll('th')
           const clonedThs = stickyHeader.querySelectorAll('th')
           originalThs.forEach((th, index) => {
             if (clonedThs[index]) {
-              clonedThs[index].style.width = `${th.offsetWidth}px`
+              const w = th.getBoundingClientRect().width
+              clonedThs[index].style.width = `${Math.round(w)}px`
             }
           })
-          
+
           document.body.appendChild(stickyHeader)
         }
-        
-        // Actualizar posición
+
+        // Actualizar posición y ancho del clone con medidas exactas
         if (stickyHeader) {
-          stickyHeader.style.left = `${tableRect.left}px`
-          stickyHeader.style.width = `${tableRect.width}px`
+          const rect = table.getBoundingClientRect()
+          stickyHeader.style.left = `${Math.round(rect.left)}px`
+          stickyHeader.style.width = `${Math.round(rect.width)}px`
           stickyHeader.style.display = 'table-header-group'
+
+          // Actualizar anchos usando getBoundingClientRect para evitar desincronías
+          const originalThs2 = thead.querySelectorAll('th')
+          const clonedThs2 = stickyHeader.querySelectorAll('th')
+          originalThs2.forEach((th, index) => {
+            if (clonedThs2[index]) {
+              const w = th.getBoundingClientRect().width
+              clonedThs2[index].style.width = `${Math.round(w)}px`
+            }
+          })
+          // Sincronizar horizontalmente por si existe scroll interno
+          handleTableScroll()
         }
       } else {
         // Remover header flotante
@@ -398,18 +422,47 @@ const MembershipAdminDashboard = () => {
       }
     }
 
+    const handleTableScroll = () => {
+      if (stickyHeader) {
+        const tableContainer = document.querySelector('.table-container')
+        if (tableContainer) {
+            const rect = table.getBoundingClientRect()
+            // Actualizar anchos de columnas con getBoundingClientRect (más preciso)
+            const originalThs = thead.querySelectorAll('th')
+            const clonedThs = stickyHeader.querySelectorAll('th')
+            originalThs.forEach((th, index) => {
+              if (clonedThs[index]) {
+                const w = th.getBoundingClientRect().width
+                clonedThs[index].style.width = `${Math.round(w)}px`
+              }
+            })
+            // Ajustar left para sincronizar con scroll horizontal usando rect.left
+            stickyHeader.style.left = `${Math.round(rect.left)}px`
+            stickyHeader.style.width = `${Math.round(rect.width)}px`
+        }
+      }
+    }
+
     // Esperar a que la tabla esté completamente renderizada
     const initTimeout = setTimeout(() => {
       calculateHeaderPosition()
       handleScroll()
       window.addEventListener('scroll', handleScroll)
       window.addEventListener('resize', handleScroll)
+      const tableContainer = document.querySelector('.table-container')
+      if (tableContainer) {
+        tableContainer.addEventListener('scroll', handleTableScroll)
+      }
     }, 100)
 
     return () => {
       clearTimeout(initTimeout)
       window.removeEventListener('scroll', handleScroll)
       window.removeEventListener('resize', handleScroll)
+      const tableContainer = document.querySelector('.table-container')
+      if (tableContainer) {
+        tableContainer.removeEventListener('scroll', handleTableScroll)
+      }
       if (stickyHeader) {
         stickyHeader.remove()
       }

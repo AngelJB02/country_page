@@ -293,9 +293,10 @@ const CaballosAdmin = () => {
 
   useEffect(() => {
     if (loading) return;
-    const table = document.querySelector('.caballos-admin-container .members-table');
+    const container = document.querySelector('.caballos-admin-container .table-container')
+    const table = container?.querySelector('.members-table');
     const thead = table?.querySelector('thead');
-    if (!table || !thead) return;
+    if (!container || !table || !thead) return;
 
     let stickyHeader = null;
 
@@ -305,6 +306,24 @@ const CaballosAdmin = () => {
       return { tableRect, theadRect };
     };
 
+    const handleTableScroll = () => {
+      if (!stickyHeader) return;
+      const rect = table.getBoundingClientRect();
+      // actualizar anchos con getBoundingClientRect
+      const originalThs = thead.querySelectorAll('th');
+      const clonedThs = stickyHeader.querySelectorAll('th');
+      originalThs.forEach((th, index) => {
+        if (clonedThs[index]) {
+          const w = th.getBoundingClientRect().width;
+          clonedThs[index].style.width = `${Math.round(w)}px`;
+        }
+      });
+      // ajustar posicion relativa al viewport
+      const left = Math.round(rect.left);
+      stickyHeader.style.left = `${left}px`;
+      stickyHeader.style.width = `${Math.round(rect.width)}px`;
+    };
+
     const handleScroll = () => {
       const { tableRect, theadRect } = calculateHeaderPosition();
       if (theadRect.top <= 0 && tableRect.bottom > 100) {
@@ -312,24 +331,40 @@ const CaballosAdmin = () => {
           stickyHeader = thead.cloneNode(true);
           stickyHeader.style.position = 'fixed';
           stickyHeader.style.top = '0';
-          stickyHeader.style.left = `${tableRect.left}px`;
-          stickyHeader.style.width = `${tableRect.width}px`;
           stickyHeader.style.zIndex = '999';
           stickyHeader.classList.add('sticky-clone');
-          // Copiar anchos de columnas
+          stickyHeader.style.display = 'table';
+
+          // copiar anchos iniciales usando getBoundingClientRect
           const originalThs = thead.querySelectorAll('th');
           const clonedThs = stickyHeader.querySelectorAll('th');
           originalThs.forEach((th, index) => {
             if (clonedThs[index]) {
-              clonedThs[index].style.width = `${th.offsetWidth}px`;
+              const w = th.getBoundingClientRect().width;
+              clonedThs[index].style.width = `${Math.round(w)}px`;
             }
           });
+
           document.body.appendChild(stickyHeader);
         }
         if (stickyHeader) {
-          stickyHeader.style.left = `${tableRect.left}px`;
-          stickyHeader.style.width = `${tableRect.width}px`;
+          const rect = table.getBoundingClientRect();
+          stickyHeader.style.left = `${Math.round(rect.left)}px`;
+          stickyHeader.style.width = `${Math.round(rect.width)}px`;
           stickyHeader.style.display = 'table-header-group';
+
+          // actualizar anchos precisos
+          const originalThs2 = thead.querySelectorAll('th');
+          const clonedThs2 = stickyHeader.querySelectorAll('th');
+          originalThs2.forEach((th, index) => {
+            if (clonedThs2[index]) {
+              const w = th.getBoundingClientRect().width;
+              clonedThs2[index].style.width = `${Math.round(w)}px`;
+            }
+          });
+
+          // sincronizar horizontal
+          handleTableScroll();
         }
       } else {
         if (stickyHeader) {
@@ -340,16 +375,17 @@ const CaballosAdmin = () => {
     };
 
     const initTimeout = setTimeout(() => {
-      calculateHeaderPosition();
       handleScroll();
       window.addEventListener('scroll', handleScroll);
       window.addEventListener('resize', handleScroll);
+      container.addEventListener('scroll', handleTableScroll);
     }, 100);
 
     return () => {
       clearTimeout(initTimeout);
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('resize', handleScroll);
+      container.removeEventListener('scroll', handleTableScroll);
       if (stickyHeader) {
         stickyHeader.remove();
       }

@@ -65,6 +65,107 @@ const ReservasAdmin = () => {
     setCurrentPage(1); // Resetear a la primera página cuando cambian los filtros
   }, [filtroTiempo, fechaSeleccionada]);
 
+  // Implementar sticky header para la tabla de reservas (clon + sincronización de anchos)
+  useEffect(() => {
+    let stickyHeader = null
+    const containerSelector = '.reservas-admin-container .table-container'
+    const container = document.querySelector(containerSelector)
+    if (!container) return
+
+    const table = container.querySelector('.members-table')
+    if (!table) return
+    const thead = table.querySelector('thead')
+
+    const calculateHeaderPosition = () => {
+      const tableRect = table.getBoundingClientRect()
+      const theadRect = thead.getBoundingClientRect()
+      return { tableRect, theadRect }
+    }
+
+    const handleScroll = () => {
+      const { tableRect, theadRect } = calculateHeaderPosition()
+
+      if (theadRect.top <= 0 && tableRect.bottom > 100) {
+        if (!stickyHeader) {
+          stickyHeader = thead.cloneNode(true)
+          stickyHeader.style.position = 'fixed'
+          stickyHeader.style.top = '0'
+          stickyHeader.style.zIndex = '999'
+          stickyHeader.classList.add('sticky-clone')
+          stickyHeader.style.display = 'table'
+
+          // copiar anchos iniciales
+          const originalThs = thead.querySelectorAll('th')
+          const clonedThs = stickyHeader.querySelectorAll('th')
+          originalThs.forEach((th, index) => {
+            if (clonedThs[index]) {
+              const w = th.getBoundingClientRect().width
+              clonedThs[index].style.width = `${Math.round(w)}px`
+            }
+          })
+
+          document.body.appendChild(stickyHeader)
+        }
+
+        if (stickyHeader) {
+          const rect = table.getBoundingClientRect()
+          stickyHeader.style.left = `${Math.round(rect.left)}px`
+          stickyHeader.style.width = `${Math.round(rect.width)}px`
+          stickyHeader.style.display = 'table-header-group'
+
+          // actualizar anchos
+          const originalThs2 = thead.querySelectorAll('th')
+          const clonedThs2 = stickyHeader.querySelectorAll('th')
+          originalThs2.forEach((th, index) => {
+            if (clonedThs2[index]) {
+              const w = th.getBoundingClientRect().width
+              clonedThs2[index].style.width = `${Math.round(w)}px`
+            }
+          })
+          // sincronizar horizontal
+          handleTableScroll()
+        }
+      } else {
+        if (stickyHeader) {
+          stickyHeader.remove()
+          stickyHeader = null
+        }
+      }
+    }
+
+    const handleTableScroll = () => {
+      if (!stickyHeader) return
+      const rect = table.getBoundingClientRect()
+      // actualizar anchos
+      const originalThs = thead.querySelectorAll('th')
+      const clonedThs = stickyHeader.querySelectorAll('th')
+      originalThs.forEach((th, index) => {
+        if (clonedThs[index]) {
+          const w = th.getBoundingClientRect().width
+          clonedThs[index].style.width = `${Math.round(w)}px`
+        }
+      })
+      // ajustar posicion
+      stickyHeader.style.left = `${Math.round(rect.left)}px`
+      stickyHeader.style.width = `${Math.round(rect.width)}px`
+    }
+
+    const initTimeout = setTimeout(() => {
+      handleScroll()
+      window.addEventListener('scroll', handleScroll)
+      window.addEventListener('resize', handleScroll)
+      container.addEventListener('scroll', handleTableScroll)
+    }, 100)
+
+    return () => {
+      clearTimeout(initTimeout)
+      window.removeEventListener('scroll', handleScroll)
+      window.removeEventListener('resize', handleScroll)
+      container.removeEventListener('scroll', handleTableScroll)
+      if (stickyHeader) stickyHeader.remove()
+    }
+  }, [loading, reservas])
+
   // Calcular paginación
   const totalPages = Math.ceil(reservas.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
