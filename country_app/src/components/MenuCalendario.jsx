@@ -636,7 +636,7 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
 function MenuCalendario() {
   // Estado del usuario (esto vendría de tu sistema de autenticación)
   // Obtiene los datos reales del usuario desde localStorage
-  const [userLevel] = useState(() => {
+  const [userLevel, setUserLevel] = useState(() => {
     const user = localStorage.getItem('user');
     if (user) {
       try {
@@ -687,6 +687,97 @@ function MenuCalendario() {
     return 'general';
   });
   const [isChangeOpen, setIsChangeOpen] = useState(false);
+
+  // Monitor de cambios de nivel en tiempo real
+    useEffect(() => {
+      // No hacer polling si no hay usuario en sesión
+      if (!userId || !localStorage.getItem('user')) return;
+  
+      const checkUserLevel = async () => {
+        // Optimización: No hacer peticiones si la pestaña no está visible
+        if (document.hidden) return;
+
+        try {
+          // Verificar nuevamente existencia de sesión antes de la llamada
+          if (!localStorage.getItem('user')) return;
+  
+          // Usar la misma URL que en handleConfirm
+          const response = await fetch(`https://elrefugiocountryclub.com/api/api/users/${userId}`);
+          
+          if (!response.ok) return;
+        
+        const data = await response.json();
+        const userDB = data.usuario;
+        
+        if (!userDB) return;
+
+        const currentLevel = userLevel;
+        const newLevel = userDB.tipo_nivel;
+        
+        // Si hay cambio de nivel
+        if (newLevel && currentLevel !== newLevel) {
+          console.log(`🔄 Actualización de nivel detectada: ${currentLevel} -> ${newLevel}`);
+          
+          // 1. Actualizar localStorage
+          const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+          const usuarioActualizado = {
+            ...currentUser,
+            id: userDB.id,
+            nombre: userDB.nombre,
+            rol: userDB.rol,
+            estatus: userDB.estatus,
+            tipo_cliente: userDB.tipo_cliente,
+            tipo_nivel: userDB.tipo_nivel
+          };
+          localStorage.setItem('user', JSON.stringify(usuarioActualizado));
+          
+          // 2. Actualizar estado (esto disparará el re-render de CalendarContent)
+          setUserLevel(newLevel);
+          
+          // 3. Notificar al usuario
+          toast.info(`Tu nivel ha sido actualizado a: ${newLevel}`, {
+            position: "top-center",
+            autoClose: 4000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+          });
+        }
+      } catch (error) {
+        // Silencioso para no molestar al usuario con errores de red en polling
+        console.error("Error verificando nivel de usuario:", error);
+      }
+    };
+
+    // Verificar cada 10 segundos (optimizado para reducir carga)
+    const intervalId = setInterval(checkUserLevel, 10000);
+
+    // Listener para eventos de storage (cambios en otras pestañas)
+    const handleStorageChange = (e) => {
+      if (e.key === 'user') {
+        const user = localStorage.getItem('user');
+        if (user) {
+          try {
+            const parsed = JSON.parse(user);
+            const newLevel = parsed.tipo_nivel;
+            if (newLevel && newLevel !== userLevel) {
+              setUserLevel(newLevel);
+            }
+          } catch (err) {
+            console.error(err);
+          }
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [userId, userLevel]);
 
   const handleLogout = () => {
     console.log("Cerrando sesión...");
