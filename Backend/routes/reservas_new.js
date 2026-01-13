@@ -857,9 +857,8 @@ router.get('/available-slots/:clienteId', async (req, res) => {
         // Calcular instructoras disponibles para este horario (considerando descansos)
         const instructorasDisponibles = await calcularInstructorasDisponibles(clase_id, fecha, hora);
         
-        // El cupo máximo es el mínimo entre el cupo configurado y las instructoras disponibles
-        // Ejemplo: si hay 2 instructoras y 1 descansa, cupo pasa de 2 a 1
-        cupoMaximoAjustado = Math.min(infoClase.cupo_max, instructorasDisponibles);
+        // Para iniciación, el cupo es igual al número de instructoras disponibles
+        cupoMaximoAjustado = instructorasDisponibles;
         
         if (cupoMaximoAjustado < infoClase.cupo_max) {
           console.log(`⚠️ Cupo ajustado por descansos: ${cupoMaximoAjustado} (original: ${infoClase.cupo_max})`);
@@ -982,6 +981,20 @@ router.post('/book', async (req, res) => {
     horaFinObj.setMinutes(horaFinObj.getMinutes() + infoClase.duracion_min);
     const hora_fin = horaFinObj.toTimeString().slice(0, 8);
 
+    // Para iniciación, ajustar cupo según instructoras disponibles (considerando descansos)
+    // Para otras clases, el cupo se mantiene como está configurado
+    let cupoMaximoAjustado = infoClase.cupo_max;
+    
+    if (infoClase.nombre.toLowerCase() === 'iniciacion') {
+      // Calcular instructoras disponibles para este horario (considerando descansos)
+      const instructorasDisponibles = await calcularInstructorasDisponibles(clase_id, fecha, hora_inicio);
+      
+      // Para iniciación, el cupo es igual al número de instructoras disponibles
+      cupoMaximoAjustado = instructorasDisponibles;
+      
+      console.log(`⚠️ Cupo ajustado para reserva: ${cupoMaximoAjustado} (instructoras disponibles: ${instructorasDisponibles})`);
+    }
+
     // Verificar cupo disponible
     const [reservasExistentes] = await db.query(`
       SELECT COUNT(*) as ocupadas FROM reservas
@@ -990,7 +1003,7 @@ router.post('/book', async (req, res) => {
       AND estatus IN ('pendiente', 'confirmada')
     `, [formatDateForMySQL(fecha), clase_id, hora_inicio]);
 
-    if (reservasExistentes[0].ocupadas >= infoClase.cupo_max) {
+    if (reservasExistentes[0].ocupadas >= cupoMaximoAjustado) {
       return res.status(400).json({ 
         error: 'No hay espacios disponibles en este horario' 
       });
@@ -1038,7 +1051,7 @@ router.post('/book', async (req, res) => {
         GROUP BY r.instructora_id
         HAVING alumnos_en_slot < ?
         LIMIT 1
-      `, [clase_id, fechaMySQL, formatTimeForMySQL(hora_inicio), clase_id, diaSemanaMySQL, fechaMySQL, infoClase.cupo_max]);
+      `, [clase_id, fechaMySQL, formatTimeForMySQL(hora_inicio), clase_id, diaSemanaMySQL, fechaMySQL, cupoMaximoAjustado]);
 
       // Si hay una instructora que ya tiene alumnos en este slot y clase específica, asignarle
       if (instructoraActual.length > 0) {

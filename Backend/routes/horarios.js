@@ -86,10 +86,10 @@ router.get('/clase/:nombreClase', async (req, res) => {
         acc[dia] = [];
       }
       
-      // Para iniciación, usar capacidad ajustada si está disponible
+      // Para iniciación, usar capacidad ajustada según instructoras disponibles
       let capacidad = row.capacidad;
       if (nombreClase.toLowerCase() === 'iniciacion' && capacidadAjustadaPorDia[row.dia_semana] !== undefined) {
-        capacidad = Math.min(row.capacidad, capacidadAjustadaPorDia[row.dia_semana]);
+        capacidad = capacidadAjustadaPorDia[row.dia_semana];
       }
       
       acc[dia].push({
