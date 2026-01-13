@@ -1335,13 +1335,13 @@ const MembershipAdminDashboard = () => {
                                 const newStatus = e.target.value
                                 try {
                                   const response = await fetch(
-                                    `https://elrefugiocountryclub.com/api/api/users/update-status/${member.id}`,
-                                    {
-                                      method: "PATCH",
-                                      headers: { "Content-Type": "application/json" },
-                                      body: JSON.stringify({ estado: newStatus }),
-                                    },
-                                  )
+                                      `https://elrefugiocountryclub.com/api/api/users/update-status/${member.id}`,
+                                      {
+                                        method: "PATCH",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({ estatus: newStatus }),
+                                      },
+                                    )
                                   if (response.ok) {
                                     setMembers((prev) =>
                                       prev.map((m) => (m.id === member.id ? { ...m, status: newStatus } : m)),
