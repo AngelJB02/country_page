@@ -344,6 +344,13 @@ const verificarRestriccionesCliente = async (clienteId, fecha, tipoCliente) => {
       AND estatus IN ('pendiente', 'confirmada')
     `, [clienteId]);
 
+    // Excepción especial: el usuario con id 8 puede tener más de una reserva activa
+    // (permitir múltiples reservas únicamente para este cliente)
+    if (String(clienteId) === '8') {
+      console.log('🔓 Excepción aplicada: cliente 8 puede crear múltiples reservas activas');
+      return { permitido: true };
+    }
+
     if (reservasActivas[0].total > 0) {
       return { 
         permitido: false, 

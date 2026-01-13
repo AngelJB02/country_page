@@ -492,7 +492,10 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
   // Determina si el usuario ya tiene reserva ese día (solo confirmada/pendiente)
   // Excepto para propietario, renta y media_renta que pueden tener múltiples reservas por día
   // Para clientes tipo general: si tiene cualquier reserva pendiente o confirmada, deshabilitar todos los slots
-  const hasBookingForDay = userType === 'general'
+  // Excepción: el usuario con id 8 puede tener múltiples reservas (bypass)
+  const isExceptionUser = String(userId) === '8';
+
+  const hasBookingForDayComputed = userType === 'general'
     ? userBookings.some(b => b.estatus === 'pendiente' || b.estatus === 'confirmada')
     : selectedSlot && userType !== 'propietario' && userType !== 'renta' && userType !== 'media_renta'
       ? userBookings.some(b => {
@@ -513,8 +516,13 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
         })
       : false;
 
+  const hasBookingForDay = isExceptionUser ? false : hasBookingForDayComputed;
+
   // Simula la regla de 24h (debería venir del backend)
-  const hasBookingWithin24h = false;
+  // Actualmente es un stub; mantener la computed variable para futuro soporte.
+  const hasBookingWithin24hComputed = false;
+  // Aplicar excepción para usuario 8: permitir crear reservas aunque tenga reserva dentro de 24h
+  const hasBookingWithin24h = isExceptionUser ? false : hasBookingWithin24hComputed;
 
   return (
     <>
