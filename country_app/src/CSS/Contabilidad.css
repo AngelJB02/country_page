@@ -1297,15 +1297,18 @@ body.no-scroll {
   color: white;
   border: none;
   border-radius: 6px;
-  padding: 8px;
+  padding: 8px 12px;
   cursor: pointer;
   transition: all 0.3s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 36px;
-  height: 36px;
+  gap: 6px;
+  min-width: auto;
+  height: auto;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .edit-payment-btn:hover {

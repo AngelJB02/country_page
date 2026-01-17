@@ -669,4 +669,190 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// =============================================================================
+// HORARIOS DE INSTRUCTORAS
+// =============================================================================
+
+// Obtener horarios disponibles de una instructora
+router.get('/:id/horarios', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const [rows] = await db.query(`
+      SELECT id, dia_semana, hora_inicio, hora_fin, activo, creado_en
+      FROM instructora_horarios
+      WHERE instructora_id = ?
+      ORDER BY FIELD(dia_semana, 'L', 'M', 'X', 'J', 'V', 'S', 'D'), hora_inicio
+    `, [id]);
+    
+    res.json(rows);
+  } catch (err) {
+    console.error('Error al obtener horarios de instructora:', err);
+    res.status(500).json({ error: 'Error al obtener horarios' });
+  }
+});
+
+// Crear horario para una instructora
+router.post('/:id/horarios', async (req, res) => {
+  const { id } = req.params;
+  const { dia_semana, hora_inicio, hora_fin } = req.body;
+  
+  if (!dia_semana || !hora_inicio || !hora_fin) {
+    return res.status(400).json({ 
+      error: 'Faltan campos requeridos: dia_semana, hora_inicio, hora_fin' 
+    });
+  }
+  
+  try {
+    // Verificar que la instructora existe
+    const [instructora] = await db.query(
+      'SELECT id FROM instructoras WHERE id = ?',
+      [id]
+    );
+    
+    if (instructora.length === 0) {
+      return res.status(404).json({ error: 'Instructora no encontrada' });
+    }
+    
+    // Verificar que no haya conflicto de horario
+    const [conflicto] = await db.query(`
+      SELECT id FROM instructora_horarios
+      WHERE instructora_id = ?
+        AND dia_semana = ?
+        AND activo = 1
+        AND (
+          (? BETWEEN hora_inicio AND hora_fin) OR
+          (? BETWEEN hora_inicio AND hora_fin) OR
+          (hora_inicio BETWEEN ? AND ?) OR
+          (hora_fin BETWEEN ? AND ?)
+        )
+    `, [id, dia_semana, hora_inicio, hora_fin, hora_inicio, hora_fin, hora_inicio, hora_fin]);
+    
+    if (conflicto.length > 0) {
+      return res.status(400).json({ 
+        error: 'Conflicto de horario: ya existe un horario que se solapa' 
+      });
+    }
+    
+    const [result] = await db.query(`
+      INSERT INTO instructora_horarios (instructora_id, dia_semana, hora_inicio, hora_fin)
+      VALUES (?, ?, ?, ?)
+    `, [id, dia_semana, hora_inicio, hora_fin]);
+    
+    res.status(201).json({ 
+      message: 'Horario creado correctamente',
+      id: result.insertId
+    });
+    
+  } catch (err) {
+    console.error('Error al crear horario:', err);
+    res.status(500).json({ error: 'Error al crear horario' });
+  }
+});
+
+// Actualizar horario de instructora
+router.put('/:id/horarios/:horarioId', async (req, res) => {
+  const { id, horarioId } = req.params;
+  const { dia_semana, hora_inicio, hora_fin, activo } = req.body;
+  
+  try {
+    // Verificar que el horario pertenece a la instructora
+    const [horario] = await db.query(`
+      SELECT id FROM instructora_horarios
+      WHERE id = ? AND instructora_id = ?
+    `, [horarioId, id]);
+    
+    if (horario.length === 0) {
+      return res.status(404).json({ error: 'Horario no encontrado' });
+    }
+    
+    // Si se está actualizando el horario, verificar conflictos
+    if (dia_semana || hora_inicio || hora_fin) {
+      const dia = dia_semana || horario[0].dia_semana;
+      const inicio = hora_inicio || horario[0].hora_inicio;
+      const fin = hora_fin || horario[0].hora_fin;
+      
+      const [conflicto] = await db.query(`
+        SELECT id FROM instructora_horarios
+        WHERE instructora_id = ?
+          AND dia_semana = ?
+          AND activo = 1
+          AND id != ?
+          AND (
+            (? BETWEEN hora_inicio AND hora_fin) OR
+            (? BETWEEN hora_inicio AND hora_fin) OR
+            (hora_inicio BETWEEN ? AND ?) OR
+            (hora_fin BETWEEN ? AND ?)
+          )
+      `, [id, dia, horarioId, inicio, fin, inicio, fin, inicio, fin]);
+      
+      if (conflicto.length > 0) {
+        return res.status(400).json({ 
+          error: 'Conflicto de horario: ya existe un horario que se solapa' 
+        });
+      }
+    }
+    
+    const updates = [];
+    const values = [];
+    
+    if (dia_semana !== undefined) {
+      updates.push('dia_semana = ?');
+      values.push(dia_semana);
+    }
+    if (hora_inicio !== undefined) {
+      updates.push('hora_inicio = ?');
+      values.push(hora_inicio);
+    }
+    if (hora_fin !== undefined) {
+      updates.push('hora_fin = ?');
+      values.push(hora_fin);
+    }
+    if (activo !== undefined) {
+      updates.push('activo = ?');
+      values.push(activo);
+    }
+    
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'No hay campos para actualizar' });
+    }
+    
+    values.push(horarioId);
+    
+    await db.query(`
+      UPDATE instructora_horarios
+      SET ${updates.join(', ')}
+      WHERE id = ?
+    `, values);
+    
+    res.json({ message: 'Horario actualizado correctamente' });
+    
+  } catch (err) {
+    console.error('Error al actualizar horario:', err);
+    res.status(500).json({ error: 'Error al actualizar horario' });
+  }
+});
+
+// Eliminar horario de instructora
+router.delete('/:id/horarios/:horarioId', async (req, res) => {
+  const { id, horarioId } = req.params;
+  
+  try {
+    const [result] = await db.query(`
+      DELETE FROM instructora_horarios
+      WHERE id = ? AND instructora_id = ?
+    `, [horarioId, id]);
+    
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Horario no encontrado' });
+    }
+    
+    res.json({ message: 'Horario eliminado correctamente' });
+    
+  } catch (err) {
+    console.error('Error al eliminar horario:', err);
+    res.status(500).json({ error: 'Error al eliminar horario' });
+  }
+});
+
 export default router;

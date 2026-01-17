@@ -32,6 +32,7 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
   const [dynamicSchedule, setDynamicSchedule] = useState(null);
   const [loadingSchedule, setLoadingSchedule] = useState(true);
   const [scheduleError, setScheduleError] = useState(null);
+  const [instructorAvailabilityMap, setInstructorAvailabilityMap] = useState({});
   
   // fecha base para la semana mostrada (permite navegar semanas)
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -48,7 +49,7 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
       
       try {
         setLoadingSchedule(true);
-        const response = await fetch(`https://elrefugiocountryclub.com/api/api/horarios/clase/${className}`);
+        const response = await fetch(`http://localhost:3001/api/horarios/clase/${className}`);
         if (!response.ok) {
           throw new Error('Error al cargar horarios desde la base de datos');
         }
@@ -88,6 +89,59 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
       }
     }
   }, [currentDate, onWeekChange]);
+
+  // Consultar disponibilidad de instructoras para los slots de la semana
+  useEffect(() => {
+    const fetchInstructorAvailability = async () => {
+      if (!dynamicSchedule || !claseId) return;
+
+      // Construir lista de slots para la semana
+      const weekDates = getCurrentWeek(currentDate, 1);
+      const dayNameToDate = {};
+      weekDates.forEach(d => {
+        const name = format(d, 'EEEE', { locale: es });
+        const cap = name.charAt(0).toUpperCase() + name.slice(1);
+        dayNameToDate[cap] = d;
+      });
+
+      const slotsToCheck = [];
+      Object.keys(dynamicSchedule.horarios || {}).forEach((dayName) => {
+        const date = dayNameToDate[dayName];
+        if (!date) return;
+        const dateStr = getDateString(date);
+        const horariosDelDia = dynamicSchedule.horarios[dayName] || [];
+        horariosDelDia.forEach(h => {
+          slotsToCheck.push({ fecha: dateStr, hora: h.hora_inicio });
+        });
+      });
+
+      if (slotsToCheck.length === 0) {
+        setInstructorAvailabilityMap({});
+        return;
+      }
+
+      try {
+        const res = await fetch('http://localhost:3001/api/reservas/instructor-availability/batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ clase_id: claseId, slots: slotsToCheck })
+        });
+        if (!res.ok) throw new Error('Error al consultar disponibilidad de instructoras');
+        const data = await res.json();
+        const map = {};
+        (data.results || []).forEach(r => {
+          const key = `${r.fecha}|${r.hora}`;
+          map[key] = r.disponibles;
+        });
+        setInstructorAvailabilityMap(map);
+      } catch (err) {
+        console.error('Error cargando disponibilidad de instructoras:', err);
+        setInstructorAvailabilityMap({});
+      }
+    };
+
+    fetchInstructorAvailability();
+  }, [dynamicSchedule, currentDate, claseId]);
 
   // Ya no necesitamos cargar capacidades ajustadas por fecha
   // El endpoint /api/horarios/clase ya devuelve la capacidad ajustada según descansos fijos
@@ -165,6 +219,29 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
       
       // Obtener capacidad específica para este slot (ajustada para iniciación)
       const capacity = getCapacityForSlot(day, time, realDate);
+
+      // Consultar disponibilidad de instructoras para este slot (siempre que exista el mapa)
+      const availabilityKey = `${slotDateStr}|${time}`;
+      const instructorasDisponibles = instructorAvailabilityMap[availabilityKey];
+      // Determinar bloqueo y capacidad efectiva basada en disponibilidad de instructoras
+      let blockedByInstructor = false;
+      let effectiveCapacity = capacity;
+
+      if (typeof instructorasDisponibles === 'number') {
+        if (instructorasDisponibles <= 0) {
+          blockedByInstructor = true;
+          effectiveCapacity = 0;
+        } else {
+          // Para clases de iniciación, el cupo real está limitado por el número de instructoras
+          if (className && className.toLowerCase().includes('iniciaci')) {
+            effectiveCapacity = Math.min(capacity, instructorasDisponibles);
+          } else {
+            // Para otras clases mantenemos el cupo, pero opcionalmente podríamos
+            // usar instructorasDisponibles para ajustar si se desea.
+            effectiveCapacity = capacity;
+          }
+        }
+      }
       
       // Calcular la hora de inicio del slot usando Luxon con zona horaria de Cancún
       const [hours, minutes] = time.split(':').map(Number);
@@ -241,10 +318,12 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
         day,
         date: realDate,
         time,
-        capacity,
+        capacity: effectiveCapacity,
+        instructorasDisponibles: typeof instructorasDisponibles === 'number' ? instructorasDisponibles : null,
+        blockedByInstructor,
         bookings: slotBookings,
         totalBooked: totalBookingsForSlot,
-        isBlocked: isBlocked || isWithin2Hours || hasPassed, // Bloquear si: iniciación tarde, <2h, ya pasó (NO si está cancelada por instructor)
+        isBlocked: blockedByInstructor || isBlocked || isWithin2Hours || hasPassed, // Bloquear si: sin instructoras, iniciación tarde, <2h, ya pasó
         isWithin2Hours, // Flag específico para mensaje "muy pronto"
         hasPassed, // Flag específico para mensaje "clase finalizada"
         userStatus, // nuevo: estatus de la reserva del usuario (si existe)

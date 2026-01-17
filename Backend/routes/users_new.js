@@ -287,7 +287,7 @@ router.post('/register', async (req, res) => {
     // Enviar email con credenciales si el usuario tiene correo
     if (correo && correo.trim() !== '') {
       try {
-        await axios.post('https://elrefugiocountryclub.com/api/api/email/send-credentials', {
+        await axios.post('http://localhost:3001/api/email/send-credentials', {
           email: correo.trim(),
           nombre: nombre,
           username: username,
@@ -437,7 +437,7 @@ router.post('/register-cliente', async (req, res) => {
     // Enviar email con credenciales si el cliente tiene correo
     if (userEmail && userEmail.trim() !== '') {
       try {
-        await axios.post('https://elrefugiocountryclub.com/api/api/email/send-credentials', {
+        await axios.post('http://localhost:3001/api/email/send-credentials', {
           email: userEmail.trim(),
           nombre: nombre,
           username: credentials.username,
@@ -570,7 +570,7 @@ router.patch('/update-password/:id', async (req, res) => {
     // Enviar email con credenciales actualizadas si el usuario tiene correo
     if (user.correo && user.correo.trim() !== '') {
       try {
-        await axios.post('https://elrefugiocountryclub.com/api/api/email/send-updated-credentials', {
+        await axios.post('http://localhost:3001/api/email/send-updated-credentials', {
           email: user.correo.trim(),
           nombre: `${user.nombre} ${user.apellido || ''}`.trim(),
           username: user.username,
@@ -1215,7 +1215,7 @@ router.post('/change-password', async (req, res) => {
     // Enviar email con credenciales actualizadas si el usuario tiene correo registrado
     if (user.correo) {
       try {
-        await axios.post('https://elrefugiocountryclub.com/api/api/email/send-updated-credentials', {
+        await axios.post('http://localhost:3001/api/email/send-updated-credentials', {
           email: user.correo,
           nombre: user.nombre,
           username: user.username,

@@ -228,7 +228,7 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
       }
 
       // Consultar el usuario en el backend
-      const res = await fetch(`https://elrefugiocountryclub.com/api/api/users/${userIdLocal}`);
+      const res = await fetch(`http://localhost:3001/api/users/${userIdLocal}`);
       
       console.log('🌐 Response status:', res.status);
       console.log('🌐 Response ok:', res.ok);
@@ -710,7 +710,7 @@ function MenuCalendario() {
           if (!localStorage.getItem('user')) return;
   
           // Usar la misma URL que en handleConfirm
-          const response = await fetch(`https://elrefugiocountryclub.com/api/api/users/${userId}`);
+          const response = await fetch(`http://localhost:3001/api/users/${userId}`);
           
           if (!response.ok) return;
         

@@ -68,21 +68,32 @@ const getDiaSemanaMySQL = (fecha) => {
 };
 
 // Función para calcular instructoras disponibles considerando descansos fijos
-// OPTIMIZADA: Usa LEFT JOIN para excluir instructoras en descanso (más confiable que NOT IN)
+// OPTIMIZADA: Usa LEFT JOIN para incluir instructoras sin horarios específicos (se consideran disponibles siempre)
+// Si tienen horarios configurados, solo están disponibles en esos horarios específicos
 const calcularInstructorasDisponibles = async (clase_id, fecha, hora_inicio) => {
   try {
     const diaSemanaMySQL = getDiaSemanaMySQL(fecha);
     const fechaMySQL = formatDateForMySQL(fecha);
     
-    // Primero, obtener todas las instructoras aptas (sin filtrar descansos)
+    // Obtener instructoras aptas PARA ESTA CLASE.
+    // Comportamiento legacy: si una instructora NO tiene horarios configurados,
+    // se considera disponible en cualquier horario. Si tiene horarios, la hora
+    // solicitada debe caer dentro de su rango activo.
     const [todasAptas] = await db.query(`
-      SELECT i.id
+      SELECT DISTINCT i.id
       FROM instructoras i
-      INNER JOIN instructora_clase ic ON i.id = ic.instructora_id 
-        AND ic.clase_id = ? 
+      INNER JOIN instructora_clase ic ON i.id = ic.instructora_id
+        AND ic.clase_id = ?
         AND ic.activo = 1
+      LEFT JOIN instructora_horarios ih ON i.id = ih.instructora_id
+        AND ih.dia_semana = ?
+        AND ih.activo = 1
       WHERE i.disponibilidad = 'disponible'
-    `, [clase_id]);
+        AND (
+          ih.id IS NULL OR
+          ? BETWEEN ih.hora_inicio AND ih.hora_fin
+        )
+    `, [clase_id, diaSemanaMySQL, formatTimeForMySQL(hora_inicio)]);
     
     console.log(`🔍 Todas las instructoras aptas para clase ${clase_id}:`, todasAptas.map(i => i.id));
     
@@ -849,26 +860,31 @@ router.get('/available-slots/:clienteId', async (req, res) => {
       });
     }
 
-    // Filtrar horarios ocupados
+    // Filtrar horarios ocupados Y verificar disponibilidad de instructoras
     const horariosLibres = [];
     for (const hora of horariosDisponibles) {
       const horaFin = new Date(`2000-01-01 ${hora}`);
       horaFin.setMinutes(horaFin.getMinutes() + infoClase.duracion_min);
       const horaFinStr = horaFin.toTimeString().slice(0, 8);
 
+      // 🔍 Verificar que haya instructoras disponibles para este horario
+      const instructorasDisponibles = await calcularInstructorasDisponibles(clase_id, fecha, hora);
+
+      if (instructorasDisponibles === 0) {
+        console.log(`⚠️ Horario ${hora} no disponible: no hay instructoras disponibles`);
+        continue; // Saltar este horario si no hay instructoras
+      }
+
       // Solo para iniciación: ajustar cupo según instructoras disponibles (considerando descansos)
       // Para otras clases, el cupo se mantiene como está configurado
       let cupoMaximoAjustado = infoClase.cupo_max;
-      
+
       if (infoClase.nombre.toLowerCase() === 'iniciacion') {
-        // Calcular instructoras disponibles para este horario (considerando descansos)
-        const instructorasDisponibles = await calcularInstructorasDisponibles(clase_id, fecha, hora);
-        
         // Para iniciación, el cupo es igual al número de instructoras disponibles
         cupoMaximoAjustado = instructorasDisponibles;
-        
+
         if (cupoMaximoAjustado < infoClase.cupo_max) {
-          console.log(`⚠️ Cupo ajustado por descansos: ${cupoMaximoAjustado} (original: ${infoClase.cupo_max})`);
+          console.log(`⚠️ Cupo ajustado por disponibilidad: ${cupoMaximoAjustado} (original: ${infoClase.cupo_max})`);
         }
       }
 
@@ -876,7 +892,7 @@ router.get('/available-slots/:clienteId', async (req, res) => {
       const [reservasExistentes] = await db.query(`
         SELECT COUNT(*) as ocupadas FROM reservas
         WHERE fecha = ? AND clase_id = ?
-        AND hora_inicio = ? 
+        AND hora_inicio = ?
         AND estatus IN ('pendiente', 'confirmada')
       `, [formatDateForMySQL(fecha), clase_id, hora]);
 
@@ -1011,6 +1027,7 @@ router.post('/book', async (req, res) => {
     `, [formatDateForMySQL(fecha), clase_id, hora_inicio]);
 
     if (reservasExistentes[0].ocupadas >= cupoMaximoAjustado) {
+      console.log('⚠️ Verificación de cupo: reservasExistentes=', reservasExistentes[0].ocupadas, 'cupoMaximoAjustado=', cupoMaximoAjustado);
       return res.status(400).json({ 
         error: 'No hay espacios disponibles en este horario' 
       });
@@ -1042,13 +1059,18 @@ router.post('/book', async (req, res) => {
         FROM reservas r
         JOIN instructoras i ON r.instructora_id = i.id
         JOIN instructora_clase ic ON i.id = ic.instructora_id AND ic.clase_id = ? AND ic.activo = 1
+        LEFT JOIN instructora_horarios ih ON i.id = ih.instructora_id AND ih.dia_semana = ? AND ih.activo = 1
         WHERE r.fecha = ?
           AND r.hora_inicio = ?
           AND r.clase_id = ?
           AND r.estatus IN ('pendiente','confirmada')
           AND i.disponibilidad = 'disponible'
+          AND (
+            ih.id IS NULL OR
+            ? BETWEEN ih.hora_inicio AND ih.hora_fin
+          )
           AND r.instructora_id NOT IN (
-            SELECT d.instructora_id FROM descansos d 
+            SELECT d.instructora_id FROM descansos d
             WHERE (
               (d.es_recurrente = 1 AND d.dia_semana = ?)
               OR
@@ -1058,7 +1080,7 @@ router.post('/book', async (req, res) => {
         GROUP BY r.instructora_id
         HAVING alumnos_en_slot < ?
         LIMIT 1
-      `, [clase_id, fechaMySQL, formatTimeForMySQL(hora_inicio), clase_id, diaSemanaMySQL, fechaMySQL, cupoMaximoAjustado]);
+      `, [clase_id, diaSemanaMySQL, fechaMySQL, formatTimeForMySQL(hora_inicio), clase_id, formatTimeForMySQL(hora_inicio), diaSemanaMySQL, fechaMySQL, cupoMaximoAjustado]);
 
       // Si hay una instructora que ya tiene alumnos en este slot y clase específica, asignarle
       if (instructoraActual.length > 0) {
@@ -1091,7 +1113,12 @@ router.post('/book', async (req, res) => {
              AND r3.estatus IN ('pendiente','confirmada')) as clases_consecutivas
         FROM instructoras i
         JOIN instructora_clase ic ON i.id = ic.instructora_id AND ic.clase_id = ? AND ic.activo = 1
+        LEFT JOIN instructora_horarios ih ON i.id = ih.instructora_id AND ih.dia_semana = ? AND ih.activo = 1
         WHERE i.disponibilidad = 'disponible'
+          AND (
+            ih.id IS NULL OR
+            ? BETWEEN ih.hora_inicio AND ih.hora_fin
+          )
           AND i.id NOT IN (
             SELECT d.instructora_id FROM descansos d 
             WHERE (
@@ -1111,6 +1138,7 @@ router.post('/book', async (req, res) => {
         fecha, fecha, fecha, fecha, // para calcular semana de la reserva
         fecha, hora_inicio, hora_fin, // para detectar clases consecutivas
         clase_id,
+        diaSemanaMySQL, formatTimeForMySQL(hora_inicio), // para horarios disponibles
         diaSemanaMySQL, // para descansos recurrentes
         fechaMySQL, // para descansos no recurrentes
         fecha,
@@ -1183,7 +1211,7 @@ router.post('/book', async (req, res) => {
                            tipoCliente === 'renta' ? 'renta' :
                            tipoCliente === 'media_renta' ? 'media_renta' : null;
 
-        await axios.post('https://elrefugiocountryclub.com/api/api/email/send-reservation-confirmation', {
+        await axios.post('http://localhost:3001/api/email/send-reservation-confirmation', {
           email: clienteData[0].correo.trim(),
           nombre: `${clienteData[0].nombre} ${clienteData[0].apellido}`,
           fechaReserva: fecha,
@@ -1421,7 +1449,7 @@ router.put('/:id/cancel/:clienteId', async (req, res) => {
           console.log(`📨 Enviando email de cancelación a ${cliente[0].correo} desde endpoint cancel cliente`);
 
           // Enviar email de cancelación (no bloquea si falla)
-          axios.post('https://elrefugiocountryclub.com/api/api/email/send-cancellation-notification', emailPayload)
+          axios.post('http://localhost:3001/api/email/send-cancellation-notification', emailPayload)
             .then(() => {
               console.log(`✅ Email de cancelación enviado correctamente a: ${cliente[0].correo}`);
             })
@@ -1909,7 +1937,7 @@ router.put('/instructor/:reservaId/attendance', async (req, res) => {
           };
 
           // Enviar email de cancelación (no bloquea si falla)
-          axios.post('https://elrefugiocountryclub.com/api/api/email/send-cancellation-notification', emailPayload)
+          axios.post('http://localhost:3001/api/email/send-cancellation-notification', emailPayload)
             .then(() => {
               console.log(`✅ Email de cancelación enviado a: ${cliente[0].correo}`);
             })
@@ -2100,7 +2128,7 @@ router.put('/instructor/:reservaId/status', async (req, res) => {
           };
 
           // Enviar email de cancelación (no bloquea si falla)
-          axios.post('https://elrefugiocountryclub.com/api/api/email/send-cancellation-notification', emailPayload)
+          axios.post('http://localhost:3001/api/email/send-cancellation-notification', emailPayload)
             .then(() => {
               console.log(`✅ Email de cancelación enviado a: ${cliente[0].correo}`);
             })
@@ -2387,7 +2415,7 @@ router.post('/instructor/cancel-from-time', async (req, res) => {
             console.log(`📨 Enviando email de cancelación a ${cliente[0].correo} con payload:`, emailPayload);
 
             // Enviar email de cancelación (no bloquea si falla)
-            axios.post('https://elrefugiocountryclub.com/api/api/email/send-cancellation-notification', emailPayload)
+            axios.post('http://localhost:3001/api/email/send-cancellation-notification', emailPayload)
               .then(() => {
                 console.log(`✅ Email de cancelación enviado correctamente a: ${cliente[0].correo}`);
               })
@@ -2506,6 +2534,42 @@ router.get('/instructors/available', async (req, res) => {
   } catch (err) {
     console.error('Error obteniendo instructoras:', err);
     res.status(500).json({ error: 'Error al obtener instructoras' });
+  }
+});
+
+// Endpoint batch para consultar disponibilidad de instructoras por múltiples slots
+// Recibe: { clase_id, slots: [{ fecha: 'YYYY-MM-DD', hora: 'HH:MM' }, ...] }
+// Devuelve: { results: [{ fecha, hora, disponibles }, ...] }
+router.post('/instructor-availability/batch', async (req, res) => {
+  try {
+    const { clase_id, slots } = req.body;
+    if (!clase_id || !Array.isArray(slots)) {
+      return res.status(400).json({ error: 'Parámetros inválidos. Se requiere clase_id y slots[]' });
+    }
+
+    // LOG: mostrar lo que llega para depuración
+    console.log('POST /instructor-availability/batch recibidos:', { clase_id, slotsCount: slots.length });
+
+    // Mapear y consultar en paralelo
+    const checks = await Promise.all(slots.map(async (s) => {
+      try {
+        const fecha = s.fecha;
+        const hora = s.hora;
+        const disponibles = await calcularInstructorasDisponibles(clase_id, fecha, hora);
+        const result = { fecha, hora, disponibles };
+        console.log('  check ->', result);
+        return result;
+      } catch (err) {
+        console.error('Error comprobando slot', s, err);
+        return { fecha: s.fecha, hora: s.hora, disponibles: 0, error: err.message };
+      }
+    }));
+
+    console.log('Respondiendo instructor-availability/batch con', checks.length, 'resultados');
+    res.json({ results: checks });
+  } catch (err) {
+    console.error('Error en batch instructor availability:', err);
+    res.status(500).json({ error: 'Error al procesar disponibilidad de instructoras' });
   }
 });
 
