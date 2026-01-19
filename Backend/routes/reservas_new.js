@@ -76,26 +76,45 @@ const calcularInstructorasDisponibles = async (clase_id, fecha, hora_inicio) => 
     const fechaMySQL = formatDateForMySQL(fecha);
     
     // Obtener instructoras aptas PARA ESTA CLASE.
-    // Comportamiento legacy: si una instructora NO tiene horarios configurados,
-    // se considera disponible en cualquier horario. Si tiene horarios, la hora
-    // solicitada debe caer dentro de su rango activo.
+    // LÓGICA CORRECTA:
+    // 1. Si NO tiene NINGÚN horario definido → disponible siempre
+    // 2. Si tiene AL MENOS UN horario definido → solo disponible en esos horarios específicos
     const [todasAptas] = await db.query(`
       SELECT DISTINCT i.id
       FROM instructoras i
       INNER JOIN instructora_clase ic ON i.id = ic.instructora_id
         AND ic.clase_id = ?
         AND ic.activo = 1
-      LEFT JOIN instructora_horarios ih ON i.id = ih.instructora_id
-        AND ih.dia_semana = ?
-        AND ih.activo = 1
       WHERE i.disponibilidad = 'disponible'
         AND (
-          ih.id IS NULL OR
-          ? BETWEEN ih.hora_inicio AND ih.hora_fin
+          -- Caso 1: La instructora NO tiene NINGÚN horario definido (disponible siempre)
+          NOT EXISTS (
+            SELECT 1 FROM instructora_horarios ih_check
+            WHERE ih_check.instructora_id = i.id AND ih_check.activo = 1
+          )
+          OR
+          -- Caso 2: La instructora tiene horarios Y este día/hora específico está en su configuración
+          EXISTS (
+            SELECT 1 FROM instructora_horarios ih_match
+            WHERE ih_match.instructora_id = i.id
+              AND ih_match.dia_semana = ?
+              AND ih_match.activo = 1
+              AND ? BETWEEN ih_match.hora_inicio AND ih_match.hora_fin
+          )
         )
     `, [clase_id, diaSemanaMySQL, formatTimeForMySQL(hora_inicio)]);
     
-    console.log(`🔍 Todas las instructoras aptas para clase ${clase_id}:`, todasAptas.map(i => i.id));
+    console.log(`🔍 Todas las instructoras aptas para clase ${clase_id} el día ${diaSemanaMySQL} a las ${hora_inicio}:`, todasAptas.map(i => i.id));
+    
+    // DEBUG: Ver horarios de cada instructora para entender por qué se incluye o excluye
+    for (const instructora of todasAptas) {
+      const [horarios] = await db.query(`
+        SELECT dia_semana, hora_inicio, hora_fin 
+        FROM instructora_horarios 
+        WHERE instructora_id = ? AND activo = 1
+      `, [instructora.id]);
+      console.log(`  Instructora ${instructora.id}: ${horarios.length === 0 ? 'SIN horarios (disponible siempre)' : JSON.stringify(horarios)}`);
+    }
     
     // Verificar descansos para estas instructoras
     // Si no hay instructoras aptas, no hay descansos que verificar
@@ -1059,15 +1078,26 @@ router.post('/book', async (req, res) => {
         FROM reservas r
         JOIN instructoras i ON r.instructora_id = i.id
         JOIN instructora_clase ic ON i.id = ic.instructora_id AND ic.clase_id = ? AND ic.activo = 1
-        LEFT JOIN instructora_horarios ih ON i.id = ih.instructora_id AND ih.dia_semana = ? AND ih.activo = 1
         WHERE r.fecha = ?
           AND r.hora_inicio = ?
           AND r.clase_id = ?
           AND r.estatus IN ('pendiente','confirmada')
           AND i.disponibilidad = 'disponible'
           AND (
-            ih.id IS NULL OR
-            ? BETWEEN ih.hora_inicio AND ih.hora_fin
+            -- Sin horarios definidos: disponible siempre
+            NOT EXISTS (
+              SELECT 1 FROM instructora_horarios ih_check
+              WHERE ih_check.instructora_id = i.id AND ih_check.activo = 1
+            )
+            OR
+            -- Con horarios: solo si este día/hora está configurado
+            EXISTS (
+              SELECT 1 FROM instructora_horarios ih_match
+              WHERE ih_match.instructora_id = i.id
+                AND ih_match.dia_semana = ?
+                AND ih_match.activo = 1
+                AND ? BETWEEN ih_match.hora_inicio AND ih_match.hora_fin
+            )
           )
           AND r.instructora_id NOT IN (
             SELECT d.instructora_id FROM descansos d
@@ -1080,7 +1110,7 @@ router.post('/book', async (req, res) => {
         GROUP BY r.instructora_id
         HAVING alumnos_en_slot < ?
         LIMIT 1
-      `, [clase_id, diaSemanaMySQL, fechaMySQL, formatTimeForMySQL(hora_inicio), clase_id, formatTimeForMySQL(hora_inicio), diaSemanaMySQL, fechaMySQL, cupoMaximoAjustado]);
+      `, [clase_id, fechaMySQL, formatTimeForMySQL(hora_inicio), clase_id, diaSemanaMySQL, formatTimeForMySQL(hora_inicio), diaSemanaMySQL, fechaMySQL, cupoMaximoAjustado]);
 
       // Si hay una instructora que ya tiene alumnos en este slot y clase específica, asignarle
       if (instructoraActual.length > 0) {
@@ -1113,11 +1143,22 @@ router.post('/book', async (req, res) => {
              AND r3.estatus IN ('pendiente','confirmada')) as clases_consecutivas
         FROM instructoras i
         JOIN instructora_clase ic ON i.id = ic.instructora_id AND ic.clase_id = ? AND ic.activo = 1
-        LEFT JOIN instructora_horarios ih ON i.id = ih.instructora_id AND ih.dia_semana = ? AND ih.activo = 1
         WHERE i.disponibilidad = 'disponible'
           AND (
-            ih.id IS NULL OR
-            ? BETWEEN ih.hora_inicio AND ih.hora_fin
+            -- Sin horarios definidos: disponible siempre
+            NOT EXISTS (
+              SELECT 1 FROM instructora_horarios ih_check
+              WHERE ih_check.instructora_id = i.id AND ih_check.activo = 1
+            )
+            OR
+            -- Con horarios: solo si este día/hora está configurado
+            EXISTS (
+              SELECT 1 FROM instructora_horarios ih_match
+              WHERE ih_match.instructora_id = i.id
+                AND ih_match.dia_semana = ?
+                AND ih_match.activo = 1
+                AND ? BETWEEN ih_match.hora_inicio AND ih_match.hora_fin
+            )
           )
           AND i.id NOT IN (
             SELECT d.instructora_id FROM descansos d 
