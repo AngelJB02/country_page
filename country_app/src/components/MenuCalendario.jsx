@@ -68,6 +68,7 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [classes, setClasses] = useState([]);
   const [sessionModal, setSessionModal] = useState({ isOpen: false, type: null });
+  const [currentWeek, setCurrentWeek] = useState({ start: null, end: null });
   
   // Función para cargar reservas de una semana específica
   const loadWeekBookings = useCallback(async (weekStart, weekEnd) => {
@@ -76,6 +77,7 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
       const fechaFin = getDateString(weekEnd);
       const weekData = await fetchWeekBookings(fechaInicio, fechaFin, userId);
       setAllWeekBookings(weekData);
+      setCurrentWeek({ start: weekStart, end: weekEnd });
     } catch (e) {
       console.error('Error al cargar reservas de la semana:', e);
     }
@@ -107,6 +109,7 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
         
         const weekData = await fetchWeekBookings(fechaInicio, fechaFin, userId);
         setAllWeekBookings(weekData);
+        setCurrentWeek({ start: weekStart, end: weekEnd });
       } catch (e) {
         toast.error('Error al cargar tus reservas');
       } finally {
@@ -402,6 +405,41 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
           position: "top-right",
           autoClose: 3000,
         });
+      }
+      
+      // Refrescar los datos de la semana para mostrar información actualizada
+      try {
+        console.log('🔄 Refrescando datos de la semana después del error de reserva...');
+        
+        let weekStart, weekEnd;
+        if (currentWeek.start && currentWeek.end) {
+          // Refrescar la semana que se está mostrando actualmente
+          weekStart = new Date(currentWeek.start);
+          weekEnd = new Date(currentWeek.end);
+          console.log('📅 Refrescando semana actual mostrada:', getDateString(weekStart), getDateString(weekEnd));
+        } else {
+          // Fallback: refrescar la semana del slot seleccionado
+          const slotDateForWeek = selectedSlot.date || new Date();
+          weekStart = new Date(slotDateForWeek);
+          const dayOfWeek = slotDateForWeek.getDay();
+          const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+          weekStart.setDate(slotDateForWeek.getDate() - daysToMonday);
+          weekStart.setHours(12, 0, 0, 0);
+          weekEnd = new Date(weekStart);
+          weekEnd.setDate(weekStart.getDate() + 6);
+          weekEnd.setHours(12, 0, 0, 0);
+          console.log('📅 Refrescando semana del slot:', getDateString(weekStart), getDateString(weekEnd));
+        }
+        
+        const fechaInicio = getDateString(weekStart);
+        const fechaFin = getDateString(weekEnd);
+        
+        const weekData = await fetchWeekBookings(fechaInicio, fechaFin, userId);
+        console.log('📊 Nuevos datos de semana:', weekData);
+        setAllWeekBookings(weekData);
+        console.log('✅ allWeekBookings actualizado después del error');
+      } catch (refreshError) {
+        console.error('❌ Error al refrescar datos después del error de reserva:', refreshError);
       }
     }
     closeModal();

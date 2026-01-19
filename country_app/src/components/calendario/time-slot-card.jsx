@@ -46,7 +46,7 @@ export function TimeSlotCard({ time, capacity, bookedCount, isBookedByUser, isBl
     } else if (isWithin2Hours) {
       metaText = 'Muy pronto (2h anticipación)';
     } else {
-      metaText = 'Bloqueado';
+      metaText = 'Sin instructor disponible';
     }
   } else if (userStatus === 'completada') {
     metaText = 'Ya asististe';
