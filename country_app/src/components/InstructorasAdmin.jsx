@@ -45,6 +45,12 @@ const InstructorasAdmin = () => {
   const [horariosSemanales, setHorariosSemanales] = useState({});
   const [loadingHorariosSemanales, setLoadingHorariosSemanales] = useState(false);
 
+  // Estados para detección de conflictos con clases existentes
+  const [clasesInstructor, setClasesInstructor] = useState([]);
+  const [classDefinitions, setClassDefinitions] = useState([]);
+  const [conflictos, setConflictos] = useState([]);
+  const [loadingClasesInstructor, setLoadingClasesInstructor] = useState(false);
+
   // Estados para gestión de horarios
   const [horariosModalOpen, setHorariosModalOpen] = useState(false);
   const [selectedInstructorHorarios, setSelectedInstructorHorarios] = useState(null);
@@ -67,6 +73,154 @@ const InstructorasAdmin = () => {
       slots.push(`${hour.toString().padStart(2, '0')}:30`);
     }
     return slots;
+  };
+
+  // Cargar definiciones de clases (duraciones) desde el backend
+  const loadClassDefinitions = async () => {
+    try {
+      const res = await fetch("http://localhost:3001/api/reservas/classes");
+      if (!res.ok) return;
+      const data = await res.json();
+      setClassDefinitions(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Error al cargar definiciones de clases:', err);
+    }
+  };
+
+  // Cargar clases (reservas) del instructor
+  const loadInstructorClases = async () => {
+    if (!selectedInstructorHorarios) return;
+    setLoadingClasesInstructor(true);
+    try {
+      const uid = selectedInstructorHorarios.usuario_id || selectedInstructorHorarios.user_id || selectedInstructorHorarios.id;
+      const res = await fetch(`http://localhost:3001/api/instructoras/clases/${uid}`);
+      if (!res.ok) {
+        setClasesInstructor([]);
+        return;
+      }
+      const data = await res.json();
+      const todas = Array.isArray(data.clases) ? data.clases : (Array.isArray(data) ? data : []);
+      // Filtrar solo reservas con estatus 'pendiente' (campo puede ser 'status' o 'estatus')
+      const pendientes = todas.filter(c => (c.status === 'pendiente' || c.estatus === 'pendiente'));
+      setClasesInstructor(pendientes);
+    } catch (err) {
+      console.error('Error al cargar clases de la instructora:', err);
+      setClasesInstructor([]);
+    } finally {
+      setLoadingClasesInstructor(false);
+    }
+  };
+
+  // Detectar conflictos entre el horario propuesto y las clases existentes
+  const detectConflicts = (horariosMap = horariosSemanales, clases = clasesInstructor, classDefs = classDefinitions) => {
+    const conflicts = [];
+
+    // Si no hay ningún bloque de horario configurado, por regla la instructora está disponible todo el tiempo
+    const anyHorario = Object.values(horariosMap).some(arr => Array.isArray(arr) && arr.length > 0);
+    if (!anyHorario) {
+      setConflictos([]);
+      return [];
+    }
+
+    const diaMap = {0: 'D', 1: 'L', 2: 'M', 3: 'X', 4: 'J', 5: 'V', 6: 'S'};
+    const diasLong = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+
+    const toMinutes = (timeStr) => {
+      if (!timeStr) return 0;
+      const parts = timeStr.split(':').map(Number);
+      return parts[0] * 60 + (parts[1] || 0);
+    };
+
+    const normalize = (s) => {
+      if (!s) return '';
+      try {
+        return String(s)
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/\p{Diacritic}/gu, '')
+          .replace(/[^a-z0-9\s]/g, '')
+          .trim();
+      } catch (e) {
+        return String(s).toLowerCase().trim();
+      }
+    };
+
+    // Fecha de referencia: hoy (local), formato YYYY-MM-DD
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const todayStr = today.toISOString().split('T')[0];
+
+    clases.forEach(clase => {
+      try {
+        const fecha = clase.date;
+        const claseDateStr = fecha ? String(fecha).split('T')[0] : null;
+        // Ignorar clases anteriores a hoy
+        if (!claseDateStr || claseDateStr < todayStr) return;
+        const horaInicio = (clase.time || clase.hora_inicio || '00:00').slice(0,5);
+        // Parsear fecha como local YYYY-MM-DD para evitar desplazamientos por zona horaria
+        const fechaStr = String(fecha).split('T')[0];
+        const [yyyy, mm, dd] = fechaStr.split('-').map(Number);
+        const fechaObj = new Date(yyyy, (mm || 1) - 1, dd || 1);
+        if (isNaN(fechaObj.getTime())) return;
+        const dia = diaMap[fechaObj.getDay()];
+
+        // Log breve para depuración de día y bloques disponibles
+        // console.debug(`detectConflicts: fecha=${fechaStr}, dia=${dia}, clasesDia=${(horariosMap[dia]||[]).length}`);
+
+        // Obtener duración de la clase por tipo (buscar con normalización y coincidencia flexible)
+        const tipoNorm = normalize(clase.type || clase.type || '');
+        let def = classDefs.find(cd => normalize(cd.nombre) === tipoNorm);
+        if (!def) {
+          // intentar coincidencia por inclusión
+          def = classDefs.find(cd => normalize(cd.nombre).includes(tipoNorm) || tipoNorm.includes(normalize(cd.nombre)));
+        }
+        let durMin = def && (def.duracion_min || def.duracion || def.duracion_min === 0 ? parseInt(def.duracion_min || def.duracion || 0, 10) : NaN);
+        if (!durMin || isNaN(durMin)) {
+          // fallback heurístico: iniciación suele ser 30min
+          if (tipoNorm.includes('inici')) durMin = 30;
+          else durMin = 60;
+        }
+
+        const startMin = toMinutes(horaInicio);
+        const endMin = startMin + parseInt(durMin, 10);
+
+        const horariosDia = horariosMap[dia] || [];
+
+        // Si no hay bloques para ese día → conflicto
+        if (!horariosDia || horariosDia.length === 0) {
+          const hFinStr = (() => {
+            const h = new Date(fecha + 'T' + horaInicio + ':00');
+            h.setMinutes(h.getMinutes() + durMin);
+            return h.toTimeString().slice(0,5);
+          })();
+          const diaNombre = diasLong[fechaObj.getDay()];
+          conflicts.push({ ...clase, hora_fin: hFinStr, razon: 'No hay bloques de horario para este día', diaNombre });
+          return;
+        }
+
+        // Verificar si algún bloque contiene completamente el intervalo de la clase
+        const contained = horariosDia.some(h => {
+          const bStart = toMinutes(h.hora_inicio);
+          const bEnd = toMinutes(h.hora_fin);
+          return startMin >= bStart && endMin <= bEnd;
+        });
+
+        if (!contained) {
+          const hFin = (() => {
+            const h = new Date(fecha + 'T' + horaInicio + ':00');
+            h.setMinutes(h.getMinutes() + durMin);
+            return h.toTimeString().slice(0,5);
+          })();
+          const diaNombre = diasLong[fechaObj.getDay()];
+          conflicts.push({ ...clase, hora_fin: hFin, razon: 'Fuera de bloques permitidos', diaNombre });
+        }
+      } catch (err) {
+        console.error('Error evaluando clase para conflictos', clase, err);
+      }
+    });
+
+    setConflictos(conflicts);
+    return conflicts;
   };
 
   // Función para convertir tiempo a minutos para comparación
@@ -103,6 +257,11 @@ const InstructorasAdmin = () => {
       });
       
       setHorariosSemanales(horariosPorDia);
+      // Cargar definiciones y clases del instructor para detectar posibles conflictos
+      await loadClassDefinitions();
+      await loadInstructorClases();
+      // Detectar conflictos con el horario recién cargado
+      detectConflicts(horariosPorDia);
     } catch (error) {
       console.error("Error al cargar horarios semanales:", error);
       showNotification("Error al cargar horarios semanales", "error");
@@ -115,6 +274,8 @@ const InstructorasAdmin = () => {
   const closeHorariosSemanalesModal = () => {
     setHorariosSemanalesModalOpen(false);
     setHorariosSemanales({});
+    setClasesInstructor([]);
+    setConflictos([]);
   };
 
   // Función para manejar clics en las celdas de tiempo
@@ -191,6 +352,13 @@ const InstructorasAdmin = () => {
   // Guardar cambios de horarios semanales
   const saveHorariosSemanales = async () => {
     try {
+      // Antes de guardar, verificar conflictos entre el horario propuesto y las clases existentes
+      const currentConflicts = detectConflicts();
+      if (currentConflicts && currentConflicts.length > 0) {
+        showNotification(`${currentConflicts.length} conflictos detectados. Ajusta el horario antes de guardar.`, "error");
+        return;
+      }
+
       setLoadingHorariosSemanales(true);
       
       // Recopilar todos los horarios
@@ -317,6 +485,12 @@ const InstructorasAdmin = () => {
   useEffect(() => {
     loadInstructoras();
   }, []);
+
+  // Re-evaluar conflictos cuando cambian los horarios, las clases o las definiciones
+  useEffect(() => {
+    if (!horariosSemanales || !selectedInstructorHorarios) return;
+    detectConflicts(horariosSemanales, clasesInstructor, classDefinitions);
+  }, [horariosSemanales, clasesInstructor, classDefinitions, selectedInstructorHorarios]);
 
   const openAddInstructorModal = () => {
     setNewInstructor({
@@ -745,6 +919,22 @@ const InstructorasAdmin = () => {
       dia_semana: "",
       hora_inicio: "",
       hora_fin: ""
+    });
+    setAddHorarioModalOpen(true);
+  };
+
+  // Abrir modal de agregar horario prellenado desde la vista tipo horario
+  const openAddHorarioPrefilled = (dia, timeSlot) => {
+    const endTime = timeSlot.split(':');
+    endTime[1] = (parseInt(endTime[1]) + 30).toString().padStart(2, '0');
+    if (endTime[1] === '60') {
+      endTime[0] = (parseInt(endTime[0]) + 1).toString().padStart(2, '0');
+      endTime[1] = '00';
+    }
+    setNewHorario({
+      dia_semana: dia,
+      hora_inicio: timeSlot,
+      hora_fin: endTime.join(':')
     });
     setAddHorarioModalOpen(true);
   };
@@ -1716,24 +1906,6 @@ const InstructorasAdmin = () => {
                   >
                     <Calendar size={16} /> Editar Horarios Semanales
                   </button>
-                  <button 
-                    className="btn btn-secondary" 
-                    onClick={openAddHorarioModal}
-                    style={{
-                      background: "linear-gradient(135deg, #6b8e23, #556b2f)",
-                      color: "white",
-                      border: "none",
-                      padding: "0.5rem 1rem",
-                      borderRadius: "8px",
-                      cursor: "pointer",
-                      fontWeight: "600",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.5rem"
-                    }}
-                  >
-                    <Clock size={16} /> Agregar Individual
-                  </button>
                 </div>
               </div>
 
@@ -1754,80 +1926,101 @@ const InstructorasAdmin = () => {
                   <p style={{ margin: 0 }}>No hay horarios registrados para esta instructora</p>
                 </div>
               ) : (
-                <div style={{ 
-                  maxHeight: "400px", 
+                <div style={{
+                  overflowX: "auto",
                   overflowY: "auto",
+                  maxHeight: "400px",
                   border: "1px solid #e0e0e0",
-                  borderRadius: "8px"
+                  borderRadius: "8px",
+                  marginBottom: "1rem"
                 }}>
-                  <table className="members-table" style={{ margin: 0 }}>
+                  <table style={{
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    fontSize: "0.75rem",
+                    minWidth: "700px"
+                  }}>
                     <thead>
                       <tr>
-                        <th>Día de la Semana</th>
-                        <th>Hora Inicio</th>
-                        <th>Hora Fin</th>
-                        <th>Estado</th>
-                        <th>Acciones</th>
+                        <th style={{
+                          padding: "0.5rem",
+                          border: "1px solid #e0e0e0",
+                          background: "#f5f5f5",
+                          fontWeight: "600",
+                          textAlign: "center",
+                          position: "sticky",
+                          top: 0,
+                          zIndex: 1,
+                          minWidth: "60px"
+                        }}>
+                          Hora
+                        </th>
+                        {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map(dia => {
+                          const diasMap = { 'L': 'Lun', 'M': 'Mar', 'X': 'Mié', 'J': 'Jue', 'V': 'Vie', 'S': 'Sáb', 'D': 'Dom' };
+                          return (
+                            <th key={dia} style={{
+                              padding: "0.5rem",
+                              border: "1px solid #e0e0e0",
+                              background: "#f5f5f5",
+                              fontWeight: "600",
+                              textAlign: "center",
+                              position: "sticky",
+                              top: 0,
+                              zIndex: 1,
+                              minWidth: "70px"
+                            }}>
+                              {diasMap[dia]}
+                            </th>
+                          );
+                        })}
                       </tr>
                     </thead>
                     <tbody>
-                      {horarios.map((horario) => (
-                        <tr key={horario.id}>
-                          <td>
-                            {horario.dia_semana === 'L' ? 'Lunes' :
-                             horario.dia_semana === 'M' ? 'Martes' :
-                             horario.dia_semana === 'X' ? 'Miércoles' :
-                             horario.dia_semana === 'J' ? 'Jueves' :
-                             horario.dia_semana === 'V' ? 'Viernes' :
-                             horario.dia_semana === 'S' ? 'Sábado' : 'Domingo'}
+                      {generateTimeSlots().filter((_, index) => index % 2 === 0).map(timeSlot => (
+                        <tr key={timeSlot}>
+                          <td style={{
+                            padding: "0.25rem",
+                            border: "1px solid #e0e0e0",
+                            background: "#f9f9f9",
+                            fontWeight: "600",
+                            textAlign: "center",
+                            fontSize: "0.7rem",
+                            position: "sticky",
+                            left: 0,
+                            zIndex: 1
+                          }}>
+                            {timeSlot}
                           </td>
-                          <td>{horario.hora_inicio.slice(0, 5)}</td>
-                          <td>{horario.hora_fin.slice(0, 5)}</td>
-                          <td>
-                            <span style={{
-                              padding: "0.25rem 0.5rem",
-                              borderRadius: "4px",
-                              fontSize: "0.875rem",
-                              backgroundColor: horario.activo ? "#d4edda" : "#f8d7da",
-                              color: horario.activo ? "#155724" : "#721c24"
-                            }}>
-                              {horario.activo ? "Activo" : "Inactivo"}
-                            </span>
-                          </td>
-                          <td>
-                            <div style={{ display: "flex", gap: "0.5rem" }}>
-                              <button
-                                className="btn-icon-action"
-                                onClick={() => openEditHorarioModal(horario)}
-                                title="Editar"
+                          {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map(dia => {
+                            const isSelected = horarios.some(h => h.dia_semana === dia && isTimeInRange(timeSlot, h.hora_inicio, h.hora_fin));
+
+                            return (
+                              <td
+                                key={`${dia}-${timeSlot}`}
                                 style={{
-                                  background: "linear-gradient(135deg, #c17b4a, #8b5a2b)",
-                                  color: "white",
-                                  border: "none",
-                                  padding: "0.25rem",
-                                  borderRadius: "4px",
-                                  cursor: "pointer"
+                                  padding: "0.1rem",
+                                  border: "1px solid #e0e0e0",
+                                  background: isSelected ? "#e3f2fd" : "#ffffff",
+                                  cursor: "default",
+                                  textAlign: "center",
+                                  transition: "all 0.15s",
+                                  userSelect: "none",
+                                  minWidth: "70px",
+                                  maxWidth: "70px"
                                 }}
+                                title={isSelected ? "Horario registrado (solo lectura)" : "Horario no disponible (solo lectura) - Usa 'Editar Horarios Semanales' para modificar"}
                               >
-                                <Edit size={14} />
-                              </button>
-                              <button
-                                className="btn-icon-action"
-                                onClick={() => deleteHorario(horario.id)}
-                                title="Eliminar"
-                                style={{
-                                  background: "#dc3545",
-                                  color: "white",
-                                  border: "none",
-                                  padding: "0.25rem",
-                                  borderRadius: "4px",
-                                  cursor: "pointer"
-                                }}
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            </div>
-                          </td>
+                                <div style={{
+                                  width: "100%",
+                                  height: "16px",
+                                  borderRadius: "2px",
+                                  background: isSelected ? "#2196f3" : "#e0e0e0",
+                                  transition: "background-color 0.15s",
+                                  border: isSelected ? "1px solid #1976d2" : "1px solid #bdbdbd"
+                                }}></div>
+                              </td>
+                            );
+                          })}
                         </tr>
                       ))}
                     </tbody>
@@ -2126,59 +2319,7 @@ const InstructorasAdmin = () => {
         )}
 
 
-      {/* Modal de agregar horario (Portal) */}
-      {addHorarioModalOpen &&
-        renderPortal(
-          <div className="modal-overlay" onClick={closeAddHorarioModal}>
-            <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: "500px" }}>
-              <h2>Agregar Horario Disponible</h2>
-              <div className="modal-section">
-                <div className="modal-field">
-                  <label>Día de la Semana *:</label>
-                  <select
-                    value={newHorario.dia_semana}
-                    onChange={e => setNewHorario({ ...newHorario, dia_semana: e.target.value })}
-                  >
-                    <option value="">Seleccionar día</option>
-                    <option value="L">Lunes</option>
-                    <option value="M">Martes</option>
-                    <option value="X">Miércoles</option>
-                    <option value="J">Jueves</option>
-                    <option value="V">Viernes</option>
-                    <option value="S">Sábado</option>
-                    <option value="D">Domingo</option>
-                  </select>
-                </div>
-                <div className="modal-field">
-                  <label>Hora de Inicio *:</label>
-                  <input
-                    type="time"
-                    value={newHorario.hora_inicio}
-                    onChange={e => setNewHorario({ ...newHorario, hora_inicio: e.target.value })}
-                    autoComplete="off"
-                  />
-                </div>
-                <div className="modal-field">
-                  <label>Hora de Fin *:</label>
-                  <input
-                    type="time"
-                    value={newHorario.hora_fin}
-                    onChange={e => setNewHorario({ ...newHorario, hora_fin: e.target.value })}
-                    autoComplete="off"
-                  />
-                </div>
-              </div>
-              <div className="modal-actions">
-                <button className="btn btn-primary" onClick={createHorario} type="button">
-                  <Clock size={16} /> Crear Horario
-                </button>
-                <button className="btn btn-secondary" onClick={closeAddHorarioModal} type="button">
-                  Cancelar
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+      
 
       {/* Modal de editar horario (Portal) */}
       {editHorarioModalOpen && editingHorario &&
@@ -2376,6 +2517,23 @@ const InstructorasAdmin = () => {
                       ))}
                     </tbody>
                   </table>
+                </div>
+              )}
+
+              {/* Conflictos detectados (si aplica) */}
+              {conflictos && conflictos.length > 0 && (
+                <div style={{ margin: '0 0 1rem 0', padding: '0.75rem', border: '1px solid #ffc107', background: '#fff8e1', borderRadius: 8 }}>
+                  <div style={{ fontWeight: 700, marginBottom: 8, color: '#856404' }}>{conflictos.length} conflictos detectados</div>
+                  <div style={{ maxHeight: '160px', overflowY: 'auto' }}>
+                    {conflictos.map(c => (
+                      <div key={c.id || `${c.date}-${c.time}`} style={{ padding: '6px 0', borderBottom: '1px solid rgba(0,0,0,0.04)', fontSize: '0.9rem' }}>
+                        <div><strong>Fecha:</strong> {c.date} {c.diaNombre ? `(${c.diaNombre})` : ''} • <strong>Hora:</strong> {c.time || c.hora_inicio} - {c.hora_fin}</div>
+                        <div style={{ color: '#6b4423' }}>{c.student || 'Sin cliente asignado'} • {c.horse || 'Sin caballo'}</div>
+                        <div style={{ color: '#6b4423' }}><em>{c.type || 'Sin tipo'}</em> • {c.razon}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ marginTop: 8, fontSize: '0.85rem', color: '#856404' }}>Ajusta los bloques para que las clases queden totalmente dentro de un bloque permitido antes de guardar.</div>
                 </div>
               )}
 
