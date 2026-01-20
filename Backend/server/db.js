@@ -33,6 +33,7 @@ const db = mysql.createPool({
   keepAliveInitialDelay: 300000
 });
 
+
 // Manejo de errores de conexión
 db.on('connection', () => {
   console.log('✅ Nueva conexión establecida a la base de datos');
