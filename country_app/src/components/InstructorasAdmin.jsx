@@ -78,7 +78,7 @@ const InstructorasAdmin = () => {
   // Cargar definiciones de clases (duraciones) desde el backend
   const loadClassDefinitions = async () => {
     try {
-      const res = await fetch("https://elrefugiocountryclub.com/api/pi/reservas/classes");
+      const res = await fetch("https://elrefugiocountryclub.com/api/api/reservas/classes");
       if (!res.ok) return;
       const data = await res.json();
       setClassDefinitions(Array.isArray(data) ? data : []);
@@ -93,7 +93,7 @@ const InstructorasAdmin = () => {
     setLoadingClasesInstructor(true);
     try {
       const uid = selectedInstructorHorarios.usuario_id || selectedInstructorHorarios.user_id || selectedInstructorHorarios.id;
-      const res = await fetch(`https://elrefugiocountryclub.com/api/pi/instructoras/clases/${uid}`);
+      const res = await fetch(`https://elrefugiocountryclub.com/api/api/instructoras/clases/${uid}`);
       if (!res.ok) {
         setClasesInstructor([]);
         return;
@@ -127,8 +127,11 @@ const InstructorasAdmin = () => {
 
     const toMinutes = (timeStr) => {
       if (!timeStr) return 0;
-      const parts = timeStr.split(':').map(Number);
-      return parts[0] * 60 + (parts[1] || 0);
+      const s = String(timeStr).trim().slice(0,5); // normalize to HH:MM
+      const parts = s.split(':').map(p => Number(String(p).replace(/[^0-9]/g, '')));
+      const h = Number.isFinite(parts[0]) ? parts[0] : 0;
+      const m = Number.isFinite(parts[1]) ? parts[1] : 0;
+      return h * 60 + m;
     };
 
     const normalize = (s) => {
@@ -156,7 +159,8 @@ const InstructorasAdmin = () => {
         const claseDateStr = fecha ? String(fecha).split('T')[0] : null;
         // Ignorar clases anteriores a hoy
         if (!claseDateStr || claseDateStr < todayStr) return;
-        const horaInicio = (clase.time || clase.hora_inicio || '00:00').slice(0,5);
+        const rawHora = (clase.time || clase.hora_inicio || '00:00');
+        const horaInicio = String(rawHora).slice(0,5).trim();
         // Parsear fecha como local YYYY-MM-DD para evitar desplazamientos por zona horaria
         const fechaStr = String(fecha).split('T')[0];
         const [yyyy, mm, dd] = fechaStr.split('-').map(Number);
@@ -198,14 +202,90 @@ const InstructorasAdmin = () => {
           return;
         }
 
-        // Verificar si algún bloque contiene completamente el intervalo de la clase
-        const contained = horariosDia.some(h => {
-          const bStart = toMinutes(h.hora_inicio);
-          const bEnd = toMinutes(h.hora_fin);
-          return startMin >= bStart && endMin <= bEnd;
+        // Preparar datos de bloques para log
+        const bloquesInfo = (horariosDia || []).map(h => {
+          const bStart = Number.parseInt(String(toMinutes(h.hora_inicio)), 10) || 0;
+          const bEnd = Number.parseInt(String(toMinutes(h.hora_fin)), 10) || 0;
+          return { raw: `${h.hora_inicio || ''}-${h.hora_fin || ''}`, bStart, bEnd };
         });
 
+        // Normalizar startMin y endMin a enteros antes de cualquier comparación
+        const startN = Number.parseInt(String(startMin), 10) || 0;
+        const endN = Number.parseInt(String(endMin), 10) || 0;
+
+        // Log de diagnóstico por cada clase evaluada (visible en consola)
+        console.log('detectConflicts: evaluando clase', {
+          claseId: clase.id || null,
+          fecha: fechaStr,
+          horaInicio,
+          durMin,
+          startMin: startN,
+          endMin: endN,
+          bloques: bloquesInfo
+        });
+
+        // Verificar si la clase puede ser cubierta por bloques contiguos (sin huecos)
+        // Ordenar bloques por hora de inicio
+        const sortedBlocks = [...bloquesInfo].sort((a, b) => a.bStart - b.bStart);
+        
+        // Función para verificar si hay cobertura continua
+        const isCoveredByContiguousBlocks = (start, end, blocks) => {
+          let currentCoverage = start;
+          
+          for (const block of blocks) {
+            const bStartN = Number.parseInt(String(block.bStart), 10) || 0;
+            const bEndN = Number.parseInt(String(block.bEnd), 10) || 0;
+            
+            // Si el bloque empieza después del punto actual de cobertura, hay un hueco
+            if (bStartN > currentCoverage) {
+              break;
+            }
+            
+            // Si el bloque cubre o extiende la cobertura actual
+            if (bEndN >= currentCoverage) {
+              currentCoverage = bEndN;
+            }
+            
+            // Si ya cubrimos todo el intervalo necesario
+            if (currentCoverage >= end) {
+              return true;
+            }
+          }
+          
+          return currentCoverage >= end;
+        };
+        
+        const contained = isCoveredByContiguousBlocks(startN, endN, sortedBlocks);
+
+        // Log adicional del booleano contained para diagnóstico inmediato
+        console.log('detectConflicts: contained?', { claseId: clase.id || null, startN, endN, contained });
+
         if (!contained) {
+          // Preparar chequeo por bloque (muestra por qué no entra) - usar startN y endN parseados
+          const bloqueChecks = bloquesInfo.map(b => {
+            const bStartN = Number.parseInt(String(b.bStart), 10) || 0;
+            const bEndN = Number.parseInt(String(b.bEnd), 10) || 0;
+            return {
+              raw: b.raw,
+              bStart: bStartN,
+              bEnd: bEndN,
+              contains: (startN >= bStartN && endN <= bEndN)
+            };
+          });
+
+          // Log claro con detalle por bloque y datos originales de horarios
+          console.log('detectConflicts: clase FUERA de bloques', {
+            claseId: clase.id || null,
+            fecha: fechaStr,
+            horaInicio,
+            durMin,
+            startMin: startN,
+            endMin: endN,
+            bloqueChecks,
+            horariosDiaRaw: horariosDia
+          });
+
+          console.log('🚨 AGREGANDO CONFLICTO para clase', clase.id, 'porque contained =', contained);
           const hFin = (() => {
             const h = new Date(fecha + 'T' + horaInicio + ':00');
             h.setMinutes(h.getMinutes() + durMin);
@@ -213,6 +293,8 @@ const InstructorasAdmin = () => {
           })();
           const diaNombre = diasLong[fechaObj.getDay()];
           conflicts.push({ ...clase, hora_fin: hFin, razon: 'Fuera de bloques permitidos', diaNombre });
+        } else {
+          console.log('✅ NO conflicto para clase', clase.id, 'porque contained =', contained);
         }
       } catch (err) {
         console.error('Error evaluando clase para conflictos', clase, err);
@@ -229,6 +311,13 @@ const InstructorasAdmin = () => {
     return hours * 60 + minutes;
   };
 
+  // Función para convertir minutos de vuelta a formato HH:MM
+  const minutesToTime = (totalMinutes) => {
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+  };
+
   // Función para verificar si una hora está dentro de un rango
   const isTimeInRange = (time, startTime, endTime) => {
     const timeMinutes = timeToMinutes(time);
@@ -243,7 +332,7 @@ const InstructorasAdmin = () => {
     setLoadingHorariosSemanales(true);
     
     try {
-      const response = await fetch(`https://elrefugiocountryclub.com/api/pi/instructoras/${selectedInstructorHorarios.id}/horarios`);
+      const response = await fetch(`https://elrefugiocountryclub.com/api/api/instructoras/${selectedInstructorHorarios.id}/horarios`);
       if (!response.ok) {
         throw new Error("Error al cargar horarios");
       }
@@ -278,6 +367,45 @@ const InstructorasAdmin = () => {
     setConflictos([]);
   };
 
+  // Función auxiliar para fusionar bloques contiguos
+  const mergeContiguousBlocks = (horarios) => {
+    if (horarios.length === 0) return [];
+    
+    // Ordenar bloques por hora de inicio
+    const sorted = [...horarios].sort((a, b) => {
+      const aMin = timeToMinutes(a.hora_inicio);
+      const bMin = timeToMinutes(b.hora_inicio);
+      return aMin - bMin;
+    });
+    
+    const merged = [];
+    let current = { ...sorted[0] };
+    
+    for (let i = 1; i < sorted.length; i++) {
+      const next = sorted[i];
+      const currentEnd = timeToMinutes(current.hora_fin);
+      const nextStart = timeToMinutes(next.hora_inicio);
+      
+      // Si el siguiente bloque es contiguo o se solapa, fusionar
+      if (nextStart <= currentEnd) {
+        const nextEnd = timeToMinutes(next.hora_fin);
+        const mergedEnd = Math.max(currentEnd, nextEnd);
+        current.hora_fin = minutesToTime(mergedEnd);
+        // Mantener el ID del primer bloque, marcar como modificado
+        if (!current.isNew && !next.isNew) {
+          current.isModified = true;
+        }
+      } else {
+        // No son contiguos, guardar el actual e iniciar nuevo
+        merged.push(current);
+        current = { ...next };
+      }
+    }
+    merged.push(current);
+    
+    return merged;
+  };
+
   // Función para manejar clics en las celdas de tiempo
   const handleTimeSlotClick = (dia, timeSlot) => {
     const currentHorarios = horariosSemanales[dia] || [];
@@ -288,64 +416,39 @@ const InstructorasAdmin = () => {
     );
     
     if (existingHorario) {
-      // Si existe, quitarlo
+      // Si existe, quitarlo completamente
       const updatedHorarios = currentHorarios.filter(h => h.id !== existingHorario.id);
       setHorariosSemanales({
         ...horariosSemanales,
         [dia]: updatedHorarios
       });
     } else {
-      // Si no existe, intentar extender un horario existente o crear uno nuevo
-      const timeMinutes = timeToMinutes(timeSlot);
+      // Agregar este bloque de 1 HORA (cada celda = 1 hora completa)
+      // Calcular hora de fin: timeSlot + 1 hora
+      const startParts = timeSlot.split(':');
+      const startHour = parseInt(startParts[0]);
+      const endHour = startHour + 1;
+      const endTimeStr = `${endHour.toString().padStart(2, '0')}:00`;
       
-      // Buscar si hay un horario adyacente que se pueda extender
-      let extended = false;
-      const extendedHorarios = currentHorarios.map(h => {
-        const startMinutes = timeToMinutes(h.hora_inicio);
-        const endMinutes = timeToMinutes(h.hora_fin);
-        
-        // Extender hacia atrás (30 min antes)
-        if (endMinutes === timeMinutes) {
-          extended = true;
-          return { ...h, hora_fin: timeSlot };
-        }
-        // Extender hacia adelante (30 min después)
-        if (startMinutes === timeMinutes + 30) {
-          extended = true;
-          return { ...h, hora_inicio: timeSlot };
-        }
-        return h;
+      const newHorario = {
+        id: `temp_${Date.now()}_${dia}`,
+        dia_semana: dia,
+        hora_inicio: timeSlot,
+        hora_fin: endTimeStr,
+        activo: true,
+        isNew: true
+      };
+      
+      // Agregar el nuevo bloque y fusionar solo los contiguos (sin huecos)
+      const withNewBlock = [...currentHorarios, newHorario];
+      const mergedHorarios = mergeContiguousBlocks(withNewBlock);
+      
+      console.log(`📊 Bloques después de fusión en ${dia}:`, mergedHorarios.map(h => `${h.hora_inicio}-${h.hora_fin}`).join(', '));
+      
+      setHorariosSemanales({
+        ...horariosSemanales,
+        [dia]: mergedHorarios
       });
-      
-      if (extended) {
-        setHorariosSemanales({
-          ...horariosSemanales,
-          [dia]: extendedHorarios
-        });
-      } else {
-        // Crear nuevo horario de 30 minutos
-        const endTime = timeSlot.split(':');
-        endTime[1] = (parseInt(endTime[1]) + 30).toString().padStart(2, '0');
-        if (endTime[1] === '60') {
-          endTime[0] = (parseInt(endTime[0]) + 1).toString().padStart(2, '0');
-          endTime[1] = '00';
-        }
-        const endTimeStr = endTime.join(':');
-        
-        const newHorario = {
-          id: `temp_${Date.now()}_${dia}`,
-          dia_semana: dia,
-          hora_inicio: timeSlot,
-          hora_fin: endTimeStr,
-          activo: true,
-          isNew: true
-        };
-        
-        setHorariosSemanales({
-          ...horariosSemanales,
-          [dia]: [...currentHorarios, newHorario]
-        });
-      }
     }
   };
 
@@ -373,18 +476,18 @@ const InstructorasAdmin = () => {
       
       // Eliminar horarios que ya no existen
       const currentIds = existingHorarios.map(h => h.id);
-      const originalHorarios = await (await fetch(`https://elrefugiocountryclub.com/api/pi/instructoras/${selectedInstructorHorarios.id}/horarios`)).json();
+      const originalHorarios = await (await fetch(`https://elrefugiocountryclub.com/api/api/instructoras/${selectedInstructorHorarios.id}/horarios`)).json();
       const toDelete = originalHorarios.filter(h => !currentIds.includes(h.id));
       
       // Ejecutar operaciones
       const deletePromises = toDelete.map(h => 
-        fetch(`https://elrefugiocountryclub.com/api/pi/instructoras/${selectedInstructorHorarios.id}/horarios/${h.id}`, {
+        fetch(`https://elrefugiocountryclub.com/api/api/instructoras/${selectedInstructorHorarios.id}/horarios/${h.id}`, {
           method: 'DELETE'
         })
       );
       
       const updatePromises = existingHorarios.map(h =>
-        fetch(`https://elrefugiocountryclub.com/api/pi/instructoras/${selectedInstructorHorarios.id}/horarios/${h.id}`, {
+        fetch(`https://elrefugiocountryclub.com/api/api/instructoras/${selectedInstructorHorarios.id}/horarios/${h.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -397,7 +500,7 @@ const InstructorasAdmin = () => {
       );
       
       const createPromises = newHorarios.map(h =>
-        fetch(`https://elrefugiocountryclub.com/api/pi/instructoras/${selectedInstructorHorarios.id}/horarios`, {
+        fetch(`https://elrefugiocountryclub.com/api/api/instructoras/${selectedInstructorHorarios.id}/horarios`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -434,7 +537,7 @@ const InstructorasAdmin = () => {
   const loadInstructoras = async () => {
     setLoading(true);
     try {
-      const response = await fetch("https://elrefugiocountryclub.com/api/pi/instructoras");
+      const response = await fetch("https://elrefugiocountryclub.com/api/api/instructoras");
       if (!response.ok) {
         throw new Error("Error al cargar instructoras");
       }
@@ -462,7 +565,7 @@ const InstructorasAdmin = () => {
         instructorasList.map(async (instructora) => {
           try {
             const response = await fetch(
-              `https://elrefugiocountryclub.com/api/pi/descansos/check/${instructora.id}?fecha=${hoy}`
+              `https://elrefugiocountryclub.com/api/api/descansos/check/${instructora.id}?fecha=${hoy}`
             );
             if (response.ok) {
               const data = await response.json();
@@ -550,7 +653,7 @@ const InstructorasAdmin = () => {
 
     setCreatingInstructor(true);
     try {
-      const response = await fetch("https://elrefugiocountryclub.com/api/pi/instructoras", {
+      const response = await fetch("https://elrefugiocountryclub.com/api/api/instructoras", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newInstructor)
@@ -581,7 +684,7 @@ const InstructorasAdmin = () => {
 
     setUpdatingInstructor(true);
     try {
-      const response = await fetch(`https://elrefugiocountryclub.com/api/pi/instructoras/${editingInstructor.id}`, {
+      const response = await fetch(`https://elrefugiocountryclub.com/api/api/instructoras/${editingInstructor.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(editingInstructor)
@@ -609,7 +712,7 @@ const InstructorasAdmin = () => {
 
     setDeletingInstructor(true);
     try {
-      const response = await fetch(`https://elrefugiocountryclub.com/api/pi/instructoras/${instructorToDelete.id}`, {
+      const response = await fetch(`https://elrefugiocountryclub.com/api/api/instructoras/${instructorToDelete.id}`, {
         method: "DELETE"
       });
 
@@ -633,7 +736,7 @@ const InstructorasAdmin = () => {
   // Reactivar instructora (cambiar de no_disponible a disponible)
   const handleReactivateInstructor = async (instructor) => {
     try {
-      const response = await fetch(`https://elrefugiocountryclub.com/api/pi/instructoras/${instructor.id}`, {
+      const response = await fetch(`https://elrefugiocountryclub.com/api/api/instructoras/${instructor.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json"
@@ -674,7 +777,7 @@ const InstructorasAdmin = () => {
   const loadDescansos = async (instructoraId) => {
     setLoadingDescansos(true);
     try {
-      const response = await fetch(`https://elrefugiocountryclub.com/api/pi/descansos/instructora/${instructoraId}`);
+      const response = await fetch(`https://elrefugiocountryclub.com/api/api/descansos/instructora/${instructoraId}`);
       if (!response.ok) {
         throw new Error("Error al cargar descansos");
       }
@@ -774,7 +877,7 @@ const InstructorasAdmin = () => {
 
       console.log('Enviando descanso:', descansoData); // Debug
 
-      const response = await fetch("https://elrefugiocountryclub.com/api/pi/descansos", {
+      const response = await fetch("https://elrefugiocountryclub.com/api/api/descansos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(descansoData)
@@ -836,7 +939,7 @@ const InstructorasAdmin = () => {
         })
       };
 
-      const response = await fetch(`https://elrefugiocountryclub.com/api/pi/descansos/${editingDescanso.id}`, {
+      const response = await fetch(`https://elrefugiocountryclub.com/api/api/descansos/${editingDescanso.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(descansoData)
@@ -864,7 +967,7 @@ const InstructorasAdmin = () => {
     }
 
     try {
-      const response = await fetch(`https://elrefugiocountryclub.com/api/pi/descansos/${descansoId}`, {
+      const response = await fetch(`https://elrefugiocountryclub.com/api/api/descansos/${descansoId}`, {
         method: "DELETE"
       });
 
@@ -899,7 +1002,7 @@ const InstructorasAdmin = () => {
   const loadHorarios = async (instructoraId) => {
     setLoadingHorarios(true);
     try {
-      const response = await fetch(`https://elrefugiocountryclub.com/api/pi/instructoras/${instructoraId}/horarios`);
+      const response = await fetch(`u/api/instructoras/${instructoraId}/horarios`);
       if (!response.ok) {
         throw new Error("Error al cargar horarios");
       }
@@ -977,7 +1080,7 @@ const InstructorasAdmin = () => {
     }
 
     try {
-      const response = await fetch(`https://elrefugiocountryclub.com/api/pi/instructoras/${selectedInstructorHorarios.id}/horarios`, {
+      const response = await fetch(`https://elrefugiocountryclub.com/api/api/instructoras/${selectedInstructorHorarios.id}/horarios`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -1012,7 +1115,7 @@ const InstructorasAdmin = () => {
     }
 
     try {
-      const response = await fetch(`https://elrefugiocountryclub.com/api/pi/instructoras/${selectedInstructorHorarios.id}/horarios/${editingHorario.id}`, {
+      const response = await fetch(`https://elrefugiocountryclub.com/api/api/instructoras/${selectedInstructorHorarios.id}/horarios/${editingHorario.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json"
@@ -1045,7 +1148,7 @@ const InstructorasAdmin = () => {
     }
 
     try {
-      const response = await fetch(`https://elrefugiocountryclub.com/api/pi/instructoras/${selectedInstructorHorarios.id}/horarios/${horarioId}`, {
+      const response = await fetch(`https://elrefugiocountryclub.com/api/api/instructoras/${selectedInstructorHorarios.id}/horarios/${horarioId}`, {
         method: "DELETE"
       });
 

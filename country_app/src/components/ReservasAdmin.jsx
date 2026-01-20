@@ -22,7 +22,7 @@ const ReservasAdmin = () => {
   const loadReservas = async () => {
     setLoading(true);
     try {
-      let url = "https://elrefugiocountryclub.com/api/pi/reservas-admin";
+      let url = "https://elrefugiocountryclub.com/api/api/reservas-admin";
       const params = new URLSearchParams();
       
       if (filtroTiempo === "dia") {
