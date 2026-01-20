@@ -78,7 +78,7 @@ const InstructorasAdmin = () => {
   // Cargar definiciones de clases (duraciones) desde el backend
   const loadClassDefinitions = async () => {
     try {
-      const res = await fetch("http://localhost:3001/api/reservas/classes");
+      const res = await fetch("https://elrefugiocountryclub.com/api/pi/reservas/classes");
       if (!res.ok) return;
       const data = await res.json();
       setClassDefinitions(Array.isArray(data) ? data : []);
@@ -93,7 +93,7 @@ const InstructorasAdmin = () => {
     setLoadingClasesInstructor(true);
     try {
       const uid = selectedInstructorHorarios.usuario_id || selectedInstructorHorarios.user_id || selectedInstructorHorarios.id;
-      const res = await fetch(`http://localhost:3001/api/instructoras/clases/${uid}`);
+      const res = await fetch(`https://elrefugiocountryclub.com/api/pi/instructoras/clases/${uid}`);
       if (!res.ok) {
         setClasesInstructor([]);
         return;
@@ -243,7 +243,7 @@ const InstructorasAdmin = () => {
     setLoadingHorariosSemanales(true);
     
     try {
-      const response = await fetch(`http://localhost:3001/api/instructoras/${selectedInstructorHorarios.id}/horarios`);
+      const response = await fetch(`https://elrefugiocountryclub.com/api/pi/instructoras/${selectedInstructorHorarios.id}/horarios`);
       if (!response.ok) {
         throw new Error("Error al cargar horarios");
       }
@@ -373,18 +373,18 @@ const InstructorasAdmin = () => {
       
       // Eliminar horarios que ya no existen
       const currentIds = existingHorarios.map(h => h.id);
-      const originalHorarios = await (await fetch(`http://localhost:3001/api/instructoras/${selectedInstructorHorarios.id}/horarios`)).json();
+      const originalHorarios = await (await fetch(`https://elrefugiocountryclub.com/api/pi/instructoras/${selectedInstructorHorarios.id}/horarios`)).json();
       const toDelete = originalHorarios.filter(h => !currentIds.includes(h.id));
       
       // Ejecutar operaciones
       const deletePromises = toDelete.map(h => 
-        fetch(`http://localhost:3001/api/instructoras/${selectedInstructorHorarios.id}/horarios/${h.id}`, {
+        fetch(`https://elrefugiocountryclub.com/api/pi/instructoras/${selectedInstructorHorarios.id}/horarios/${h.id}`, {
           method: 'DELETE'
         })
       );
       
       const updatePromises = existingHorarios.map(h =>
-        fetch(`http://localhost:3001/api/instructoras/${selectedInstructorHorarios.id}/horarios/${h.id}`, {
+        fetch(`https://elrefugiocountryclub.com/api/pi/instructoras/${selectedInstructorHorarios.id}/horarios/${h.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -397,7 +397,7 @@ const InstructorasAdmin = () => {
       );
       
       const createPromises = newHorarios.map(h =>
-        fetch(`http://localhost:3001/api/instructoras/${selectedInstructorHorarios.id}/horarios`, {
+        fetch(`https://elrefugiocountryclub.com/api/pi/instructoras/${selectedInstructorHorarios.id}/horarios`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -434,7 +434,7 @@ const InstructorasAdmin = () => {
   const loadInstructoras = async () => {
     setLoading(true);
     try {
-      const response = await fetch("http://localhost:3001/api/instructoras");
+      const response = await fetch("https://elrefugiocountryclub.com/api/pi/instructoras");
       if (!response.ok) {
         throw new Error("Error al cargar instructoras");
       }
@@ -462,7 +462,7 @@ const InstructorasAdmin = () => {
         instructorasList.map(async (instructora) => {
           try {
             const response = await fetch(
-              `http://localhost:3001/api/descansos/check/${instructora.id}?fecha=${hoy}`
+              `https://elrefugiocountryclub.com/api/pi/descansos/check/${instructora.id}?fecha=${hoy}`
             );
             if (response.ok) {
               const data = await response.json();
@@ -550,7 +550,7 @@ const InstructorasAdmin = () => {
 
     setCreatingInstructor(true);
     try {
-      const response = await fetch("http://localhost:3001/api/instructoras", {
+      const response = await fetch("https://elrefugiocountryclub.com/api/pi/instructoras", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newInstructor)
@@ -581,7 +581,7 @@ const InstructorasAdmin = () => {
 
     setUpdatingInstructor(true);
     try {
-      const response = await fetch(`http://localhost:3001/api/instructoras/${editingInstructor.id}`, {
+      const response = await fetch(`https://elrefugiocountryclub.com/api/pi/instructoras/${editingInstructor.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(editingInstructor)
@@ -609,7 +609,7 @@ const InstructorasAdmin = () => {
 
     setDeletingInstructor(true);
     try {
-      const response = await fetch(`http://localhost:3001/api/instructoras/${instructorToDelete.id}`, {
+      const response = await fetch(`https://elrefugiocountryclub.com/api/pi/instructoras/${instructorToDelete.id}`, {
         method: "DELETE"
       });
 
@@ -633,7 +633,7 @@ const InstructorasAdmin = () => {
   // Reactivar instructora (cambiar de no_disponible a disponible)
   const handleReactivateInstructor = async (instructor) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/instructoras/${instructor.id}`, {
+      const response = await fetch(`https://elrefugiocountryclub.com/api/pi/instructoras/${instructor.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json"
@@ -674,7 +674,7 @@ const InstructorasAdmin = () => {
   const loadDescansos = async (instructoraId) => {
     setLoadingDescansos(true);
     try {
-      const response = await fetch(`http://localhost:3001/api/descansos/instructora/${instructoraId}`);
+      const response = await fetch(`https://elrefugiocountryclub.com/api/pi/descansos/instructora/${instructoraId}`);
       if (!response.ok) {
         throw new Error("Error al cargar descansos");
       }
@@ -774,7 +774,7 @@ const InstructorasAdmin = () => {
 
       console.log('Enviando descanso:', descansoData); // Debug
 
-      const response = await fetch("http://localhost:3001/api/descansos", {
+      const response = await fetch("https://elrefugiocountryclub.com/api/pi/descansos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(descansoData)
@@ -836,7 +836,7 @@ const InstructorasAdmin = () => {
         })
       };
 
-      const response = await fetch(`http://localhost:3001/api/descansos/${editingDescanso.id}`, {
+      const response = await fetch(`https://elrefugiocountryclub.com/api/pi/descansos/${editingDescanso.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(descansoData)
@@ -864,7 +864,7 @@ const InstructorasAdmin = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:3001/api/descansos/${descansoId}`, {
+      const response = await fetch(`https://elrefugiocountryclub.com/api/pi/descansos/${descansoId}`, {
         method: "DELETE"
       });
 
@@ -899,7 +899,7 @@ const InstructorasAdmin = () => {
   const loadHorarios = async (instructoraId) => {
     setLoadingHorarios(true);
     try {
-      const response = await fetch(`http://localhost:3001/api/instructoras/${instructoraId}/horarios`);
+      const response = await fetch(`https://elrefugiocountryclub.com/api/pi/instructoras/${instructoraId}/horarios`);
       if (!response.ok) {
         throw new Error("Error al cargar horarios");
       }
@@ -977,7 +977,7 @@ const InstructorasAdmin = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:3001/api/instructoras/${selectedInstructorHorarios.id}/horarios`, {
+      const response = await fetch(`https://elrefugiocountryclub.com/api/pi/instructoras/${selectedInstructorHorarios.id}/horarios`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -1012,7 +1012,7 @@ const InstructorasAdmin = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:3001/api/instructoras/${selectedInstructorHorarios.id}/horarios/${editingHorario.id}`, {
+      const response = await fetch(`https://elrefugiocountryclub.com/api/pi/instructoras/${selectedInstructorHorarios.id}/horarios/${editingHorario.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json"
@@ -1045,7 +1045,7 @@ const InstructorasAdmin = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:3001/api/instructoras/${selectedInstructorHorarios.id}/horarios/${horarioId}`, {
+      const response = await fetch(`https://elrefugiocountryclub.com/api/pi/instructoras/${selectedInstructorHorarios.id}/horarios/${horarioId}`, {
         method: "DELETE"
       });
 
