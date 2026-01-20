@@ -7,7 +7,7 @@ const useUsuarios = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const API_URL = 'https://elrefugiocountryclub.com/api/pi/users';
+  const API_URL = 'https://elrefugiocountryclub.com/api/api/users';
 
 
   useEffect(() => {
