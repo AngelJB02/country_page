@@ -1,23 +1,12 @@
 // server/db.js
 import mysql from 'mysql2/promise';
 
-// Credenciales para desarrollo
-// host: 212.227.238.213
-// user: dev_user
-// password: elrefugio2025desarrollo
-//
-// Credenciales para producción
-// host: localhost
-// user: root
-// password: ElRefugio2025
 const db = mysql.createPool({
   host: 'localhost',
+  port: 3306,
   user: 'root',
-  password: 'ElRefugio2025',
+  password: '',
   database: 'country_refugiodb',
-  waitForConnections: true,
-  connectionLimit: 5,
-  queueLimit: 0,
   waitForConnections: true,
   connectionLimit: 5,
   queueLimit: 0,

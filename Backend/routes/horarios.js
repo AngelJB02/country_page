@@ -380,4 +380,131 @@ router.get('/ocupacion/:fecha', async (req, res) => {
   }
 });
 router.get('/ocupacion/:fecha', async (req, res) => {
-  const { fecha } = req.params;    try {    const fechaObj = new Date(fecha);    const diasSemana = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];    const diaSemana = diasSemana[fechaObj.getDay()];        const [ocupacion] = await db.execute(`      SELECT         h.id,        h.hora,        h.turno,        h.dia_semana,        COALESCE(reservas.total, 0) as ocupadas,        6 as capacidad_maxima,        (6 - COALESCE(reservas.total, 0)) as disponibles,        ROUND((COALESCE(reservas.total, 0) / 6) * 100, 2) as porcentaje_ocupacion      FROM horarios h      LEFT JOIN (        SELECT horario, COUNT(*) as total        FROM reservas r        JOIN clases c ON r.clase_id = c.id        WHERE r.fecha = ? AND r.estado = 'confirmada' AND c.tipo != 'salto'        GROUP BY horario      ) reservas ON TIME_FORMAT(h.hora, '%H:%i') = reservas.horario      WHERE h.dia_semana = ? AND h.disponible = 1      ORDER BY h.hora    `, [fecha, diaSemana]);        res.json({      fecha,      dia_semana: diaSemana,      horarios: ocupacion    });  } catch (err) {    console.error('Error obteniendo ocupación de horarios:', err);    res.status(500).json({ error: "Error en el servidor obteniendo ocupación" });  }});export default router;
+  const { fecha } = req.params;    try {    const fechaObj = new Date(fecha);    const diasSemana = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];    const diaSemana = diasSemana[fechaObj.getDay()];        const [ocupacion] = await db.execute(`      SELECT         h.id,        h.hora,        h.turno,        h.dia_semana,        COALESCE(reservas.total, 0) as ocupadas,        6 as capacidad_maxima,        (6 - COALESCE(reservas.total, 0)) as disponibles,        ROUND((COALESCE(reservas.total, 0) / 6) * 100, 2) as porcentaje_ocupacion      FROM horarios h      LEFT JOIN (        SELECT horario, COUNT(*) as total        FROM reservas r        JOIN clases c ON r.clase_id = c.id        WHERE r.fecha = ? AND r.estado = 'confirmada' AND c.tipo != 'salto'        GROUP BY horario      ) reservas ON TIME_FORMAT(h.hora, '%H:%i') = reservas.horario      WHERE h.dia_semana = ? AND h.disponible = 1      ORDER BY h.hora    `, [fecha, diaSemana]);        res.json({      fecha,      dia_semana: diaSemana,      horarios: ocupacion    });  } catch (err) {    console.error('Error obteniendo ocupación de horarios:', err);    res.status(500).json({ error: "Error en el servidor obteniendo ocupación" });  }});
+
+// GET /api/horarios/clases - Obtener todas las clases disponibles
+router.get('/clases', async (req, res) => {
+  try {
+    const [rows] = await db.execute('SELECT id, nombre, duracion_min, cupo_max FROM clases ORDER BY nombre');
+    res.json(rows);
+  } catch (err) {
+    console.error('Error obteniendo clases:', err);
+    res.status(500).json({ error: "Error obteniendo clases" });
+  }
+});
+
+// GET /api/horarios/personalizados - Obtener todos los horarios personalizados (Admin)
+router.get('/personalizados-all', async (req, res) => {
+  try {
+    const [rows] = await db.execute(`
+      SELECT 
+        hp.id,
+        hp.cliente_id,
+        hp.instructora_id,
+        hp.clase_id,
+        hp.tipo,
+        hp.fecha,
+        hp.dia_semana,
+        TIME_FORMAT(hp.hora_inicio, '%H:%i') as hora_inicio,
+        TIME_FORMAT(hp.hora_fin, '%H:%i') as hora_fin,
+        hp.activo,
+        c.nombre as clase_nombre,
+        i.nombre as instructora_nombre,
+        i.apellido as instructora_apellido,
+        u.nombre as cliente_nombre,
+        u.apellido as cliente_apellido
+      FROM horarios_personalizados hp
+      INNER JOIN clases c ON hp.clase_id = c.id
+      INNER JOIN instructoras i ON hp.instructora_id = i.id
+      INNER JOIN usuarios u ON hp.cliente_id = u.id
+      ORDER BY hp.creado_en DESC
+    `);
+    res.json(rows);
+  } catch (err) {
+    console.error('Error obteniendo todos los horarios personalizados:', err);
+    res.status(500).json({ error: "Error obteniendo horarios personalizados" });
+  }
+});
+
+// POST /api/horarios/personalizados - Crear nuevo horario personalizado
+router.post('/personalizados', async (req, res) => {
+  const { cliente_id, instructora_id, clase_id, tipo, fecha, dia_semana, hora_inicio, hora_fin } = req.body;
+  
+  try {
+    const [result] = await db.execute(
+      `INSERT INTO horarios_personalizados 
+       (cliente_id, instructora_id, clase_id, tipo, fecha, dia_semana, hora_inicio, hora_fin) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [cliente_id, instructora_id, clase_id, tipo, fecha || null, dia_semana || null, hora_inicio, hora_fin]
+    );
+    res.json({ success: true, id: result.insertId });
+  } catch (err) {
+    console.error('Error creando horario personalizado:', err);
+    res.status(500).json({ error: "Error creando horario personalizado" });
+  }
+});
+
+// PUT /api/horarios/personalizados/:id - Actualizar horario personalizado
+router.put('/personalizados/:id', async (req, res) => {
+  const { id } = req.params;
+  const { cliente_id, instructora_id, clase_id, tipo, fecha, dia_semana, hora_inicio, hora_fin } = req.body;
+  
+  try {
+    await db.execute(
+      `UPDATE horarios_personalizados 
+       SET cliente_id = ?, instructora_id = ?, clase_id = ?, tipo = ?, fecha = ?, dia_semana = ?, hora_inicio = ?, hora_fin = ?
+       WHERE id = ?`,
+      [cliente_id, instructora_id, clase_id, tipo, fecha || null, dia_semana || null, hora_inicio, hora_fin, id]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Error actualizando horario personalizado:', err);
+    res.status(500).json({ error: "Error actualizando horario personalizado" });
+  }
+});
+
+// DELETE /api/horarios/personalizados/:id - Eliminar horario personalizado
+router.delete('/personalizados/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await db.execute('DELETE FROM horarios_personalizados WHERE id = ?', [id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Error eliminando horario personalizado:', err);
+    res.status(500).json({ error: "Error eliminando horario personalizado" });
+  }
+});
+
+// GET /api/horarios/personalizados/:userId - Obtener horarios personalizados de un cliente
+router.get('/personalizados/:userId', async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const [rows] = await db.execute(`
+      SELECT 
+        hp.id,
+        hp.cliente_id,
+        hp.instructora_id,
+        hp.clase_id,
+        hp.tipo,
+        hp.fecha,
+        hp.dia_semana,
+        TIME_FORMAT(hp.hora_inicio, '%H:%i') as hora_inicio,
+        TIME_FORMAT(hp.hora_fin, '%H:%i') as hora_fin,
+        c.nombre as clase_nombre,
+        c.duracion_min,
+        i.nombre as instructora_nombre,
+        i.apellido as instructora_apellido
+      FROM horarios_personalizados hp
+      INNER JOIN clases c ON hp.clase_id = c.id
+      INNER JOIN instructoras i ON hp.instructora_id = i.id
+      WHERE hp.cliente_id = ? AND hp.activo = 1
+    `, [userId]);
+    
+    res.json(rows);
+  } catch (err) {
+    console.error('Error obteniendo horarios personalizados:', err);
+    res.status(500).json({ error: "Error obteniendo horarios personalizados" });
+  }
+});
+
+export default router;

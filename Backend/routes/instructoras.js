@@ -63,6 +63,27 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// Obtener mapeo de instructoras y clases
+router.get('/clases-asignadas', async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT 
+        ic.id,
+        ic.instructora_id,
+        ic.clase_id,
+        ic.activo,
+        c.nombre as clase_nombre
+      FROM instructora_clase ic
+      JOIN clases c ON ic.clase_id = c.id
+      WHERE ic.activo = 1
+    `);
+    res.json(rows);
+  } catch (err) {
+    console.error('Error al obtener mapeo de instructoras/clases:', err);
+    res.status(500).json({ error: 'Error al obtener mapeo de instructoras/clases' });
+  }
+});
+
 // Obtener clases/reservas de una instructora usando usuario_id
 router.get('/clases/:usuario_id', async (req, res) => {
   const { usuario_id } = req.params;

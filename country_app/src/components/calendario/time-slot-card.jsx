@@ -4,7 +4,7 @@ import './css/tieme-slot-card.css'
 // Tarjeta de franja horaria: muestra hora, plazas y estado (disponible/reservada/bloqueada).
 // Usa clases CSS prefijadas `tsc-` y responde a click/Enter/Space para seleccionar la franja.
 
-export function TimeSlotCard({ time, capacity, bookedCount, isBookedByUser, isBlocked, isWithin2Hours, hasPassed, userStatus, instructoraNombre, motivoCancelacion, onClick }) {
+export function TimeSlotCard({ time, capacity, bookedCount, isBookedByUser, isBlocked, isWithin2Hours, hasPassed, userStatus, instructoraNombre, motivoCancelacion, isPersonalized, onClick }) {
   const isFull = bookedCount >= capacity;
   const availableSpots = capacity - bookedCount;
   const hasSomeBookings = bookedCount > 0 && bookedCount < capacity;
@@ -31,6 +31,11 @@ export function TimeSlotCard({ time, capacity, bookedCount, isBookedByUser, isBl
     stateClass = 'tsc--attended';
   }
 
+  // Clase adicional para horarios personalizados
+  if (isPersonalized && !userHasBooking && !isBlocked && !isFull) {
+    stateClass += ' tsc--personalized';
+  }
+
   const handleKeyDown = (e) => {
     if ((e.key === 'Enter' || e.key === ' ') && !isBlocked && !isFull) {
       e.preventDefault();
@@ -54,6 +59,8 @@ export function TimeSlotCard({ time, capacity, bookedCount, isBookedByUser, isBl
     metaText = 'Tu reserva';
   } else if (isFull) {
     metaText = 'Completo';
+  } else if (isPersonalized) {
+    metaText = <span className="tsc-personalized-text">Horario extra</span>;
   } else {
     metaText = <span className="tsc-available-text">{availableSpots} {availableSpots === 1 ? "plaza" : "plazas"}</span>;
   }

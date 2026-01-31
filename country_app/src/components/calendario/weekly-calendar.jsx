@@ -30,6 +30,7 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
   
   // Estados para horarios dinámicos desde la base de datos
   const [dynamicSchedule, setDynamicSchedule] = useState(null);
+  const [personalSchedule, setPersonalSchedule] = useState([]);
   const [loadingSchedule, setLoadingSchedule] = useState(true);
   const [scheduleError, setScheduleError] = useState(null);
   const [instructorAvailabilityMap, setInstructorAvailabilityMap] = useState({});
@@ -49,13 +50,26 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
       
       try {
         setLoadingSchedule(true);
-        const response = await fetch(`https://elrefugiocountryclub.com/api/api/horarios/clase/${className}`);
+        const response = await fetch(`http://localhost:3001/api/horarios/clase/${className}`);
         if (!response.ok) {
           throw new Error('Error al cargar horarios desde la base de datos');
         }
         const data = await response.json();
         setDynamicSchedule(data);
         setScheduleError(null);
+
+        // Cargar horarios personalizados si hay un userId
+        if (userId) {
+          try {
+            const pResponse = await fetch(`http://localhost:3001/api/horarios/personalizados/${userId}`);
+            if (pResponse.ok) {
+              const pData = await pResponse.json();
+              setPersonalSchedule(pData);
+            }
+          } catch (pErr) {
+            console.error('Error cargando horarios personalizados:', pErr);
+          }
+        }
       } catch (error) {
         console.error('Error cargando horarios:', error);
         setScheduleError(error.message);
@@ -66,7 +80,7 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
     };
     
     fetchSchedule();
-  }, [className]);
+  }, [className, userId]);
   
   // Notificar cuando cambie la semana
   useEffect(() => {
@@ -121,7 +135,7 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
       }
 
       try {
-        const res = await fetch('https://elrefugiocountryclub.com/api/api/reservas/instructor-availability/batch', {
+        const res = await fetch('http://localhost:3001/api/reservas/instructor-availability/batch', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ clase_id: claseId, slots: slotsToCheck })
@@ -175,22 +189,62 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
   })
   
   // Función para obtener los timeSlots correctos según el día (desde DB)
-  const getTimeSlotsForDay = (dayName) => {
-    const date = dayNameToDate[dayName];
-    if (!date) return [];
+  const getTimeSlotsForDay = (dayName, realDate) => {
+    const slotsMap = new Set();
     
-    // Obtener horarios desde la BD
+    // 1. Horarios Generales
     const horariosDelDia = dynamicSchedule.horarios[dayName];
     if (horariosDelDia && Array.isArray(horariosDelDia)) {
-      return horariosDelDia.map(h => h.hora_inicio);
+      horariosDelDia.forEach(h => slotsMap.add(h.hora_inicio));
     }
     
-    return [];
+    // 2. Horarios Personalizados
+    if (realDate && personalSchedule.length > 0) {
+      const slotDateStr = getDateString(realDate);
+      const dayMapShort = {
+        'Lunes': 'L', 'Martes': 'M', 'Miércoles': 'X', 'Jueves': 'J',
+        'Viernes': 'V', 'Sábado': 'S', 'Domingo': 'D'
+      };
+      const diaCorto = dayMapShort[dayName];
+
+      personalSchedule.forEach(hp => {
+        if (hp.clase_nombre.toLowerCase() !== className.toLowerCase()) return;
+        
+        if (hp.tipo === 'fecha_especifica') {
+          if (hp.fecha.split('T')[0] === slotDateStr) slotsMap.add(hp.hora_inicio);
+        } else if (hp.tipo === 'recurrente') {
+          if (hp.dia_semana === diaCorto) slotsMap.add(hp.hora_inicio);
+        }
+      });
+    }
+    
+    return Array.from(slotsMap).sort();
   };
   
   // Función para obtener la capacidad correcta según el día y hora específica (desde DB)
   // La capacidad ya viene ajustada desde el backend según descansos fijos
   const getCapacityForSlot = (dayName, time, realDate) => {
+    // Si es personalizado, capacidad = 1 (según requerimiento)
+    const slotDateStr = realDate ? getDateString(realDate) : null;
+    const dayMapShort = {
+      'Lunes': 'L', 'Martes': 'M', 'Miércoles': 'X', 'Jueves': 'J',
+      'Viernes': 'V', 'Sábado': 'S', 'Domingo': 'D'
+    };
+    const diaCorto = dayMapShort[dayName];
+
+    const isPersonalized = personalSchedule.some(hp => {
+      if (hp.clase_nombre.toLowerCase() !== className.toLowerCase()) return false;
+      if (hp.hora_inicio !== time) return false;
+      if (hp.tipo === 'fecha_especifica') {
+        return hp.fecha.split('T')[0] === slotDateStr;
+      } else if (hp.tipo === 'recurrente') {
+        return hp.dia_semana === diaCorto;
+      }
+      return false;
+    });
+
+    if (isPersonalized) return 1;
+
     if (!dayNameToDate[dayName]) return claseCupoMax || 6;
     
     // Obtener capacidad desde la BD (ya viene ajustada para iniciación según descansos)
@@ -209,16 +263,33 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
   // bookings: solo las del usuario, para marcar los slots reservados
   const generateTimeSlots = (day, realDate) => {
     const slots = [];
-    const timeSlots = getTimeSlotsForDay(day);
+    const timeSlots = getTimeSlotsForDay(day, realDate);
     const now = DateTime.now().setZone('America/Cancun');
+    const slotDateStr = getDateString(realDate);
+
+    const dayMapShort = {
+      'Lunes': 'L', 'Martes': 'M', 'Miércoles': 'X', 'Jueves': 'J',
+      'Viernes': 'V', 'Sábado': 'S', 'Domingo': 'D'
+    };
+    const diaCorto = dayMapShort[day];
     
     timeSlots.forEach((time) => {
       const slotId = `${day}-${time}`;
-      // Usar función helper para evitar problemas de zona horaria
-      const slotDateStr = getDateString(realDate);
       
       // Obtener capacidad específica para este slot (ajustada para iniciación)
       const capacity = getCapacityForSlot(day, time, realDate);
+
+      // Si es personalizado, marcarlo para visualización
+      const isPersonalized = personalSchedule.some(hp => {
+        if (hp.clase_nombre.toLowerCase() !== className.toLowerCase()) return false;
+        if (hp.hora_inicio !== time) return false;
+        if (hp.tipo === 'fecha_especifica') {
+          return hp.fecha.split('T')[0] === slotDateStr;
+        } else if (hp.tipo === 'recurrente') {
+          return hp.dia_semana === diaCorto;
+        }
+        return false;
+      });
 
       // Consultar disponibilidad de instructoras para este slot (siempre que exista el mapa)
       const availabilityKey = `${slotDateStr}|${time}`;
@@ -232,12 +303,10 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
           blockedByInstructor = true;
           effectiveCapacity = 0;
         } else {
-          // Para clases de iniciación, el cupo real está limitado por el número de instructoras
-          if (className && className.toLowerCase().includes('iniciaci')) {
+          // Para clases de iniciación o personalizados, el cupo real está limitado por el número de instructoras
+          if (isPersonalized || (className && className.toLowerCase().includes('iniciaci'))) {
             effectiveCapacity = Math.min(capacity, instructorasDisponibles);
           } else {
-            // Para otras clases mantenemos el cupo, pero opcionalmente podríamos
-            // usar instructorasDisponibles para ajustar si se desea.
             effectiveCapacity = capacity;
           }
         }
@@ -329,17 +398,43 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
         userStatus, // nuevo: estatus de la reserva del usuario (si existe)
         instructoraNombre,
         motivoCancelacion, // motivo de cancelación si existe
+        isPersonalized // Flag para destacar visualmente
       });
     });
     return slots;
   };
 
-  // Obtener todos los días únicos desde la BD
+  // Obtener todos los días únicos (generales + personalizados)
   const getAllDaysForClass = () => {
+    const days = new Set();
     if (dynamicSchedule && dynamicSchedule.horarios) {
-      return Object.keys(dynamicSchedule.horarios);
+      Object.keys(dynamicSchedule.horarios).forEach(d => days.add(d));
     }
-    return [];
+    
+    // Añadir días con horarios personalizados
+    const dayMapLong = {
+      'L': 'Lunes', 'M': 'Martes', 'X': 'Miércoles', 'J': 'Jueves',
+      'V': 'Viernes', 'S': 'Sábado', 'D': 'Domingo'
+    };
+    
+    personalSchedule.forEach(hp => {
+      if (hp.clase_nombre.toLowerCase() === className.toLowerCase()) {
+        if (hp.tipo === 'recurrente' && hp.dia_semana) {
+          days.add(dayMapLong[hp.dia_semana]);
+        } else if (hp.tipo === 'fecha_especifica' && hp.fecha) {
+          const dateStr = hp.fecha.split('T')[0];
+          // Buscar qué día de la semana actual corresponde a esa fecha
+          for (const [dayName, d] of Object.entries(dayNameToDate)) {
+            if (getDateString(d) === dateStr) {
+              days.add(dayName);
+            }
+          }
+        }
+      }
+    });
+
+    const order = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+    return order.filter(d => days.has(d));
   };
 
   const slotsByDay = getAllDaysForClass().map((day) => {
@@ -380,6 +475,11 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
         <div className="wc-legend-item">
           <div className="wc-legend-box wc-legend-box--full"></div>
           <span className="wc-legend-text">Completo/Bloqueado</span>
+        </div>
+
+        <div className="wc-legend-item">
+          <div className="wc-legend-box" style={{ border: '2px dashed #c17b4a', backgroundColor: '#fff9f0' }}></div>
+          <span className="wc-legend-text">Horario extra</span>
         </div>
        
       </div>
@@ -447,6 +547,7 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
                     userStatus={slot.userStatus}
                     instructoraNombre={slot.instructoraNombre}
                     motivoCancelacion={slot.motivoCancelacion}
+                    isPersonalized={slot.isPersonalized}
                     onClick={() => onSlotClick(slot)}
                   />
                 );

@@ -1064,61 +1064,84 @@ router.post('/book', async (req, res) => {
 
     let instructora_id = null;
 
-    // REGLA ESPECIAL PARA INICIACIÓN: Una instructora por alumno
-    const esIniciacion = infoClase.nombre.toLowerCase().includes('iniciaci');
+    // ===================== CHEQUEO DE HORARIO PERSONALIZADO =====================
+    // Si el cliente tiene un horario personalizado para este día/hora/clase,
+    // se debe usar la instructora_id definida allí y saltar la asignación automática.
+    const diaSemanaHP = getDiaSemanaMySQL(fecha);
+    const [horarioPersonalizado] = await db.query(`
+      SELECT instructora_id FROM horarios_personalizados
+      WHERE cliente_id = ? AND clase_id = ? AND activo = 1
+      AND (
+        (tipo = 'fecha_especifica' AND fecha = ?)
+        OR
+        (tipo = 'recurrente' AND dia_semana = ?)
+      )
+      AND TIME_FORMAT(hora_inicio, '%H:%i') = ?
+    `, [cliente_id, clase_id, formatDateForMySQL(fecha), diaSemanaHP, hora_inicio.slice(0, 5)]);
 
-    if (!esIniciacion) {
-      // Para clases que NO son iniciación: buscar si hay una instructora que ya tiene alumnos en este slot
-      const diaSemanaMySQL = getDiaSemanaMySQL(fecha);
-      const fechaMySQL = formatDateForMySQL(fecha);
-      
-      const [instructoraActual] = await db.query(`
-        SELECT DISTINCT r.instructora_id, COUNT(*) as alumnos_en_slot
-        FROM reservas r
-        JOIN instructoras i ON r.instructora_id = i.id
-        JOIN instructora_clase ic ON i.id = ic.instructora_id AND ic.clase_id = ? AND ic.activo = 1
-        WHERE r.fecha = ?
-          AND r.hora_inicio = ?
-          AND r.clase_id = ?
-          AND r.estatus IN ('pendiente','confirmada')
-          AND i.disponibilidad = 'disponible'
-          AND (
-            -- Sin horarios definidos: disponible siempre
-            NOT EXISTS (
-              SELECT 1 FROM instructora_horarios ih_check
-              WHERE ih_check.instructora_id = i.id AND ih_check.activo = 1
-            )
-            OR
-            -- Con horarios: solo si este día/hora está configurado
-            EXISTS (
-              SELECT 1 FROM instructora_horarios ih_match
-              WHERE ih_match.instructora_id = i.id
-                AND ih_match.dia_semana = ?
-                AND ih_match.activo = 1
-                AND ? BETWEEN ih_match.hora_inicio AND ih_match.hora_fin
-            )
-          )
-          AND r.instructora_id NOT IN (
-            SELECT d.instructora_id FROM descansos d
-            WHERE (
-              (d.es_recurrente = 1 AND d.dia_semana = ?)
+    if (horarioPersonalizado.length > 0) {
+      instructora_id = horarioPersonalizado[0].instructora_id;
+      console.log(`✨ Usando instructora personalizada: ${instructora_id} para el cliente ${cliente_id}`);
+    }
+
+    // Si NO se asignó por horario personalizado, usar lógica automática
+    if (!instructora_id) {
+      // REGLA ESPECIAL PARA INICIACIÓN: Una instructora por alumno
+      const esIniciacion = infoClase.nombre.toLowerCase().includes('iniciaci');
+
+      if (!esIniciacion) {
+        // Para clases que NO son iniciación: buscar si hay una instructora que ya tiene alumnos en este slot
+        const diaSemanaMySQL = getDiaSemanaMySQL(fecha);
+        const fechaMySQL = formatDateForMySQL(fecha);
+        
+        const [instructoraActual] = await db.query(`
+          SELECT DISTINCT r.instructora_id, COUNT(*) as alumnos_en_slot
+          FROM reservas r
+          JOIN instructoras i ON r.instructora_id = i.id
+          JOIN instructora_clase ic ON i.id = ic.instructora_id AND ic.clase_id = ? AND ic.activo = 1
+          WHERE r.fecha = ?
+            AND r.hora_inicio = ?
+            AND r.clase_id = ?
+            AND r.estatus IN ('pendiente','confirmada')
+            AND i.disponibilidad = 'disponible'
+            AND (
+              -- Sin horarios definidos: disponible siempre
+              NOT EXISTS (
+                SELECT 1 FROM instructora_horarios ih_check
+                WHERE ih_check.instructora_id = i.id AND ih_check.activo = 1
+              )
               OR
-              (d.es_recurrente = 0 AND ? BETWEEN d.fecha_inicio AND d.fecha_fin)
+              -- Con horarios: solo si este día/hora está configurado
+              EXISTS (
+                SELECT 1 FROM instructora_horarios ih_match
+                WHERE ih_match.instructora_id = i.id
+                  AND ih_match.dia_semana = ?
+                  AND ih_match.activo = 1
+                  AND ? BETWEEN ih_match.hora_inicio AND ih_match.hora_fin
+              )
             )
-          )
-        GROUP BY r.instructora_id
-        HAVING alumnos_en_slot < ?
-        LIMIT 1
-      `, [clase_id, fechaMySQL, formatTimeForMySQL(hora_inicio), clase_id, diaSemanaMySQL, formatTimeForMySQL(hora_inicio), diaSemanaMySQL, fechaMySQL, cupoMaximoAjustado]);
+            AND r.instructora_id NOT IN (
+              SELECT d.instructora_id FROM descansos d
+              WHERE (
+                (d.es_recurrente = 1 AND d.dia_semana = ?)
+                OR
+                (d.es_recurrente = 0 AND ? BETWEEN d.fecha_inicio AND d.fecha_fin)
+              )
+            )
+          GROUP BY r.instructora_id
+          HAVING alumnos_en_slot < ?
+          LIMIT 1
+        `, [clase_id, fechaMySQL, formatTimeForMySQL(hora_inicio), clase_id, diaSemanaMySQL, formatTimeForMySQL(hora_inicio), diaSemanaMySQL, fechaMySQL, cupoMaximoAjustado]);
 
-      // Si hay una instructora que ya tiene alumnos en este slot y clase específica, asignarle
-      if (instructoraActual.length > 0) {
-        instructora_id = instructoraActual[0].instructora_id;
-        console.log(`✅ Asignando a instructora existente en el slot (tiene ${instructoraActual[0].alumnos_en_slot} alumnos)`);
+        // Si hay una instructora que ya tiene alumnos en este slot y clase específica, asignarle
+        if (instructoraActual.length > 0) {
+          instructora_id = instructoraActual[0].instructora_id;
+          console.log(`✅ Asignando a instructora existente en el slot (tiene ${instructoraActual[0].alumnos_en_slot} alumnos)`);
+        }
+      } else {
+        // Para INICIACIÓN: NO buscar instructoras con alumnos, siempre asignar una nueva
+        console.log(`📚 Clase de INICIACIÓN detectada - cada alumno tendrá su propia instructora`);
       }
-    } else {
-      // Para INICIACIÓN: NO buscar instructoras con alumnos, siempre asignar una nueva
-      console.log(`📚 Clase de INICIACIÓN detectada - cada alumno tendrá su propia instructora`);
     }
 
     if (!instructora_id) {
@@ -1251,7 +1274,7 @@ router.post('/book', async (req, res) => {
                            tipoCliente === 'renta' ? 'renta' :
                            tipoCliente === 'media_renta' ? 'media_renta' : null;
 
-        await axios.post('https://elrefugiocountryclub.com/api/api/email/send-reservation-confirmation', {
+        await axios.post('http://localhost:3001/api/email/send-reservation-confirmation', {
           email: clienteData[0].correo.trim(),
           nombre: `${clienteData[0].nombre} ${clienteData[0].apellido}`,
           fechaReserva: fecha,
@@ -1467,7 +1490,7 @@ router.put('/:id/cancel/:clienteId', async (req, res) => {
           console.log(`📨 Enviando email de cancelación a ${cliente[0].correo} desde endpoint cancel cliente`);
 
           // Enviar email de cancelación (no bloquea si falla)
-          axios.post('https://elrefugiocountryclub.com/api/api/email/send-cancellation-notification', emailPayload)
+          axios.post('http://localhost:3001/api/email/send-cancellation-notification', emailPayload)
             .then(() => {
               console.log(`✅ Email de cancelación enviado correctamente a: ${cliente[0].correo}`);
             })
@@ -1955,7 +1978,7 @@ router.put('/instructor/:reservaId/attendance', async (req, res) => {
           };
 
           // Enviar email de cancelación (no bloquea si falla)
-          axios.post('https://elrefugiocountryclub.com/api/api/email/send-cancellation-notification', emailPayload)
+          axios.post('http://localhost:3001/api/email/send-cancellation-notification', emailPayload)
             .then(() => {
               console.log(`✅ Email de cancelación enviado a: ${cliente[0].correo}`);
             })
@@ -2146,7 +2169,7 @@ router.put('/instructor/:reservaId/status', async (req, res) => {
           };
 
           // Enviar email de cancelación (no bloquea si falla)
-          axios.post('https://elrefugiocountryclub.com/api/api/email/send-cancellation-notification', emailPayload)
+          axios.post('http://localhost:3001/api/email/send-cancellation-notification', emailPayload)
             .then(() => {
               console.log(`✅ Email de cancelación enviado a: ${cliente[0].correo}`);
             })
@@ -2433,7 +2456,7 @@ router.post('/instructor/cancel-from-time', async (req, res) => {
             console.log(`📨 Enviando email de cancelación a ${cliente[0].correo} con payload:`, emailPayload);
 
             // Enviar email de cancelación (no bloquea si falla)
-            axios.post('https://elrefugiocountryclub.com/api/api/email/send-cancellation-notification', emailPayload)
+            axios.post('http://localhost:3001/api/email/send-cancellation-notification', emailPayload)
               .then(() => {
                 console.log(`✅ Email de cancelación enviado correctamente a: ${cliente[0].correo}`);
               })

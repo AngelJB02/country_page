@@ -1,4 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import Home from "./views/Home";
 import Equitacion from "./views/Equitacion";
 import CalendarioReserva from "./components/CalendarioReserva";
@@ -13,6 +15,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 function App() {
   return (
     <Router>
+      <ToastContainer position="top-right" autoClose={3000} />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/equitacion" element={<Equitacion />} />

@@ -3,7 +3,8 @@ import axios from 'axios';
  import Contabilidad from './administrador/ContabilidadLocal';
 import LogoutButton from './LogoutBoton';
 import ReservasAdmin from './administrador/ReservasAdmin';
-import { Search, Calendar, Clock, User, Loader, DollarSign, TrendingUp, TrendingDown, Download, Filter, CalendarCheck, FileText } from 'lucide-react';
+import HorariosPersonalizadosAdmin from './administrador/HorariosPersonalizadosAdmin';
+import { Search, Calendar, Clock, User, Loader, DollarSign, TrendingUp, TrendingDown, Download, Filter, CalendarCheck, FileText, UserPlus } from 'lucide-react';
 import '../CSS/AdminPanel.css';
 const AdminPanel = () => {
   const [activeTab, setActiveTab] = useState('reservas'); // 'reservas' o 'contabilidad'
@@ -25,7 +26,7 @@ const AdminPanel = () => {
   // Fetch reservations once on mount and store them keyed by date (like the Administrador example you provided)
   useEffect(() => {
     let mounted = true
-    axios.get('https://elrefugiocountryclub.com/api/api/reservas')
+    axios.get('http://localhost:3001/api/reservas')
       .then(response => {
         const reservasPorFecha = {};
         response.data.forEach(reserva => {
@@ -132,6 +133,13 @@ const AdminPanel = () => {
           <FileText size={20} />
           Contabilidad
         </button>
+        <button 
+          className={`tab-button ${activeTab === 'horarios' ? 'active' : ''}`}
+          onClick={() => setActiveTab('horarios')}
+        >
+          <Clock size={20} />
+          Horarios Extras
+        </button>
       </div>
 
       {/* CONTENIDO: render components that provide the actual data/views */}
@@ -139,6 +147,10 @@ const AdminPanel = () => {
         <div>
           <ReservasAdmin reservations={reservations} />
         </div>
+      )}
+
+      {activeTab === 'horarios' && (
+        <HorariosPersonalizadosAdmin />
       )}
 
       {activeTab === 'contabilidad' && (
