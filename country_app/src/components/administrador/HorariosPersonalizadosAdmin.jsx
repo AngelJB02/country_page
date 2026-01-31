@@ -33,11 +33,11 @@ const HorariosPersonalizadosAdmin = () => {
     setLoading(true);
     try {
       const [hRes, cRes, iRes, clRes, icRes] = await Promise.all([
-        axios.get('http://localhost:3001/api/horarios/personalizados-all'),
-        axios.get('http://localhost:3001/api/users/all'),
-        axios.get('http://localhost:3001/api/instructoras'),
-        axios.get('http://localhost:3001/api/horarios/clases'),
-        axios.get('http://localhost:3001/api/instructoras/clases-asignadas')
+        axios.get('https://elrefugiocountryclub.com/api/api/horarios/personalizados-all'),
+        axios.get('https://elrefugiocountryclub.com/api/api/users/all'),
+        axios.get('https://elrefugiocountryclub.com/api/api/instructoras'),
+        axios.get('https://elrefugiocountryclub.com/api/api/horarios/clases'),
+        axios.get('https://elrefugiocountryclub.com/api/api/instructoras/clases-asignadas')
       ]);
       setHorarios(hRes.data);
       // Solo clientes activos (no bloqueados)
@@ -160,10 +160,10 @@ const HorariosPersonalizadosAdmin = () => {
     e.preventDefault();
     try {
       if (editingId) {
-        await axios.put(`http://localhost:3001/api/horarios/personalizados/${editingId}`, formData);
+        await axios.put(`https://elrefugiocountryclub.com/api/api/horarios/personalizados/${editingId}`, formData);
         toast.success('Horario actualizado correctamente');
       } else {
-        await axios.post('http://localhost:3001/api/horarios/personalizados', formData);
+        await axios.post('https://elrefugiocountryclub.com/api/api/horarios/personalizados', formData);
         toast.success('Horario personalizado creado');
       }
       resetForm();
@@ -177,7 +177,7 @@ const HorariosPersonalizadosAdmin = () => {
   const handleDelete = async (id) => {
     if (!window.confirm('¿Estás seguro de eliminar este horario personalizado?')) return;
     try {
-      await axios.delete(`http://localhost:3001/api/horarios/personalizados/${id}`);
+      await axios.delete(`https://elrefugiocountryclub.com/api/api/horarios/personalizados/${id}`);
       toast.success('Horario eliminado');
       fetchData();
     } catch (err) {
