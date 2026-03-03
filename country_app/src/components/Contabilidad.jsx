@@ -8,6 +8,7 @@ import CaballosAdmin from "./CaballosAdmin";
 import InstructorasAdmin from "./InstructorasAdmin";
 import ReservasAdmin from "./ReservasAdmin";
 import HorariosPersonalizadosAdmin from "./administrador/HorariosPersonalizadosAdmin";
+import MetricasResumen from "./administrador/MetricasResumen";
 
 const MembershipAdminDashboard = () => {
   useRoleGuard(['administrador', 'contabilidad']);
@@ -1153,6 +1154,22 @@ const MembershipAdminDashboard = () => {
         >
           Horarios Extras
         </button>
+        <button
+          className={activeTab === "metricas" ? "tab-active" : "tab-inactive"}
+          onClick={() => setActiveTab("metricas")}
+          style={{ 
+            padding: "0.8rem 1.8rem", 
+            border: "none", 
+            borderBottom: activeTab === "metricas" ? "3px solid #2d5016" : "3px solid transparent",
+            fontWeight: "bold", 
+            background: "transparent",
+            color: activeTab === "metricas" ? "#2d5016" : "#4a7a2d", 
+            cursor: "pointer",
+            transition: "all 0.3s ease"
+          }}
+        >
+          Métricas
+        </button>
       </div>
 
       {/* CONTENIDO DE CLIENTES */}
@@ -1611,6 +1628,12 @@ const MembershipAdminDashboard = () => {
       {activeTab === "horariosPersonalizados" && (
         <div style={{ marginTop: "2rem" }}>
           <HorariosPersonalizadosAdmin />
+        </div>
+      )}
+
+      {activeTab === "metricas" && (
+        <div style={{ marginTop: "2rem" }}>
+          <MetricasResumen />
         </div>
       )}
 

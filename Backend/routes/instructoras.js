@@ -133,13 +133,13 @@ router.get('/clases/:usuario_id', async (req, res) => {
     
     console.log(`📋 Buscando clases para instructora ID: ${instructora.instructora_id} (${instructora.nombre} ${instructora.apellido})`);
     
-    // Actualizar clases pasadas de pendiente/confirmada a completada automáticamente
+    // Actualizar clases pasadas de pendiente/confirmada a completada automáticamente (+30 min)
     await db.query(`
       UPDATE reservas 
       SET estatus = 'completada'
       WHERE instructora_id = ?
       AND estatus IN ('pendiente', 'confirmada')
-      AND CONCAT(fecha, ' ', hora_fin) < NOW()
+      AND TIMESTAMP(fecha, hora_fin) < DATE_SUB(NOW(), INTERVAL 30 MINUTE)
     `, [instructora.instructora_id]);
     
     // Obtener todas las reservas/clases de esta instructora
@@ -655,18 +655,19 @@ router.delete('/:id', async (req, res) => {
   try {
     await connection.beginTransaction();
     
-    // Verificar si tiene reservas activas
+    // Verificar si tiene reservas pendientes (aún sin ocurrir)
     const [activeReservations] = await connection.query(
       `SELECT COUNT(*) as count 
        FROM reservas 
-       WHERE instructora_id = ? AND estatus IN ('confirmada', 'pendiente')`,
+       WHERE instructora_id = ? AND estatus = 'pendiente'`,
       [id]
     );
     
     if (activeReservations[0].count > 0) {
       await connection.rollback();
-      return res.status(400).json({ 
-        error: `No se puede eliminar la instructora porque tiene ${activeReservations[0].count} reserva(s) activa(s)` 
+      return res.status(409).json({ 
+        tieneReservasActivas: true,
+        count: activeReservations[0].count
       });
     }
     
@@ -706,6 +707,153 @@ router.delete('/:id', async (req, res) => {
     await connection.rollback();
     console.error('Error al eliminar instructora:', err);
     res.status(500).json({ error: 'Error al eliminar instructora' });
+  } finally {
+    connection.release();
+  }
+});
+
+// Obtener reservas pendientes de una instructora con candidatos para reasignar
+router.get('/:id/reservas-activas', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // 1. Obtener reservas pendientes de la instructora
+    const [reservas] = await db.query(`
+      SELECT
+        r.id,
+        r.fecha,
+        r.hora_inicio,
+        r.hora_fin,
+        r.clase_id,
+        cl.nombre AS clase_nombre,
+        u.nombre  AS cliente_nombre,
+        u.apellido AS cliente_apellido
+      FROM reservas r
+      JOIN clases cl  ON cl.id = r.clase_id
+      JOIN usuarios u ON u.id = r.cliente_id
+      WHERE r.instructora_id = ? AND r.estatus = 'pendiente'
+      ORDER BY r.fecha, r.hora_inicio
+    `, [id]);
+
+    if (reservas.length === 0) {
+      return res.json([]);
+    }
+
+    // 2. Para cada reserva, obtener candidatos válidos con filtros completos de disponibilidad
+    const reservasConCandidatos = await Promise.all(reservas.map(async (reserva) => {
+      const [candidatos] = await db.query(`
+        SELECT
+          i.id,
+          u.nombre,
+          u.apellido
+        FROM instructoras i
+        JOIN usuarios u        ON u.id  = i.usuario_id
+        -- Puede impartir esta clase específica
+        JOIN instructora_clase ic ON ic.instructora_id = i.id
+                                  AND ic.clase_id = ?
+                                  AND ic.activo = 1
+        WHERE i.disponibilidad = 'disponible'
+          AND i.id <> ?
+
+          -- Respetar horario semanal: si tiene horarios configurados, debe cubrir este día/hora
+          AND (
+            NOT EXISTS (
+              SELECT 1 FROM instructora_horarios ih_check
+              WHERE ih_check.instructora_id = i.id AND ih_check.activo = 1
+            )
+            OR EXISTS (
+              SELECT 1 FROM instructora_horarios ih_match
+              WHERE ih_match.instructora_id = i.id
+                AND ih_match.activo = 1
+                AND ih_match.dia_semana = (
+                  CASE DAYOFWEEK(?)
+                    WHEN 1 THEN 'D' WHEN 2 THEN 'L' WHEN 3 THEN 'M'
+                    WHEN 4 THEN 'X' WHEN 5 THEN 'J' WHEN 6 THEN 'V'
+                    WHEN 7 THEN 'S'
+                  END
+                )
+                AND ? BETWEEN ih_match.hora_inicio AND ih_match.hora_fin
+            )
+          )
+
+          -- Sin descanso ese día (recurrente por día de semana)
+          AND i.id NOT IN (
+            SELECT d.instructora_id FROM descansos d
+            WHERE d.es_recurrente = 1
+              AND d.dia_semana = (
+                CASE DAYOFWEEK(?)
+                  WHEN 1 THEN 'D' WHEN 2 THEN 'L' WHEN 3 THEN 'M'
+                  WHEN 4 THEN 'X' WHEN 5 THEN 'J' WHEN 6 THEN 'V'
+                  WHEN 7 THEN 'S'
+                END
+              )
+          )
+
+          -- Sin descanso ese día (por rango de fecha)
+          AND i.id NOT IN (
+            SELECT d.instructora_id FROM descansos d
+            WHERE d.es_recurrente = 0
+              AND ? BETWEEN d.fecha_inicio AND d.fecha_fin
+          )
+
+        ORDER BY u.nombre, u.apellido
+      `, [
+        reserva.clase_id,        // JOIN instructora_clase
+        id,                      // i.id <> instructora que se va
+        reserva.fecha,           // DAYOFWEEK para horario (dia_semana)
+        reserva.hora_inicio,     // hora dentro del horario
+        reserva.fecha,           // DAYOFWEEK para descanso recurrente
+        reserva.fecha,           // descanso por rango de fecha
+      ]);
+
+      return { ...reserva, candidatos };
+    }));
+
+    res.json(reservasConCandidatos);
+  } catch (err) {
+    console.error('Error obteniendo reservas activas de instructora:', err);
+    res.status(500).json({ error: 'Error al obtener reservas activas' });
+  }
+});
+
+// Reasignar reservas pendientes a otros instructores
+router.post('/:id/reasignar', async (req, res) => {
+  const { id } = req.params;
+  const { reasignaciones } = req.body; // [{ reserva_id, nuevo_instructora_id }]
+
+  if (!Array.isArray(reasignaciones) || reasignaciones.length === 0) {
+    return res.status(400).json({ error: 'Se requiere un array de reasignaciones' });
+  }
+
+  const connection = await db.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    for (const { reserva_id, nuevo_instructora_id } of reasignaciones) {
+      if (!reserva_id || !nuevo_instructora_id) {
+        await connection.rollback();
+        connection.release();
+        return res.status(400).json({ error: 'Cada reasignación requiere reserva_id y nuevo_instructora_id' });
+      }
+
+      const [result] = await connection.query(
+        `UPDATE reservas SET instructora_id = ? WHERE id = ? AND instructora_id = ? AND estatus = 'pendiente'`,
+        [nuevo_instructora_id, reserva_id, id]
+      );
+
+      if (result.affectedRows === 0) {
+        await connection.rollback();
+        connection.release();
+        return res.status(400).json({ error: `No se pudo reasignar la reserva ${reserva_id}` });
+      }
+    }
+
+    await connection.commit();
+    res.json({ message: 'Reservas reasignadas correctamente', count: reasignaciones.length });
+  } catch (err) {
+    await connection.rollback();
+    console.error('Error reasignando reservas:', err);
+    res.status(500).json({ error: 'Error al reasignar reservas' });
   } finally {
     connection.release();
   }

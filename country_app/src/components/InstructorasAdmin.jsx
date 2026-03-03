@@ -8,7 +8,8 @@ const InstructorasAdmin = () => {
   const [notification, setNotification] = useState({ show: false, message: "", type: "" });
   const [addInstructorModalOpen, setAddInstructorModalOpen] = useState(false);
   const [editInstructorModalOpen, setEditInstructorModalOpen] = useState(false);
-  const [deleteConfirmModalOpen, setDeleteConfirmModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [loadingReservas, setLoadingReservas] = useState(false);
   const [instructorToDelete, setInstructorToDelete] = useState(null);
   const [editingInstructor, setEditingInstructor] = useState(null);
   const [newInstructor, setNewInstructor] = useState({
@@ -21,6 +22,11 @@ const InstructorasAdmin = () => {
   const [creatingInstructor, setCreatingInstructor] = useState(false);
   const [updatingInstructor, setUpdatingInstructor] = useState(false);
   const [deletingInstructor, setDeletingInstructor] = useState(false);
+
+  // Estados para el flujo de desactivación + reasignación de reservas
+  const [activeReservations, setActiveReservations] = useState([]);
+  const [reasignaciones, setReasignaciones] = useState({});
+  const [reassigning, setReassigning] = useState(false);
   
   // Estados para gestión de descansos
   const [descansosModalOpen, setDescansosModalOpen] = useState(false);
@@ -634,14 +640,29 @@ const InstructorasAdmin = () => {
     setEditingInstructor(null);
   };
 
-  const openDeleteConfirmModal = (instructor) => {
+  const openDeleteModal = async (instructor) => {
     setInstructorToDelete(instructor);
-    setDeleteConfirmModalOpen(true);
+    setReasignaciones({});
+    setActiveReservations([]);
+    setDeleteModalOpen(true);
+    setLoadingReservas(true);
+    try {
+      const res = await fetch(`https://elrefugiocountryclub.com/api/api/instructoras/${instructor.id}/reservas-activas`);
+      const reservas = await res.json();
+      setActiveReservations(reservas);
+    } catch (e) {
+      showNotification("Error al cargar reservas pendientes", "error");
+    } finally {
+      setLoadingReservas(false);
+    }
   };
 
-  const closeDeleteConfirmModal = () => {
-    setDeleteConfirmModalOpen(false);
+  const closeDeleteModal = () => {
+    if (reassigning || deletingInstructor) return;
+    setDeleteModalOpen(false);
     setInstructorToDelete(null);
+    setActiveReservations([]);
+    setReasignaciones({});
   };
 
   const createNewInstructor = async () => {
@@ -707,28 +728,47 @@ const InstructorasAdmin = () => {
     }
   };
 
-  const deleteInstructor = async () => {
+  const handleConfirmDelete = async () => {
     if (!instructorToDelete) return;
 
-    setDeletingInstructor(true);
-    try {
-      const response = await fetch(`https://elrefugiocountryclub.com/api/api/instructoras/${instructorToDelete.id}`, {
-        method: "DELETE"
-      });
+    const listaReasignaciones = Object.entries(reasignaciones).map(([reserva_id, nuevo_instructora_id]) => ({
+      reserva_id: parseInt(reserva_id),
+      nuevo_instructora_id: parseInt(nuevo_instructora_id)
+    }));
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Error al eliminar instructora");
+    const busy = activeReservations.length > 0 ? setReassigning : setDeletingInstructor;
+    busy(true);
+    try {
+      // 1. Reasignar si hay reservas con sustituto asignado
+      if (listaReasignaciones.length > 0) {
+        const reasignarRes = await fetch(`https://elrefugiocountryclub.com/api/api/instructoras/${instructorToDelete.id}/reasignar`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reasignaciones: listaReasignaciones })
+        });
+        if (!reasignarRes.ok) {
+          const err = await reasignarRes.json();
+          throw new Error(err.error || "Error al reasignar reservas");
+        }
       }
 
-      const data = await response.json();
-      showNotification(data.message || "Instructora eliminada correctamente", "success");
-      closeDeleteConfirmModal();
+      // 2. Desactivar instructora
+      const deleteRes = await fetch(`https://elrefugiocountryclub.com/api/api/instructoras/${instructorToDelete.id}`, {
+        method: "DELETE"
+      });
+      if (!deleteRes.ok) {
+        const err = await deleteRes.json();
+        throw new Error(err.error || "Error al desactivar instructora");
+      }
+
+      showNotification("Instructora desactivada correctamente", "success");
+      closeDeleteModal();
       loadInstructoras();
     } catch (error) {
-      console.error("Error al eliminar instructora:", error);
-      showNotification(error.message || "Error al eliminar instructora", "error");
+      console.error("Error al desactivar instructora:", error);
+      showNotification(error.message || "Error al desactivar instructora", "error");
     } finally {
+      setReassigning(false);
       setDeletingInstructor(false);
     }
   };
@@ -1405,7 +1445,7 @@ const InstructorasAdmin = () => {
                             </button>
                             <button
                               className="btn-icon-action"
-                              onClick={() => openDeleteConfirmModal(instructor)}
+                              onClick={() => openDeleteModal(instructor)}
                               title="Eliminar"
                               style={{
                                 background: "#dc3545",
@@ -1433,43 +1473,104 @@ const InstructorasAdmin = () => {
         </div>
       )}
       
-      {/* Modal de confirmación de eliminación (Portal) */}
-      {deleteConfirmModalOpen && instructorToDelete &&
+      {/* Modal unificado: confirmación + reasignación de reservas (Portal) */}
+      {deleteModalOpen && instructorToDelete &&
         renderPortal(
-          <div className="modal-overlay" onClick={closeDeleteConfirmModal}>
-            <div className="modal-content delete-confirm-modal" onClick={e => e.stopPropagation()}>
-              <h2 style={{ color: "#dc3545", marginBottom: "1rem" }}>Confirmar Eliminación</h2>
-              <p style={{ fontSize: "1.1rem", marginBottom: "1.5rem", color: "var(--charcoal)" }}>
-                ¿Estás seguro de que deseas eliminar a la instructora{" "}
+          <div className="modal-overlay" onClick={closeDeleteModal}>
+            <div className="modal-content" style={{ maxWidth: "640px", maxHeight: "85vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
+              <h2 style={{ color: "#dc3545", marginBottom: "0.5rem" }}>Desactivar instructora</h2>
+              <p style={{ fontSize: "1rem", marginBottom: "1.25rem", color: "var(--charcoal)" }}>
+                ¿Estás seguro de que deseas desactivar a{" "}
                 <strong>{instructorToDelete.nombre} {instructorToDelete.apellido}</strong>?
               </p>
-              <p style={{ fontSize: "0.9rem", color: "var(--stone-gray)", marginBottom: "1.5rem" }}>
-                Esta acción marcará a la instructora como inactiva. No se puede deshacer si tiene reservas activas.
-              </p>
-              <div className="modal-actions">
+
+              {loadingReservas ? (
+                <p style={{ color: "var(--stone-gray)", fontSize: "0.95rem", marginBottom: "1rem" }}>Verificando reservas pendientes...</p>
+              ) : activeReservations.length > 0 ? (
+                <>
+                  <p style={{ color: "#b45309", fontSize: "0.95rem", marginBottom: "1rem", fontWeight: "500" }}>
+                    Tiene {activeReservations.length} reserva(s) pendiente(s). Asigna un instructor sustituto para cada una.
+                  </p>
+                  {activeReservations.map((reserva) => (
+                    <div key={reserva.id} style={{
+                      border: "1px solid #e5e7eb",
+                      borderRadius: "8px",
+                      padding: "1rem",
+                      marginBottom: "1rem",
+                      background: "#fafaf9"
+                    }}>
+                      <div style={{ marginBottom: "0.5rem" }}>
+                        <strong style={{ color: "var(--charcoal)" }}>
+                          {new Date(reserva.fecha).toLocaleDateString("es-MX", { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "UTC" })}
+                        </strong>
+                        {" · "}
+                        {reserva.hora_inicio?.slice(0, 5)} – {reserva.hora_fin?.slice(0, 5)}
+                      </div>
+                      <div style={{ fontSize: "0.9rem", color: "var(--stone-gray)", marginBottom: "0.75rem" }}>
+                        {reserva.clase_nombre} · {reserva.cliente_nombre} {reserva.cliente_apellido}
+                      </div>
+                      {reserva.candidatos && reserva.candidatos.length > 0 ? (
+                        <select
+                          value={reasignaciones[reserva.id] || ""}
+                          onChange={e => setReasignaciones(prev => ({ ...prev, [reserva.id]: e.target.value }))}
+                          style={{
+                            width: "100%",
+                            padding: "0.5rem",
+                            borderRadius: "6px",
+                            border: "1px solid #d1d5db",
+                            fontSize: "0.95rem",
+                            background: "white"
+                          }}
+                        >
+                          <option value="">— Seleccionar instructor sustituto —</option>
+                          {reserva.candidatos.map(c => (
+                            <option key={c.id} value={c.id}>{c.nombre} {c.apellido}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <p style={{ color: "#dc2626", fontSize: "0.9rem", margin: 0 }}>
+                          ⚠ No hay instructores disponibles para este horario.
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </>
+              ) : (
+                <p style={{ fontSize: "0.9rem", color: "var(--stone-gray)", marginBottom: "1rem" }}>
+                  No tiene reservas pendientes. Esta acción la marcará como inactiva.
+                </p>
+              )}
+
+              <div className="modal-actions" style={{ marginTop: "1.25rem" }}>
                 <button
                   className="btn btn-danger"
-                  onClick={deleteInstructor}
-                  disabled={deletingInstructor}
+                  onClick={handleConfirmDelete}
+                  disabled={
+                    loadingReservas ||
+                    reassigning ||
+                    deletingInstructor ||
+                    activeReservations.some(r => !r.candidatos?.length || !reasignaciones[r.id])
+                  }
                   style={{
                     background: "#dc3545",
                     color: "white",
                     border: "none",
                     padding: "0.75rem 1.5rem",
                     borderRadius: "8px",
-                    cursor: deletingInstructor ? "not-allowed" : "pointer",
+                    cursor: (loadingReservas || reassigning || deletingInstructor) ? "not-allowed" : "pointer",
                     fontWeight: "600",
                     display: "flex",
                     alignItems: "center",
                     gap: "0.5rem"
                   }}
                 >
-                  <Trash2 size={16} /> {deletingInstructor ? "Eliminando..." : "Sí, Eliminar"}
+                  <Trash2 size={16} />
+                  {(reassigning || deletingInstructor) ? "Procesando..." : activeReservations.length > 0 ? "Confirmar y desactivar" : "Sí, Desactivar"}
                 </button>
                 <button
                   className="btn btn-secondary"
-                  onClick={closeDeleteConfirmModal}
-                  disabled={deletingInstructor}
+                  onClick={closeDeleteModal}
+                  disabled={reassigning || deletingInstructor}
                 >
                   Cancelar
                 </button>
@@ -1477,7 +1578,7 @@ const InstructorasAdmin = () => {
             </div>
           </div>
         )}
-      
+
       {/* Modal de edición de instructora (Portal) */}
       {editInstructorModalOpen && editingInstructor &&
         renderPortal(

@@ -156,6 +156,29 @@ app.use((err, req, res, next) => {
 });
 
 // ========================
+// Job periódico: auto-completar reservas pasadas (+30 min)
+// ========================
+async function autoCompletarReservasPasadas() {
+  try {
+    const [result] = await db.query(`
+      UPDATE reservas
+      SET estatus = 'completada'
+      WHERE estatus IN ('pendiente', 'confirmada')
+        AND TIMESTAMP(fecha, hora_fin) < DATE_SUB(NOW(), INTERVAL 30 MINUTE)
+    `);
+    if (result.affectedRows > 0) {
+      console.log(`🕐 Auto-completar: ${result.affectedRows} reserva(s) marcadas como completadas`);
+    }
+  } catch (err) {
+    console.error('❌ Error en auto-completar reservas:', err.message);
+  }
+}
+
+// Ejecutar al arrancar y luego cada 5 minutos
+autoCompletarReservasPasadas();
+setInterval(autoCompletarReservasPasadas, 30 * 60 * 1000);
+
+// ========================
 // Iniciar servidor
 // ========================
 app.listen(PORT, '0.0.0.0', () => {

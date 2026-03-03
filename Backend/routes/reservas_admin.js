@@ -319,4 +319,171 @@ router.get('/stats/summary', async (req, res) => {
   }
 });
 
+// Endpoint de analíticas detalladas para Contabilidad
+router.get('/analytics/detailed', async (req, res) => {
+  const { fecha_inicio, fecha_fin } = req.query;
+  
+  if (!fecha_inicio || !fecha_fin) {
+    return res.status(400).json({ error: 'Las fechas de inicio y fin son obligatorias' });
+  }
+
+  try {
+    const params = [fecha_inicio, fecha_fin];
+
+    // 1. Métricas por cada clase/nivel
+    const [classesRes] = await db.query(`
+      SELECT id, nombre FROM clases
+    `);
+
+    const classMetrics = [];
+    for (const cl of classesRes) {
+      // 1. Métricas de clases por nivel
+      const [statsRow] = await db.query(`
+        SELECT 
+          SUM(CASE WHEN estatus = 'completada' THEN 1 ELSE 0 END) as asistencias_reales,
+          SUM(CASE WHEN estatus LIKE 'cancelada%' AND observaciones LIKE '%No asistió%' THEN 1 ELSE 0 END) as faltas_por_inasistencia,
+          SUM(CASE WHEN estatus LIKE 'cancelada%' AND (observaciones IS NULL OR observaciones NOT LIKE '%No asistió%') THEN 1 ELSE 0 END) as cancelaciones_por_cliente
+        FROM reservas 
+        WHERE clase_id = ? AND fecha BETWEEN ? AND ?
+      `, [cl.id, fecha_inicio, fecha_fin]);
+
+      const totalAsistencias = Number(statsRow[0].asistencias_reales) || 0;
+      const totalFaltas = Number(statsRow[0].faltas_por_inasistencia) || 0;
+      const totalCancelacionesValidas = Number(statsRow[0].cancelaciones_por_cliente) || 0;
+
+      // 2. Mejor cliente de esta clase específica (solo asistencias reales)
+      const [topClientRow] = await db.query(`
+        SELECT u.nombre, u.apellido, COUNT(*) as total 
+        FROM reservas r 
+        JOIN usuarios u ON r.cliente_id = u.id 
+        WHERE r.clase_id = ? AND r.estatus = 'completada' AND r.fecha BETWEEN ? AND ? 
+        GROUP BY r.cliente_id 
+        ORDER BY total DESC LIMIT 1
+      `, [cl.id, fecha_inicio, fecha_fin]);
+
+      // 3. Cliente con más FALTAS REALES (Solo las que dicen 'No asistió')
+      const [topCancellerRow] = await db.query(`
+        SELECT u.nombre, u.apellido, COUNT(*) as total 
+        FROM reservas r 
+        JOIN usuarios u ON r.cliente_id = u.id 
+        WHERE r.clase_id = ? 
+        AND r.estatus LIKE 'cancelada%' 
+        AND r.observaciones LIKE '%No asistió%'
+        AND r.fecha BETWEEN ? AND ? 
+        GROUP BY r.cliente_id 
+        ORDER BY total DESC LIMIT 1
+      `, [cl.id, fecha_inicio, fecha_fin]);
+
+      // 4. Horario con más demanda (considerando lo que se reservó originalmente: completada + pendiente)
+      const [topHourRow] = await db.query(`
+        SELECT hora_inicio, COUNT(*) as total 
+        FROM reservas 
+        WHERE clase_id = ? AND estatus IN ('completada', 'pendiente') AND fecha BETWEEN ? AND ?
+        GROUP BY hora_inicio 
+        ORDER BY total DESC LIMIT 1
+      `, [cl.id, fecha_inicio, fecha_fin]);
+
+      classMetrics.push({
+        id: cl.id,
+        nombre: cl.nombre,
+        total: totalAsistencias,
+        cancelaciones: totalFaltas, 
+        cancelaciones_validas: totalCancelacionesValidas,
+        mejor_cliente: topClientRow[0] || null,
+        peor_cliente: topCancellerRow[0] || null,
+        horario_top: topHourRow[0] || null
+      });
+    }
+
+    // 2. Cliente con más INASISTENCIAS (Solo cuando es cancelada + 'No asistió')
+    const [mostCancellations] = await db.query(`
+      SELECT u.nombre, u.apellido, COUNT(*) as total 
+      FROM reservas r 
+      JOIN usuarios u ON r.cliente_id = u.id 
+      WHERE r.estatus LIKE 'cancelada%' AND r.observaciones LIKE '%No asistió%'
+      AND r.fecha BETWEEN ? AND ? 
+      GROUP BY r.cliente_id 
+      ORDER BY total DESC LIMIT 1
+    `, params);
+
+    const topCanceller = mostCancellations[0] || null;
+
+    // 3. Horario estrella (más reservado: completada + pendiente)
+    const [busiestHour] = await db.query(`
+      SELECT hora_inicio, COUNT(*) as total 
+      FROM reservas 
+      WHERE estatus IN ('completada', 'pendiente') AND fecha BETWEEN ? AND ? 
+      GROUP BY hora_inicio 
+      ORDER BY total DESC LIMIT 1
+    `, params);
+
+    const starHour = busiestHour[0] || null;
+
+    // 4. Clientes más fieles (Ranking Real: Top 5 solo clases 'completada')
+    const [frequentClients] = await db.query(`
+      SELECT u.nombre, u.apellido, COUNT(*) as total 
+      FROM reservas r 
+      JOIN usuarios u ON r.cliente_id = u.id 
+      WHERE r.estatus = 'completada' AND r.fecha BETWEEN ? AND ? 
+      GROUP BY r.cliente_id 
+      ORDER BY total DESC LIMIT 5
+    `, params);
+
+    // 5. MÉTRICAS PARA INSTRUCTORES
+    const [instructorsRes] = await db.query(`
+      SELECT i.id, i.nombre, i.apellido, i.disponibilidad, COUNT(r.id) as total_clases
+      FROM instructoras i
+      JOIN reservas r ON i.id = r.instructora_id
+      WHERE r.estatus = 'completada' AND r.fecha BETWEEN ? AND ?
+      GROUP BY i.id
+      ORDER BY total_clases DESC
+    `, params);
+
+    const instructorMetrics = [];
+    for (const inst of instructorsRes) {
+      // Todos los niveles impartidos por este instructor en el periodo
+      const [levelsRes] = await db.query(`
+        SELECT cl.nombre, COUNT(r.id) as total
+        FROM reservas r
+        JOIN clases cl ON r.clase_id = cl.id
+        WHERE r.instructora_id = ? AND r.estatus = 'completada' AND r.fecha BETWEEN ? AND ?
+        GROUP BY cl.id
+        ORDER BY total DESC
+      `, [inst.id, fecha_inicio, fecha_fin]);
+
+      // Alumna más frecuente de esta instructora
+      const [topStudents] = await db.query(`
+        SELECT u.nombre, u.apellido, COUNT(r.id) as total
+        FROM reservas r
+        JOIN usuarios u ON r.cliente_id = u.id
+        WHERE r.instructora_id = ? AND r.estatus = 'completada' AND r.fecha BETWEEN ? AND ?
+        GROUP BY u.id
+        ORDER BY total DESC LIMIT 1
+      `, [inst.id, fecha_inicio, fecha_fin]);
+
+      instructorMetrics.push({
+        id: inst.id,
+        nombre: `${inst.nombre} ${inst.apellido}`,
+        total_clases: inst.total_clases,
+        activo: inst.disponibilidad !== 'no_disponible',
+        disponibilidad: inst.disponibilidad,
+        niveles: levelsRes.map(l => ({ nombre: l.nombre, total: Number(l.total) })),
+        mejor_alumna: topStudents[0] || null
+      });
+    }
+
+    res.json({
+      metricas_por_clase: classMetrics,
+      cliente_cancelador_top: topCanceller,
+      horario_estrella: starHour,
+      clientes_fieles: frequentClients,
+      metricas_instructores: instructorMetrics
+    });
+
+  } catch (err) {
+    console.error('Error al obtener analíticas detalladas:', err);
+    res.status(500).json({ error: 'Error al obtener analíticas detalladas' });
+  }
+});
+
 export default router;
