@@ -263,12 +263,13 @@ const verificarDisponibilidadCaballo = async (caballoId, fecha, horaInicio, hora
       AND r.fecha = ?
       AND r.estatus IN ('confirmada', 'completada')
       AND LOWER(c.nombre) NOT LIKE '%iniciaci%'
+      AND LOWER(c.nombre) NOT LIKE '%ponyclub%'
     `, [caballoId, fecha]);
 
     const actividadesNoIniciacion = actividadesHoy[0]?.total || 0;
     
-    // Si la clase actual no es iniciación y ya trabajó 3 veces, no puede trabajar más
-    if (tipoClase && !tipoClase.toLowerCase().includes('iniciaci') && actividadesNoIniciacion >= 3) {
+    // Si la clase actual no es iniciación/ponyclub y ya trabajó 3 veces, no puede trabajar más
+    if (tipoClase && !tipoClase.toLowerCase().includes('iniciaci') && !tipoClase.toLowerCase().includes('ponyclub') && actividadesNoIniciacion >= 3) {
       return { 
         disponible: false, 
         razon: `Caballo ya trabajó ${actividadesNoIniciacion} veces hoy en actividades no-iniciación. Necesita descansar.` 
@@ -897,8 +898,8 @@ router.get('/available-slots/:clienteId', async (req, res) => {
       // Para otras clases, el cupo se mantiene como está configurado
       let cupoMaximoAjustado = infoClase.cupo_max;
 
-      if (infoClase.nombre.toLowerCase() === 'iniciacion') {
-        // Para iniciación, el cupo es igual al número de instructoras disponibles
+      if (['iniciacion', 'ponyclub'].includes(infoClase.nombre.toLowerCase())) {
+        // Para iniciación/ponyclub, el cupo es igual al número de instructoras disponibles
         cupoMaximoAjustado = instructorasDisponibles;
 
         if (cupoMaximoAjustado < infoClase.cupo_max) {
@@ -1026,11 +1027,11 @@ router.post('/book', async (req, res) => {
     // Para otras clases, el cupo se mantiene como está configurado
     let cupoMaximoAjustado = infoClase.cupo_max;
     
-    if (infoClase.nombre.toLowerCase() === 'iniciacion') {
+    if (['iniciacion', 'ponyclub'].includes(infoClase.nombre.toLowerCase())) {
       // Calcular instructoras disponibles para este horario (considerando descansos)
       const instructorasDisponibles = await calcularInstructorasDisponibles(clase_id, fecha, hora_inicio);
       
-      // Para iniciación, el cupo es igual al número de instructoras disponibles
+      // Para iniciación/ponyclub, el cupo es igual al número de instructoras disponibles
       cupoMaximoAjustado = instructorasDisponibles;
       
       console.log(`⚠️ Cupo ajustado para reserva: ${cupoMaximoAjustado} (instructoras disponibles: ${instructorasDisponibles})`);
@@ -1086,11 +1087,11 @@ router.post('/book', async (req, res) => {
 
     // Si NO se asignó por horario personalizado, usar lógica automática
     if (!instructora_id) {
-      // REGLA ESPECIAL PARA INICIACIÓN: Una instructora por alumno
-      const esIniciacion = infoClase.nombre.toLowerCase().includes('iniciaci');
+      // REGLA ESPECIAL PARA INICIACIÓN/PONYCLUB: Una instructora por alumno
+      const esIniciacion = ['iniciacion', 'ponyclub'].includes(infoClase.nombre.toLowerCase());
 
       if (!esIniciacion) {
-        // Para clases que NO son iniciación: buscar si hay una instructora que ya tiene alumnos en este slot
+        // Para clases que NO son iniciación/ponyclub: buscar si hay una instructora que ya tiene alumnos en este slot
         const diaSemanaMySQL = getDiaSemanaMySQL(fecha);
         const fechaMySQL = formatDateForMySQL(fecha);
         
@@ -1716,7 +1717,7 @@ router.put('/instructor/:reservaId/assign-horse', async (req, res) => {
 
       // Obtener cooldown de la nueva clase
       const cooldownNuevaClase = tipoClase ? (
-        ['iniciacion', 'paseo'].includes(tipoClase.toLowerCase()) ? 0 :
+        ['iniciacion', 'paseo', 'ponyclub'].includes(tipoClase.toLowerCase()) ? 0 :
         tipoClase.toLowerCase() === 'intermedio' ? 2 :
         ['salto', 'avanzado'].includes(tipoClase.toLowerCase()) ? 3 : 0
       ) : 0;

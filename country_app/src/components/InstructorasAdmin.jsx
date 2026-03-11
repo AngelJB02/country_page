@@ -1634,7 +1634,7 @@ const InstructorasAdmin = () => {
                 <div className="modal-field">
                   <label>Especialidad *:</label>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '8px 0' }}>
-                    {['iniciacion', 'intermedio', 'paseo', 'avanzado'].map(esp => {
+                    {['iniciacion', 'ponyclub', 'intermedio', 'paseo', 'avanzado'].map(esp => {
                       const selectedEspecialidades = editingInstructor.especialidad ? editingInstructor.especialidad.split(',') : [];
                       const isChecked = selectedEspecialidades.includes(esp);
                       
@@ -1730,7 +1730,7 @@ const InstructorasAdmin = () => {
                 <div className="modal-field">
                   <label>Especialidad *:</label>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '8px 0' }}>
-                    {['iniciacion', 'intermedio', 'paseo', 'avanzado'].map(esp => {
+                    {['iniciacion', 'ponyclub', 'intermedio', 'paseo', 'avanzado'].map(esp => {
                       const selectedEspecialidades = newInstructor.especialidad ? newInstructor.especialidad.split(',') : [];
                       const isChecked = selectedEspecialidades.includes(esp);
                       

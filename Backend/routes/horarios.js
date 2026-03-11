@@ -27,9 +27,9 @@ router.get('/clase/:nombreClase', async (req, res) => {
       [nombreClase.toLowerCase()]
     );
     
-    // Si es iniciación, calcular capacidad ajustada según descansos fijos
+    // Si es iniciación o ponyclub, calcular capacidad ajustada según descansos fijos
     let capacidadAjustadaPorDia = {};
-    if (nombreClase.toLowerCase() === 'iniciacion' && rows.length > 0) {
+    if (['iniciacion', 'ponyclub'].includes(nombreClase.toLowerCase()) && rows.length > 0) {
       const claseId = rows[0].clase_id;
       
       // Obtener todas las instructoras que pueden dar iniciación
@@ -86,9 +86,9 @@ router.get('/clase/:nombreClase', async (req, res) => {
         acc[dia] = [];
       }
       
-      // Para iniciación, usar capacidad ajustada según instructoras disponibles
+      // Para iniciación/ponyclub, usar capacidad ajustada según instructoras disponibles
       let capacidad = row.capacidad;
-      if (nombreClase.toLowerCase() === 'iniciacion' && capacidadAjustadaPorDia[row.dia_semana] !== undefined) {
+      if (['iniciacion', 'ponyclub'].includes(nombreClase.toLowerCase()) && capacidadAjustadaPorDia[row.dia_semana] !== undefined) {
         capacidad = capacidadAjustadaPorDia[row.dia_semana];
       }
       

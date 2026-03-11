@@ -416,7 +416,8 @@ router.post('/', async (req, res) => {
         'iniciacion': 1,
         'intermedio': 2,
         'paseo': 3,
-        'avanzado': 4
+        'avanzado': 4,
+        'ponyclub': 5
       };
       
       for (const esp of especialidades) {
@@ -562,7 +563,8 @@ router.put('/:id', async (req, res) => {
         'iniciacion': 1,
         'intermedio': 2,
         'paseo': 3,
-        'avanzado': 4
+        'avanzado': 4,
+        'ponyclub': 5
       };
       
       // 1. Desactivar todas las clases actuales

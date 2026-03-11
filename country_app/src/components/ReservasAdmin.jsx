@@ -234,6 +234,7 @@ const ReservasAdmin = () => {
     const niveles = {
       'paseo': 'Paseo',
       'iniciacion': 'Iniciación',
+      'ponyclub': 'Ponyclub',
       'intermedio': 'Intermedio',
       'avanzado': 'Avanzado'
     };

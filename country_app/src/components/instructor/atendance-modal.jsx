@@ -8,6 +8,7 @@ function AttendanceModal({ classData, onClose, onAttendanceChange }) {
   const nivelesDisponibles = [
     { value: 'paseo', label: 'Paseo' },
     { value: 'iniciacion', label: 'Iniciación' },
+    { value: 'ponyclub', label: 'Ponyclub' },
     { value: 'intermedio', label: 'Intermedio' },
     { value: 'avanzado', label: 'Avanzado' }
   ]

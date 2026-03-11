@@ -7,6 +7,7 @@ const router = express.Router();
 const mapNivelToEspecialidad = (nivel) => {
   if (!nivel) return null;
   const n = String(nivel).toLowerCase();
+  if (n.includes('ponyclub')) return 'iniciacion';
   if (n.includes('inici')) return 'iniciacion';
   if (n.includes('inter')) return 'intermedio';
   if (n.includes('paseo')) return 'paseo';
@@ -98,7 +99,7 @@ router.get('/disponibles', async (req, res) => {
 
     // Calcular cooldown de la clase solicitada
     const cooldownClaseSolicitada = tipo_clase ? (
-      ['iniciacion', 'paseo'].includes(tipo_clase.toLowerCase()) ? 0 :
+      ['iniciacion', 'paseo', 'ponyclub'].includes(tipo_clase.toLowerCase()) ? 0 :
       tipo_clase.toLowerCase() === 'intermedio' ? 2 :
       ['salto', 'avanzado'].includes(tipo_clase.toLowerCase()) ? 3 : 0
     ) : 3; // Si no se especifica, usar el peor caso (3 horas)
@@ -167,7 +168,7 @@ router.get('/disponibles', async (req, res) => {
               (? >= r3.hora_fin
               AND ? < DATE_ADD(r3.hora_fin, INTERVAL 
                 CASE 
-                  WHEN LOWER(cl3.nombre) IN ('iniciacion', 'paseo') THEN 0
+                  WHEN LOWER(cl3.nombre) IN ('iniciacion', 'paseo', 'ponyclub') THEN 0
                   WHEN LOWER(cl3.nombre) = 'intermedio' THEN 2
                   WHEN LOWER(cl3.nombre) IN ('salto', 'avanzado') THEN 3
                   ELSE 0
@@ -715,6 +716,7 @@ router.get('/:id/actividades-dia', async (req, res) => {
       AND r.fecha = ?
       AND r.estatus IN ('confirmada', 'completada')
       AND LOWER(c.nombre) NOT LIKE '%iniciaci%'
+      AND LOWER(c.nombre) NOT LIKE '%ponyclub%'
     `, [id, fecha]);
 
     const actividadesTotal = await db.query(`
@@ -812,6 +814,7 @@ router.get('/disponibles-filtrado', async (req, res) => {
               AND r.fecha = ?
               AND r.estatus != 'cancelada'
               AND cl.nombre NOT LIKE '%iniciaci%'
+              AND cl.nombre NOT LIKE '%ponyclub%'
             GROUP BY r.caballo_id
             HAVING COUNT(*) >= 3
           ) subq

@@ -168,6 +168,7 @@ export default function InstructorClases() {
               >
                 <option value="all">Todas las clases</option>
                 <option value="Iniciación">Iniciación</option>
+                <option value="Ponyclub">Ponyclub</option>
                 <option value="Salto">Salto</option>
                 <option value="Paseo">Paseo</option>
                 <option value="Intermedio">Intermedio</option>

@@ -360,7 +360,7 @@ const FormularioUsuario = React.memo(({ onCrearUsuario, loading }) => {
   );
 
   const tiposNivel = useMemo(
-    () => ["iniciacion", "paseo", "intermedio", "avanzado"],
+    () => ["iniciacion", "ponyclub", "paseo", "intermedio", "avanzado"],
     []
   );
 
@@ -820,6 +820,7 @@ const FormularioUsuario = React.memo(({ onCrearUsuario, loading }) => {
                 >
                   <option value="mixto">Mixto</option>
                   <option value="iniciacion">Iniciación</option>
+                  <option value="ponyclub">Ponyclub</option>
                   <option value="intermedio">Intermedio</option>
                   <option value="paseo">Paseo</option>
                   <option value="salto">Salto</option>

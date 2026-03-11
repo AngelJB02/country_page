@@ -172,6 +172,7 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
   // Mapeo de nivel a nombre de clase permitida
   const nivelToClase = {
     'iniciacion': ['iniciacion'],
+    'ponyclub': ['ponyclub'],
     'intermedio': ['intermedio'],
     'avanzado': ['avanzado'], // Solo clase de salto para usuarios avanzados
     'paseo': ['paseo'],

@@ -636,6 +636,26 @@ const MembershipAdminDashboard = () => {
     })
   }
 
+  const fetchPaymentHistory = async (memberId, retries = 1) => {
+    const url = `https://elrefugiocountryclub.com/api/api/users/payment-history/${memberId}`
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const response = await fetch(url)
+        if (response.ok) {
+          const history = await response.json()
+          return history
+        }
+      } catch (error) {
+        if (attempt < retries) {
+          await new Promise(res => setTimeout(res, 1500)) // espera 1.5s antes de reintentar
+        } else {
+          console.error("Error cargando historial tras reintentar:", error)
+        }
+      }
+    }
+    return null // null indica fallo, distingue de [] (sin pagos reales)
+  }
+
   const openPaymentHistoryModal = async (member) => {
     setSelectedMember(member)
     setNewPayment({
@@ -646,28 +666,23 @@ const MembershipAdminDashboard = () => {
       metodo_pago: "efectivo",
       observaciones: "",
     })
-    
-    // Cargar historial de pagos
-    setLoadingHistory(true)
-    try {
-      const response = await fetch(`https://elrefugiocountryclub.com/api/api/users/payment-history/${member.id}`)
-      if (response.ok) {
-        const history = await response.json()
-        setPaymentHistory(history)
-      } else {
-        console.error("Respuesta fallida al cargar historial:", response.status)
-        showNotification("No se pudo cargar el historial completo del servidor.", "error")
-        setPaymentHistory([])
-      }
-    } catch (error) {
-      console.error("Error cargando historial:", error)
-      showNotification("Error de conexión al cargar el historial.", "error")
-      setPaymentHistory([])
-    } finally {
-      setLoadingHistory(false)
-    }
-    
     setPaymentHistoryModalOpen(true)
+    setLoadingHistory(true)
+
+    // Carga en paralelo: historial + sincronizar alertas
+    const [history] = await Promise.all([
+      fetchPaymentHistory(member.id),
+      loadPaymentStatus(), // sincroniza alertas para que coincidan con el historial
+    ])
+
+    if (history === null) {
+      showNotification("Error de conexión al cargar el historial. Intente cerrando y abriendo de nuevo.", "error")
+      setPaymentHistory(null) // null = error, para distinguirlo de [] sin pagos
+    } else {
+      setPaymentHistory(history)
+    }
+
+    setLoadingHistory(false)
   }
 
   const closePaymentHistoryModal = () => {
@@ -1462,6 +1477,7 @@ const MembershipAdminDashboard = () => {
                             >
                               <option value="">Seleccione un nivel</option>
                               <option value="iniciacion">Iniciación</option>
+                              <option value="ponyclub">Ponyclub</option>
                               <option value="paseo">Paseo</option>
                               <option value="intermedio">Intermedio</option>
                               <option value="avanzado">Avanzado</option>
@@ -1849,6 +1865,7 @@ const MembershipAdminDashboard = () => {
                     >
                       <option value="">Seleccione un nivel</option>
                       <option value="iniciacion">Iniciación</option>
+                      <option value="ponyclub">Ponyclub</option>
                       <option value="paseo">Paseo</option>
                       <option value="intermedio">Intermedio</option>
                       <option value="avanzado">Avanzado</option>
@@ -2156,40 +2173,23 @@ const MembershipAdminDashboard = () => {
         renderPortal(
           <div className="modal-overlay" onClick={closePaymentHistoryModal}>
             <div className="modal-content payment-history-modal" onClick={(e) => e.stopPropagation()}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", borderBottom: "2px solid #8b5a2b", paddingBottom: "10px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px", borderBottom: "2px solid #8b5a2b", paddingBottom: "10px" }}>
                 <h2 style={{ margin: 0, color: "#8b5a2b", fontSize: "1.8rem" }}>Historial de Pagos - {selectedMember.name}</h2>
-                <button 
-                  className="btn-refresh-history" 
-                  onClick={() => openPaymentHistoryModal(selectedMember)}
-                  disabled={loadingHistory}
-                  style={{ 
-                    display: "inline-flex", 
-                    alignItems: "center", 
-                    gap: "8px", 
-                    padding: "10px 18px",
-                    backgroundColor: "#8b5a2b",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "8px",
-                    cursor: "pointer",
-                    fontWeight: "bold",
-                    boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
-                    zIndex: 9999
-                  }}
-                >
-                  <History size={18} className={loadingHistory ? "spin" : ""} />
-                  {loadingHistory ? "CARGANDO..." : "ACTUALIZAR"}
-                </button>
+                {loadingHistory && <Loader className="spin" size={20} style={{ color: "#8b5a2b" }} />}
               </div>
 
               {/* Historial de pagos existentes */}
               <div className="modal-section">
                 <h3>Pagos Realizados</h3>
                 {loadingHistory ? (
-                  <div style={{ textAlign: "center", padding: "20px", color: "var(--dusty-teal)" }}>
+                  <div style={{ textAlign: "center", padding: "20px", color: "#8b5a2b" }}>
                     <Loader className="spin" size={32} style={{ margin: "0 auto 10px" }} />
                     <p>Cargando historial de pagos...</p>
                   </div>
+                ) : paymentHistory === null ? (
+                  <p style={{ color: "#c17b4a", fontStyle: "italic", fontWeight: "600" }}>
+                    ⚠️ No se pudieron cargar los pagos. Intente cerrar e iniciar sesión de nuevo.
+                  </p>
                 ) : paymentHistory.length === 0 ? (
                   <p style={{ color: "var(--stone-gray)", fontStyle: "italic" }}>
                     No hay pagos registrados

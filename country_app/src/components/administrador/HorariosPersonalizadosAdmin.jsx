@@ -79,7 +79,7 @@ const HorariosPersonalizadosAdmin = () => {
     
     let duracion = 60;
     if (claseSeleccionada) {
-      if (claseSeleccionada.nombre.toLowerCase() === 'iniciacion') {
+      if (['iniciacion', 'ponyclub'].includes(claseSeleccionada.nombre.toLowerCase())) {
         duracion = 30;
       } else {
         duracion = claseSeleccionada.duracion_min || 60;
