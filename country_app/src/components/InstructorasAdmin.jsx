@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import ReactDOM from "react-dom";
-import { Loader, UserPlus, Edit, Trash2, Calendar, Clock } from "lucide-react";
+import { Loader, UserPlus, Edit, Trash2, Calendar, Clock, Search } from "lucide-react";
 
 const InstructorasAdmin = () => {
   const [instructoras, setInstructoras] = useState([]);
@@ -19,6 +19,8 @@ const InstructorasAdmin = () => {
     telefono: "",
     especialidad: ""
   });
+  const [searchTerm, setSearchTerm] = useState("");
+  const [availabilityFilter, setAvailabilityFilter] = useState("disponible");
   const [creatingInstructor, setCreatingInstructor] = useState(false);
   const [updatingInstructor, setUpdatingInstructor] = useState(false);
   const [deletingInstructor, setDeletingInstructor] = useState(false);
@@ -1232,16 +1234,38 @@ const InstructorasAdmin = () => {
         </div>
       )}
       
-      <div className="controls-container enhanced-controls" style={{ marginBottom: "1.5rem" }}>
+      <div className="controls-container enhanced-controls" style={{ marginBottom: "1rem" }}>
         <div className="controls-inner">
           <h2 style={{ margin: 0, color: "var(--primary-brown)" }}>Gestión de Instructoras</h2>
           <button className="add-client-btn" onClick={openAddInstructorModal} type="button">
-            <UserPlus size={20} /> Nueva Instructora
+            <UserPlus size={18} /> Nueva Instructora
           </button>
         </div>
       </div>
-      
-      
+
+      <div className="controls-bar">
+        <div className="controls-search">
+          <Search size={18} className="controls-search-icon" />
+          <input
+            type="text"
+            className="controls-search-input"
+            placeholder="Buscar por nombre o email..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            autoComplete="off"
+          />
+        </div>
+        <div className="controls-filters">
+          <div className="controls-filter-item">
+            <label className={`controls-filter-label ${availabilityFilter ? "label-active" : ""}`}>Disponibilidad</label>
+            <select className={`controls-filter-select ${availabilityFilter ? "filter-active" : ""}`} value={availabilityFilter} onChange={(e) => setAvailabilityFilter(e.target.value)}>
+              <option value="disponible">Solo disponibles</option>
+              <option value="">Todas las instructoras</option>
+              <option value="no_disponible">Solo no disponibles</option>
+            </select>
+          </div>
+        </div>
+      </div>
 
       {loading ? (
         <div
@@ -1279,23 +1303,25 @@ const InstructorasAdmin = () => {
               </tr>
             </thead>
             <tbody>
-              {instructoras.length === 0 ? (
+              {(() => {
+                const filtered = instructoras.filter(inst => {
+                  const matchesSearch = searchTerm === "" ||
+                    (inst.nombre + " " + (inst.apellido || "")).toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    (inst.correo && inst.correo.toLowerCase().includes(searchTerm.toLowerCase()));
+                  const matchesAvailability = availabilityFilter === "" || inst.disponibilidad === availabilityFilter;
+                  return matchesSearch && matchesAvailability;
+                });
+                return filtered.length === 0 ? (
                 <tr>
                   <td
                     colSpan={7}
-                    style={{
-                      textAlign: "center",
-                      padding: "3rem",
-                      color: "var(--terracotta)",
-                      fontSize: "1.1rem",
-                      fontWeight: "600",
-                    }}
+                    className="empty-state-cell"
                   >
-                    No hay instructoras registradas.
+                    {searchTerm || availabilityFilter ? "No se encontraron instructoras con los filtros aplicados." : "No hay instructoras registradas."}
                   </td>
                 </tr>
               ) : (
-                instructoras.map(instructor => (
+                filtered.map(instructor => (
                   <tr 
                     key={instructor.id}
                     style={{
@@ -1467,7 +1493,8 @@ const InstructorasAdmin = () => {
                     </td>
                   </tr>
                 ))
-              )}
+              );
+              })()}
             </tbody>
           </table>
         </div>

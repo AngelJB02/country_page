@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Loader, Calendar, Filter, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader, Calendar, ChevronLeft, ChevronRight, Search } from "lucide-react";
 
 const ReservasAdmin = () => {
   const [reservas, setReservas] = useState([]);
@@ -8,6 +8,8 @@ const ReservasAdmin = () => {
   const [filtroTiempo, setFiltroTiempo] = useState("dia"); // "dia" o "semana"
   const [fechaSeleccionada, setFechaSeleccionada] = useState(new Date().toISOString().split("T")[0]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [estadoFilter, setEstadoFilter] = useState("");
   const itemsPerPage = 10;
 
   // Mostrar notificación
@@ -166,13 +168,25 @@ const ReservasAdmin = () => {
     }
   }, [loading, reservas])
 
-  // Calcular paginación
-  const totalPages = Math.ceil(reservas.length / itemsPerPage);
+  // Filtrar reservas
+  const filteredReservas = reservas.filter(r => {
+    const clienteNombre = r.cliente_nombre && r.cliente_apellido ? `${r.cliente_nombre} ${r.cliente_apellido}` : "";
+    const instructoraNombre = r.instructora_nombre && r.instructora_apellido ? `${r.instructora_nombre} ${r.instructora_apellido}` : "";
+    const matchesSearch = searchTerm === "" ||
+      clienteNombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      instructoraNombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (r.caballo_nombre && r.caballo_nombre.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesEstado = estadoFilter === "" || r.estatus === estadoFilter;
+    return matchesSearch && matchesEstado;
+  });
+
+  // Calcular paginación sobre filtrados
+  const totalPages = Math.ceil(filteredReservas.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentReservas = reservas.slice(startIndex, endIndex);
+  const currentReservas = filteredReservas.slice(startIndex, endIndex);
 
-  // Calcular métricas
+  // Calcular metricas (siempre sobre todas las del periodo)
   const totalReservas = reservas.length;
   const confirmadas = reservas.filter(r => r.estatus === "confirmada").length;
   const pendientes = reservas.filter(r => r.estatus === "pendiente").length;
@@ -267,143 +281,91 @@ const ReservasAdmin = () => {
         </div>
       </div>
 
-      {/* Métricas - Movidas arriba */}
+      {/* Metricas */}
       {!loading && reservas.length > 0 && (
-        <div style={{ 
-          marginBottom: "1.5rem", 
-          display: "flex", 
-          gap: "1rem", 
-          justifyContent: "center",
-          flexWrap: "wrap"
-        }}>
-          <div style={{ 
-            padding: "1rem 1.5rem", 
-            background: "rgba(156, 175, 136, 0.1)", 
-            borderRadius: "8px",
-            border: "2px solid #9caf88"
-          }}>
-            <div style={{ fontSize: "0.85rem", color: "var(--stone-gray)", marginBottom: "0.3rem" }}>
-              Total Reservas
-            </div>
-            <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#9caf88" }}>
-              {totalReservas}
-            </div>
+        <div className="stats-grid caballos-stats" style={{ gridTemplateColumns: "repeat(5, 1fr)" }}>
+          <div className="stat-card">
+            <div className="stat-card-topline topline-terracotta"></div>
+            <div className="stat-title">Total</div>
+            <div className="stat-value">{totalReservas}</div>
           </div>
-          <div style={{ 
-            padding: "1rem 1.5rem", 
-            background: "rgba(156, 175, 136, 0.1)", 
-            borderRadius: "8px",
-            border: "2px solid #9caf88"
-          }}>
-            <div style={{ fontSize: "0.85rem", color: "var(--stone-gray)", marginBottom: "0.3rem" }}>
-              Confirmadas
-            </div>
-            <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#9caf88" }}>
-              {confirmadas}
-            </div>
+          <div className="stat-card">
+            <div className="stat-card-topline topline-sage"></div>
+            <div className="stat-title">Confirmadas</div>
+            <div className="stat-value">{confirmadas}</div>
           </div>
-          <div style={{ 
-            padding: "1rem 1.5rem", 
-            background: "rgba(212, 165, 116, 0.1)", 
-            borderRadius: "8px",
-            border: "2px solid #d4a574"
-          }}>
-            <div style={{ fontSize: "0.85rem", color: "var(--stone-gray)", marginBottom: "0.3rem" }}>
-              Pendientes
-            </div>
-            <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#d4a574" }}>
-              {pendientes}
-            </div>
+          <div className="stat-card">
+            <div className="stat-card-topline topline-light"></div>
+            <div className="stat-title">Pendientes</div>
+            <div className="stat-value">{pendientes}</div>
           </div>
-          <div style={{ 
-            padding: "1rem 1.5rem", 
-            background: "rgba(156, 175, 136, 0.1)", 
-            borderRadius: "8px",
-            border: "2px solid #9caf88"
-          }}>
-            <div style={{ fontSize: "0.85rem", color: "var(--stone-gray)", marginBottom: "0.3rem" }}>
-              Completadas
-            </div>
-            <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#9caf88" }}>
-              {completadas}
-            </div>
+          <div className="stat-card">
+            <div className="stat-card-topline topline-sage"></div>
+            <div className="stat-title">Completadas</div>
+            <div className="stat-value">{completadas}</div>
           </div>
-          <div style={{ 
-            padding: "1rem 1.5rem", 
-            background: "rgba(139, 90, 43, 0.1)", 
-            borderRadius: "8px",
-            border: "2px solid #8b5a2b"
-          }}>
-            <div style={{ fontSize: "0.85rem", color: "var(--stone-gray)", marginBottom: "0.3rem" }}>
-              Canceladas
-            </div>
-            <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#8b5a2b" }}>
-              {canceladas}
-            </div>
+          <div className="stat-card">
+            <div className="stat-card-topline topline-brown"></div>
+            <div className="stat-title">Canceladas</div>
+            <div className="stat-value">{canceladas}</div>
           </div>
         </div>
       )}
 
-      {/* Filtros */}
-      <div className="controls-container enhanced-controls" style={{ marginBottom: "1.5rem" }}>
-        <div className="controls-inner">
-          <div className="search-filter-group enhanced-search-filter">
-            <Filter size={18} className="search-icon external-search-icon" />
-            <div className="filter-box">
-              <select 
-                className="status-filter" 
-                value={filtroTiempo} 
-                onChange={(e) => setFiltroTiempo(e.target.value)}
-              >
-                <option value="dia">Ver por Día</option>
-                <option value="semana">Ver por Semana</option>
-              </select>
-            </div>
-            <Calendar size={18} style={{ marginLeft: "1rem", color: "var(--terracotta)" }} />
-            <div className="search-box" style={{ flex: "0 0 auto", width: "auto" }}>
-              <input
-                type="date"
-                className="search-input"
-                value={fechaSeleccionada}
-                onChange={(e) => setFechaSeleccionada(e.target.value)}
-                style={{ width: "200px" }}
-              />
-            </div>
-          </div>
-          {filtroTiempo === "semana" && (
-            <div style={{ 
-              fontSize: "0.9rem", 
-              color: "var(--stone-gray)", 
-              fontWeight: "500",
-              marginTop: "0.5rem"
-            }}>
-              Semana: {getRangoSemana()}
-            </div>
-          )}
+      {/* Barra de busqueda y filtros */}
+      <div className="controls-bar">
+        <div className="controls-search">
+          <Search size={18} className="controls-search-icon" />
+          <input
+            type="text"
+            className="controls-search-input"
+            placeholder="Buscar por cliente, instructora o caballo..."
+            value={searchTerm}
+            onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+            autoComplete="off"
+          />
         </div>
+        <div className="controls-filters">
+          <div className="controls-filter-item">
+            <label className="controls-filter-label">Periodo</label>
+            <select className="controls-filter-select" value={filtroTiempo} onChange={(e) => setFiltroTiempo(e.target.value)}>
+              <option value="dia">Por dia</option>
+              <option value="semana">Por semana</option>
+            </select>
+          </div>
+          <div className="controls-filter-item">
+            <label className="controls-filter-label">Fecha</label>
+            <input
+              type="date"
+              className="controls-filter-select"
+              value={fechaSeleccionada}
+              onChange={(e) => setFechaSeleccionada(e.target.value)}
+              style={{ minWidth: "140px" }}
+            />
+          </div>
+          <div className="controls-filter-item">
+            <label className={`controls-filter-label ${estadoFilter ? "label-active" : ""}`}>Estado</label>
+            <select className={`controls-filter-select ${estadoFilter ? "filter-active" : ""}`} value={estadoFilter} onChange={(e) => { setEstadoFilter(e.target.value); setCurrentPage(1); }}>
+              <option value="">Todos</option>
+              <option value="pendiente">Pendiente</option>
+              <option value="confirmada">Confirmada</option>
+              <option value="completada">Completada</option>
+              <option value="cancelada">Cancelada</option>
+            </select>
+          </div>
+        </div>
+        {filtroTiempo === "semana" && (
+          <div style={{ fontSize: "0.8rem", color: "var(--secondary-brown)", fontWeight: "500" }}>
+            Semana: {getRangoSemana()}
+          </div>
+        )}
       </div>
 
       {/* Tabla de reservas */}
       {loading ? (
-        <div
-          style={{
-            textAlign: "center",
-            padding: "4rem 2rem",
-            background: "rgba(255, 255, 255, 0.9)",
-            borderRadius: "16px",
-            boxShadow: "0 4px 20px rgba(107,68,35,0.06)",
-          }}
-        >
-          <Loader size={40} className="spin" style={{ color: "var(--terracotta)", marginBottom: "1rem" }} />
-          <div
-            style={{
-              color: "var(--primary-brown)",
-              fontSize: "1.1rem",
-              fontWeight: "600",
-            }}
-          >
-            Cargando reservas...
-          </div>
+        <div className="loading-container">
+          <Loader size={40} className="spin loading-spinner" />
+          <div className="loading-text">Cargando reservas...</div>
         </div>
       ) : (
         <div className="table-container">
@@ -422,21 +384,14 @@ const ReservasAdmin = () => {
               </tr>
             </thead>
             <tbody>
-              {reservas.length === 0 ? (
+              {currentReservas.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan={9}
-                    style={{
-                      textAlign: "center",
-                      padding: "3rem",
-                      color: "var(--terracotta)",
-                      fontSize: "1.1rem",
-                      fontWeight: "600",
-                    }}
-                  >
-                    {filtroTiempo === "dia" 
-                      ? `No hay reservas para el ${formatDate(fechaSeleccionada)}`
-                      : `No hay reservas para la semana seleccionada`
+                  <td colSpan={9} className="empty-state-cell">
+                    {searchTerm || estadoFilter
+                      ? "No se encontraron reservas con los filtros aplicados."
+                      : filtroTiempo === "dia"
+                        ? `No hay reservas para el ${formatDate(fechaSeleccionada)}`
+                        : "No hay reservas para la semana seleccionada"
                     }
                   </td>
                 </tr>
@@ -512,90 +467,38 @@ const ReservasAdmin = () => {
         </div>
       )}
 
-      {/* Paginación */}
-      {!loading && reservas.length > itemsPerPage && (
-        <div style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          gap: "1rem",
-          marginTop: "2rem",
-          padding: "1rem"
-        }}>
+      {/* Paginacion */}
+      {!loading && filteredReservas.length > itemsPerPage && (
+        <div className="pagination-container">
           <button
+            className="pagination-btn"
             onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
             disabled={currentPage === 1}
-            style={{
-              padding: "0.5rem 1rem",
-              border: "2px solid var(--terracotta)",
-              borderRadius: "8px",
-              background: currentPage === 1 ? "#f5f5f5" : "white",
-              color: currentPage === 1 ? "#999" : "var(--terracotta)",
-              cursor: currentPage === 1 ? "not-allowed" : "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "0.5rem",
-              fontWeight: "600",
-              transition: "all 0.2s ease"
-            }}
           >
             <ChevronLeft size={18} />
-            Anterior
+            <span>Anterior</span>
           </button>
-          
-          <div style={{
-            display: "flex",
-            gap: "0.5rem",
-            alignItems: "center"
-          }}>
+          <div className="pagination-numbers">
             {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
               <button
                 key={page}
+                className={currentPage === page ? "pagination-page pagination-page-active" : "pagination-page"}
                 onClick={() => setCurrentPage(page)}
-                style={{
-                  padding: "0.5rem 0.75rem",
-                  border: currentPage === page ? "2px solid var(--terracotta)" : "2px solid #ddd",
-                  borderRadius: "6px",
-                  background: currentPage === page ? "var(--terracotta)" : "white",
-                  color: currentPage === page ? "white" : "var(--primary-brown)",
-                  cursor: "pointer",
-                  fontWeight: currentPage === page ? "700" : "500",
-                  minWidth: "40px",
-                  transition: "all 0.2s ease"
-                }}
               >
                 {page}
               </button>
             ))}
           </div>
-
           <button
+            className="pagination-btn"
             onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
             disabled={currentPage === totalPages}
-            style={{
-              padding: "0.5rem 1rem",
-              border: "2px solid var(--terracotta)",
-              borderRadius: "8px",
-              background: currentPage === totalPages ? "#f5f5f5" : "white",
-              color: currentPage === totalPages ? "#999" : "var(--terracotta)",
-              cursor: currentPage === totalPages ? "not-allowed" : "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "0.5rem",
-              fontWeight: "600",
-              transition: "all 0.2s ease"
-            }}
           >
-            Siguiente
+            <span>Siguiente</span>
             <ChevronRight size={18} />
           </button>
-
-          <div style={{
-            marginLeft: "1rem",
-            color: "var(--stone-gray)",
-            fontSize: "0.9rem"
-          }}>
-            Mostrando {startIndex + 1} - {Math.min(endIndex, reservas.length)} de {reservas.length}
+          <div className="pagination-info">
+            Mostrando {startIndex + 1} - {Math.min(endIndex, filteredReservas.length)} de {filteredReservas.length}
           </div>
         </div>
       )}

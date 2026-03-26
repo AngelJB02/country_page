@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react"
 import ReactDOM from "react-dom"
 import "../CSS/Contabilidad.css"
 import LogoutButton from './LogoutBoton'
-import { UserPlus, Eye, XCircle, CheckCircle, Loader, Search, History, AlertTriangle, Clock, AlertCircle, Edit, Copy, ChevronLeft, ChevronRight } from "lucide-react"
+import { UserPlus, Eye, XCircle, CheckCircle, Loader, Search, History, AlertTriangle, Clock, AlertCircle, Edit, Copy, ChevronLeft, ChevronRight, Users, UserCheck, UserX } from "lucide-react"
 import useRoleGuard from '../hooks/useRoleGuard';
 import CaballosAdmin from "./CaballosAdmin";
 import InstructorasAdmin from "./InstructorasAdmin";
@@ -16,6 +16,7 @@ const MembershipAdminDashboard = () => {
   const [members, setMembers] = useState([])
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("")
+  const [levelFilter, setLevelFilter] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
   const [modalOpen, setModalOpen] = useState(false)
@@ -549,11 +550,12 @@ const MembershipAdminDashboard = () => {
     .filter((member) => member.rol === "cliente")
     .filter(
       (member) => {
-        const matchesSearch = member.name.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesSearch = member.name.toLowerCase().includes(searchTerm.toLowerCase()) || (member.email && member.email.toLowerCase().includes(searchTerm.toLowerCase()));
         const matchesStatus = statusFilter === "" || normalize(member.status) === normalize(statusFilter);
+        const matchesLevel = levelFilter === "" || normalize(member.tipo_nivel) === normalize(levelFilter);
         const matchesOverdue = showOverdueFilter ? paymentStatus[member.id]?.estado_pago === "vencido" : true;
-        
-        return matchesSearch && matchesStatus && matchesOverdue;
+
+        return matchesSearch && matchesStatus && matchesLevel && matchesOverdue;
       }
     )
 
@@ -1067,128 +1069,74 @@ const MembershipAdminDashboard = () => {
       {/* ESTADÍSTICAS */}
       <div ref={statsRef} className="stats-grid">
         <div className="stat-card">
-          <div className="stat-card-topline" style={{ backgroundColor: "#c17b4a" }}></div>
-          <div className="stat-title">Usuarios Totales</div>
+          <div className="stat-card-topline topline-terracotta"></div>
+          <div className="stat-card-header">
+            <Users size={24} className="stat-icon" />
+            <div className="stat-title">Usuarios Totales</div>
+          </div>
           <div className="stat-value">{totalUsers}</div>
         </div>
         <div className="stat-card">
-          <div className="stat-card-topline" style={{ backgroundColor: "#9caf88" }}></div>
-          <div className="stat-title">Activos</div>
+          <div className="stat-card-topline topline-sage"></div>
+          <div className="stat-card-header">
+            <UserCheck size={24} className="stat-icon" />
+            <div className="stat-title">Activos</div>
+          </div>
           <div className="stat-value">{activeUsers}</div>
         </div>
         <div className="stat-card">
-          <div className="stat-card-topline" style={{ backgroundColor: "#8b5a2b" }}></div>
-          <div className="stat-title">Bloqueados</div>
+          <div className="stat-card-topline topline-brown"></div>
+          <div className="stat-card-header">
+            <UserX size={24} className="stat-icon" />
+            <div className="stat-title">Bloqueados</div>
+          </div>
           <div className="stat-value">{blockedUsers}</div>
         </div>
         <div className="stat-card">
-          <div className="stat-card-topline" style={{ backgroundColor: "#d4a574" }}></div>
-          <div className="stat-title">Pendientes</div>
+          <div className="stat-card-topline topline-light"></div>
+          <div className="stat-card-header">
+            <Clock size={24} className="stat-icon" />
+            <div className="stat-title">Pendientes</div>
+          </div>
           <div className="stat-value">{pendingUsers}</div>
         </div>
       </div>
 
       {/* NAVEGACIÓN DE PESTAÑAS */}
-      <div ref={tabsRef} className="admin-tabs" style={{ 
-        display: "flex", 
-        gap: "0.5rem", 
-        marginTop: "2rem",
-        borderBottom: "2px solid #eee",
-        paddingBottom: "0"
-      }}>
+      <div ref={tabsRef} className="admin-tabs">
         <button
           className={activeTab === "clientes" ? "tab-active" : "tab-inactive"}
           onClick={() => setActiveTab("clientes")}
-          style={{ 
-            padding: "0.8rem 1.8rem", 
-            border: "none", 
-            borderBottom: activeTab === "clientes" ? "3px solid #2d5016" : "3px solid transparent",
-            fontWeight: "bold", 
-            background: "transparent",
-            color: activeTab === "clientes" ? "#2d5016" : "#4a7a2d", 
-            cursor: "pointer",
-            transition: "all 0.3s ease"
-          }}
         >
           Clientes
         </button>
         <button
           className={activeTab === "caballos" ? "tab-active" : "tab-inactive"}
           onClick={() => setActiveTab("caballos")}
-          style={{ 
-            padding: "0.8rem 1.8rem", 
-            border: "none", 
-            borderBottom: activeTab === "caballos" ? "3px solid #2d5016" : "3px solid transparent",
-            fontWeight: "bold", 
-            background: "transparent",
-            color: activeTab === "caballos" ? "#2d5016" : "#4a7a2d", 
-            cursor: "pointer",
-            transition: "all 0.3s ease"
-          }}
         >
           Caballos
         </button>
         <button
           className={activeTab === "instructoras" ? "tab-active" : "tab-inactive"}
           onClick={() => setActiveTab("instructoras")}
-          style={{ 
-            padding: "0.8rem 1.8rem", 
-            border: "none", 
-            borderBottom: activeTab === "instructoras" ? "3px solid #2d5016" : "3px solid transparent",
-            fontWeight: "bold", 
-            background: "transparent",
-            color: activeTab === "instructoras" ? "#2d5016" : "#4a7a2d", 
-            cursor: "pointer",
-            transition: "all 0.3s ease"
-          }}
         >
           Instructoras
         </button>
         <button
           className={activeTab === "reservas" ? "tab-active" : "tab-inactive"}
           onClick={() => setActiveTab("reservas")}
-          style={{ 
-            padding: "0.8rem 1.8rem", 
-            border: "none", 
-            borderBottom: activeTab === "reservas" ? "3px solid #2d5016" : "3px solid transparent",
-            fontWeight: "bold", 
-            background: "transparent",
-            color: activeTab === "reservas" ? "#2d5016" : "#4a7a2d", 
-            cursor: "pointer",
-            transition: "all 0.3s ease"
-          }}
         >
           Reservas
         </button>
         <button
           className={activeTab === "horariosPersonalizados" ? "tab-active" : "tab-inactive"}
           onClick={() => setActiveTab("horariosPersonalizados")}
-          style={{ 
-            padding: "0.8rem 1.8rem", 
-            border: "none", 
-            borderBottom: activeTab === "horariosPersonalizados" ? "3px solid #2d5016" : "3px solid transparent",
-            fontWeight: "bold", 
-            background: "transparent",
-            color: activeTab === "horariosPersonalizados" ? "#2d5016" : "#4a7a2d", 
-            cursor: "pointer",
-            transition: "all 0.3s ease"
-          }}
         >
           Horarios Extras
         </button>
         <button
           className={activeTab === "metricas" ? "tab-active" : "tab-inactive"}
           onClick={() => setActiveTab("metricas")}
-          style={{ 
-            padding: "0.8rem 1.8rem", 
-            border: "none", 
-            borderBottom: activeTab === "metricas" ? "3px solid #2d5016" : "3px solid transparent",
-            fontWeight: "bold", 
-            background: "transparent",
-            color: activeTab === "metricas" ? "#2d5016" : "#4a7a2d", 
-            cursor: "pointer",
-            transition: "all 0.3s ease"
-          }}
         >
           Métricas
         </button>
@@ -1196,126 +1144,72 @@ const MembershipAdminDashboard = () => {
 
       {/* CONTENIDO DE CLIENTES */}
       {activeTab === "clientes" && (
-        <div style={{ marginTop: "2rem", overflow: "visible" }}>
+        <div className="tab-content tab-content-visible">
           {/* CONTROLES */}
-          <div ref={controlsRef} className="controls-container enhanced-controls">
-            <div className="controls-inner">
-              <div className="search-filter-group enhanced-search-filter">
-                <Search size={18} className="search-icon external-search-icon" />
-                <div className="search-box">
-                  <input
-                    type="text"
-                    className="search-input"
-                    placeholder="Buscar usuario..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    ref={searchRef}
-                    autoComplete="off"
-                    name="dashboard-search"
-                    autoCorrect="off"
-                    spellCheck={false}
-                    inputMode="search"
-                    data-lpignore="true"
-                    data-form-type="other"
-                  />
-                </div>
-                <div className="filter-box">
-                  <select className="status-filter" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                    <option value="">Todos</option>
-                    <option value="Activo">Activo</option>
-                    <option value="Inactivo">Inactivo</option>
-                    <option value="Bloqueado">Bloqueado</option>
-                    <option value="Pendiente">Pendiente</option>
-                  </select>
-                </div>
-                <button
-                  onClick={() => setShowOverdueFilter(!showOverdueFilter)}
-                  style={{
-                    padding: "0.7rem 1.5rem",
-                    background: showOverdueFilter 
-                      ? "linear-gradient(135deg, #38a169 0%, #2f855a 100%)" 
-                      : "linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)",
-                    color: "white",
-                    border: showOverdueFilter ? "2px solid #68d391" : "2px solid transparent",
-                    borderRadius: "8px",
-                    fontWeight: "700",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.5rem",
-                    boxShadow: showOverdueFilter 
-                      ? "0 4px 12px rgba(56,161,105,0.4), inset 0 2px 4px rgba(255,255,255,0.2)" 
-                      : "0 2px 8px rgba(255,107,107,0.3)",
-                    transition: "all 0.3s ease",
-                    position: "relative",
-                    overflow: "hidden"
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = "translateY(-2px)";
-                    e.currentTarget.style.boxShadow = showOverdueFilter 
-                      ? "0 6px 16px rgba(56,161,105,0.5), inset 0 2px 4px rgba(255,255,255,0.2)"
-                      : "0 4px 12px rgba(255,107,107,0.4)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = "translateY(0)";
-                    e.currentTarget.style.boxShadow = showOverdueFilter 
-                      ? "0 4px 12px rgba(56,161,105,0.4), inset 0 2px 4px rgba(255,255,255,0.2)"
-                      : "0 2px 8px rgba(255,107,107,0.3)";
-                  }}
-                >
-                  {showOverdueFilter ? (
-                    <>
-                      <CheckCircle size={18} />
-                      <span>Filtro Activo</span>
-                    </>
-                  ) : (
-                    <>
-                      <AlertTriangle size={18} />
-                      <span>Mostrar Vencidos</span>
-                    </>
-                  )}
-                  {(() => {
-                    const count = members.filter(m => 
-                      m.rol === "cliente" && paymentStatus[m.id]?.estado_pago === "vencido"
-                    ).length;
-                    return count > 0 ? (
-                      <span style={{
-                        background: showOverdueFilter 
-                          ? "rgba(255,255,255,0.25)" 
-                          : "rgba(255,255,255,0.3)",
-                        padding: "0.2rem 0.6rem",
-                        borderRadius: "12px",
-                        fontSize: "0.85rem",
-                        fontWeight: "700",
-                        minWidth: "24px",
-                        textAlign: "center"
-                      }}>{count}</span>
-                    ) : null;
-                  })()}
-                </button>
+          <div ref={controlsRef} className="controls-bar">
+            <div className="controls-search">
+              <Search size={18} className="controls-search-icon" />
+              <input
+                type="text"
+                className="controls-search-input"
+                placeholder="Buscar por nombre o email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                ref={searchRef}
+                autoComplete="off"
+                name="dashboard-search"
+                autoCorrect="off"
+                spellCheck={false}
+                inputMode="search"
+                data-lpignore="true"
+                data-form-type="other"
+              />
+            </div>
+            <div className="controls-filters">
+              <div className="controls-filter-item">
+                <label className={`controls-filter-label ${statusFilter ? "label-active" : ""}`}>Estado</label>
+                <select className={`controls-filter-select ${statusFilter ? "filter-active" : ""}`} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                  <option value="">Todos los estados</option>
+                  <option value="Activo">Activo</option>
+                  <option value="Inactivo">Inactivo</option>
+                  <option value="Bloqueado">Bloqueado</option>
+                  <option value="Pendiente">Pendiente</option>
+                </select>
               </div>
+              <div className="controls-filter-item">
+                <label className={`controls-filter-label ${levelFilter ? "label-active" : ""}`}>Nivel</label>
+                <select className={`controls-filter-select ${levelFilter ? "filter-active" : ""}`} value={levelFilter || ""} onChange={(e) => setLevelFilter(e.target.value)}>
+                  <option value="">Todos los niveles</option>
+                  <option value="iniciacion">Iniciacion</option>
+                  <option value="ponyclub">Ponyclub</option>
+                  <option value="paseo">Paseo</option>
+                  <option value="intermedio">Intermedio</option>
+                  <option value="avanzado">Avanzado</option>
+                </select>
+              </div>
+              <button
+                className={showOverdueFilter ? "controls-overdue-btn controls-overdue-active" : "controls-overdue-btn"}
+                onClick={() => setShowOverdueFilter(!showOverdueFilter)}
+              >
+                <AlertTriangle size={14} />
+                <span>{showOverdueFilter ? "Mostrando solo vencidos" : "Filtrar pagos vencidos"}</span>
+                {(() => {
+                  const count = members.filter(m =>
+                    m.rol === "cliente" && paymentStatus[m.id]?.estado_pago === "vencido"
+                  ).length;
+                  return count > 0 ? (
+                    <span className="controls-overdue-count">{count}</span>
+                  ) : null;
+                })()}
+              </button>
             </div>
           </div>
 
           {/* TABLA */}
           {loading ? (
-            <div
-              style={{
-                textAlign: "center",
-                padding: "4rem 2rem",
-                background: "rgba(255, 255, 255, 0.9)",
-                borderRadius: "16px",
-                boxShadow: "0 4px 20px rgba(107,68,35,0.06)",
-              }}
-            >
-              <Loader size={40} className="spin" style={{ color: "var(--terracotta)", marginBottom: "1rem" }} />
-              <div
-                style={{
-                  color: "var(--primary-brown)",
-                  fontSize: "1.1rem",
-                  fontWeight: "600",
-                }}
-              >
+            <div className="loading-container">
+              <Loader size={40} className="spin loading-spinner" />
+              <div className="loading-text">
                 Cargando usuarios...
               </div>
             </div>
@@ -1339,14 +1233,8 @@ const MembershipAdminDashboard = () => {
                   {filteredMembers.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={7}
-                        style={{
-                          textAlign: "center",
-                          padding: "3rem",
-                          color: "var(--terracotta)",
-                          fontSize: "1.1rem",
-                          fontWeight: "600",
-                        }}
+                        colSpan={8}
+                        className="empty-state-cell"
                       >
                         {searchTerm || statusFilter
                           ? "No se encontraron usuarios con los filtros aplicados."
@@ -1360,32 +1248,19 @@ const MembershipAdminDashboard = () => {
 
                       return (
                         <tr key={member.id}>
-                          <td style={{ fontWeight: "600" }}>{member.name}</td>
+                          <td className="td-name">{member.name}</td>
                           <td>
                             {member.email ? (
-                              <span style={{ color: "var(--stone-gray)" }}>{member.email}</span>
+                              <span className="td-email">{member.email}</span>
                             ) : (
-                              <span
-                                style={{
-                                  color: "#dc3545",
-                                  fontWeight: "bold",
-                                  fontSize: "13px",
-                                  fontStyle: "italic",
-                                  textTransform: "uppercase",
-                                  letterSpacing: "0.5px",
-                                  backgroundColor: "#f8d7da",
-                                  padding: "4px 8px",
-                                  borderRadius: "4px",
-                                  display: "inline-block",
-                                }}
-                              >
+                              <span className="td-no-email">
                                 Sin correo registrado
                               </span>
                             )}
                           </td>
                           <td>
                             <select
-                              className="status-badge"
+                              className={`status-badge status-${displayStatus.toLowerCase()}`}
                               value={member.status}
                               onChange={async (e) => {
                                 const newStatus = e.target.value
@@ -1410,24 +1285,6 @@ const MembershipAdminDashboard = () => {
                                 } catch {
                                   showNotification("Error de conexión. Inténtalo de nuevo.", "error")
                                 }
-                              }}
-                              style={{
-                                borderColor:
-                                  displayStatus === "Activo"
-                                    ? "#9caf88"
-                                    : displayStatus === "Inactivo"
-                                      ? "#c17b4a"
-                                      : displayStatus === "Pendiente"
-                                        ? "#d4a574"
-                                        : "#8b5a2b",
-                                color:
-                                  displayStatus === "Activo"
-                                    ? "#9caf88"
-                                    : displayStatus === "Inactivo"
-                                      ? "#c17b4a"
-                                      : displayStatus === "Pendiente"
-                                        ? "#d4a574"
-                                        : "#8b5a2b",
                               }}
                             >
                               <option value="Activo">Activo</option>
@@ -1462,18 +1319,7 @@ const MembershipAdminDashboard = () => {
                                   showNotification("Error de conexión. Inténtalo de nuevo.", "error");
                                 }
                               }}
-                              className="status-filter"
-                              style={{
-                                padding: "0.5rem 1rem",
-                                border: "2px solid var(--terracotta)",
-                                borderRadius: "8px",
-                                background: "white",
-                                color: "var(--primary-brown)",
-                                fontWeight: "500",
-                                minWidth: "120px",
-                                cursor: "pointer",
-                                transition: "all 0.2s ease"
-                              }}
+                              className="nivel-select"
                             >
                               <option value="">Seleccione un nivel</option>
                               <option value="iniciacion">Iniciación</option>
@@ -1483,14 +1329,9 @@ const MembershipAdminDashboard = () => {
                               <option value="avanzado">Avanzado</option>
                             </select>
                           </td>
-                          <td style={{ fontWeight: "600", color: "var(--primary-brown)" }}>${formatCurrency(member.monthlyFee)}</td>
+                          <td className="td-fee">${formatCurrency(member.monthlyFee)}</td>
                           <td>{formatDate(member.lastPaymentDate)}</td>
-                          <td
-                            style={{
-                              color: expired ? "#8b5a2b" : "var(--charcoal)",
-                              fontWeight: expired ? "600" : "500",
-                            }}
-                          >
+                          <td className={expired ? "td-expired" : "td-normal"}>
                             {formatDate(member.proximaFecha) || "-"}
                           </td>
                           <td>
@@ -1498,12 +1339,6 @@ const MembershipAdminDashboard = () => {
                               className="btn history-btn"
                               onClick={() => openPaymentHistoryModal(member)}
                               type="button"
-                              style={{
-                                background: "linear-gradient(135deg, var(--terracotta), var(--primary-brown))",
-                                color: "white",
-                                border: "none",
-                                position: "relative",
-                              }}
                             >
                               <History size={16} /> Historial
                               {paymentCounts[member.id] && paymentCounts[member.id] > 0 && (
@@ -1538,55 +1373,22 @@ const MembershipAdminDashboard = () => {
 
           {/* Paginación */}
           {!loading && filteredMembers.length > itemsPerPage && (
-            <div style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              gap: "1rem",
-              marginTop: "2rem",
-              padding: "1rem"
-            }}>
+            <div className="pagination-container">
               <button
+                className="pagination-btn"
                 onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                 disabled={currentPage === 1}
-                style={{
-                  padding: "0.5rem 1rem",
-                  border: "2px solid var(--terracotta)",
-                  borderRadius: "8px",
-                  background: currentPage === 1 ? "#f5f5f5" : "white",
-                  color: currentPage === 1 ? "#999" : "var(--terracotta)",
-                  cursor: currentPage === 1 ? "not-allowed" : "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                  fontWeight: "600",
-                  transition: "all 0.2s ease"
-                }}
               >
                 <ChevronLeft size={18} />
-                Anterior
+                <span>Anterior</span>
               </button>
-              
-              <div style={{
-                display: "flex",
-                gap: "0.5rem",
-                alignItems: "center"
-              }}>
+
+              <div className="pagination-numbers">
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
                   <button
                     key={page}
+                    className={currentPage === page ? "pagination-page pagination-page-active" : "pagination-page"}
                     onClick={() => setCurrentPage(page)}
-                    style={{
-                      padding: "0.5rem 0.75rem",
-                      border: currentPage === page ? "2px solid var(--terracotta)" : "2px solid #ddd",
-                      borderRadius: "6px",
-                      background: currentPage === page ? "var(--terracotta)" : "white",
-                      color: currentPage === page ? "white" : "var(--primary-brown)",
-                      cursor: "pointer",
-                      fontWeight: currentPage === page ? "700" : "500",
-                      minWidth: "40px",
-                      transition: "all 0.2s ease"
-                    }}
                   >
                     {page}
                   </button>
@@ -1594,31 +1396,15 @@ const MembershipAdminDashboard = () => {
               </div>
 
               <button
+                className="pagination-btn"
                 onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                 disabled={currentPage === totalPages}
-                style={{
-                  padding: "0.5rem 1rem",
-                  border: "2px solid var(--terracotta)",
-                  borderRadius: "8px",
-                  background: currentPage === totalPages ? "#f5f5f5" : "white",
-                  color: currentPage === totalPages ? "#999" : "var(--terracotta)",
-                  cursor: currentPage === totalPages ? "not-allowed" : "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                  fontWeight: "600",
-                  transition: "all 0.2s ease"
-                }}
               >
-                Siguiente
+                <span>Siguiente</span>
                 <ChevronRight size={18} />
               </button>
 
-              <div style={{
-                marginLeft: "1rem",
-                color: "var(--stone-gray)",
-                fontSize: "0.9rem"
-              }}>
+              <div className="pagination-info">
                 Mostrando {startIndex + 1} - {Math.min(endIndex, filteredMembers.length)} de {filteredMembers.length}
               </div>
             </div>
@@ -1628,34 +1414,34 @@ const MembershipAdminDashboard = () => {
 
       {/* CONTENIDO DE CABALLOS */}
       {activeTab === "caballos" && (
-        <div style={{ marginTop: "2rem" }}>
+        <div className="tab-content">
           <CaballosAdmin />
         </div>
       )}
 
       {/* CONTENIDO DE INSTRUCTORAS */}
       {activeTab === "instructoras" && (
-        <div style={{ marginTop: "2rem" }}>
+        <div className="tab-content">
           <InstructorasAdmin />
         </div>
       )}
 
       {/* CONTENIDO DE RESERVAS */}
       {activeTab === "reservas" && (
-        <div style={{ marginTop: "2rem" }}>
+        <div className="tab-content">
           <ReservasAdmin />
         </div>
       )}
 
       {/* CONTENIDO DE HORARIOS PERSONALIZADOS */}
       {activeTab === "horariosPersonalizados" && (
-        <div style={{ marginTop: "2rem" }}>
+        <div className="tab-content">
           <HorariosPersonalizadosAdmin />
         </div>
       )}
 
       {activeTab === "metricas" && (
-        <div style={{ marginTop: "2rem" }}>
+        <div className="tab-content">
           <MetricasResumen />
         </div>
       )}
@@ -1724,27 +1510,19 @@ const MembershipAdminDashboard = () => {
       {addClientModalOpen &&
         renderPortal(
           <div className="modal-overlay" onClick={closeAddClientModal}>
-            <div className="modal-content add-client-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "800px", maxHeight: "90vh", overflowY: "auto" }}>
+            <div className="modal-content add-client-modal" onClick={(e) => e.stopPropagation()}>
               <h2>Agregar Nuevo Cliente</h2>
               
               {/* Información sobre credenciales */}
-              <div style={{
-                background: "rgba(139, 111, 78, 0.1)",
-                border: "1px solid rgba(139, 111, 78, 0.3)",
-                borderRadius: "8px",
-                padding: "12px",
-                marginBottom: "20px",
-                fontSize: "14px",
-                color: "#8b6f4e",
-              }}>
-                🔑 <strong>Credenciales automáticas:</strong> Las credenciales se generan automáticamente. Puedes elegir enviarlas por email o copiarlas para entregarlas manualmente.
+              <div className="modal-info-box">
+                <strong>Credenciales automaticas:</strong> Las credenciales se generan automaticamente. Puedes elegir enviarlas por email o copiarlas para entregarlas manualmente.
               </div>
 
               <div className="modal-section">
-                <h3>Información Personal</h3>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px", marginBottom: "15px" }}>
+                <h3>Informacion Personal</h3>
+                <div className="modal-grid-2">
                   <div className="modal-field">
-                    <label>Nombre *:</label>
+                    <label>Nombre *</label>
                     <input
                       type="text"
                       value={newClient.nombre}
@@ -1756,7 +1534,7 @@ const MembershipAdminDashboard = () => {
                     />
                   </div>
                   <div className="modal-field">
-                    <label>Apellido *:</label>
+                    <label>Apellido *</label>
                     <input
                       type="text"
                       value={newClient.apellido}
@@ -1767,9 +1545,9 @@ const MembershipAdminDashboard = () => {
                     />
                   </div>
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "15px", marginBottom: "15px" }}>
+                <div className="modal-grid-2">
                   <div className="modal-field">
-                    <label>Edad:</label>
+                    <label>Edad</label>
                     <input
                       type="number"
                       value={newClient.edad || ""}
@@ -1781,7 +1559,7 @@ const MembershipAdminDashboard = () => {
                     />
                   </div>
                   <div className="modal-field">
-                    <label>Teléfono:</label>
+                    <label>Telefono</label>
                     <input
                       type="text"
                       value={newClient.telefono || ""}
@@ -1791,64 +1569,52 @@ const MembershipAdminDashboard = () => {
                       name="newclient-phone"
                     />
                   </div>
-                  <div className="modal-field" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{color: withoutEmail ? '#999' : 'inherit'}}>
-                      Email {!withoutEmail && '*'}:
-                    </label>
+                </div>
+                <div className="modal-field">
+                  <label className={withoutEmail ? "label-disabled" : ""}>
+                    Email {!withoutEmail && '*'}
+                  </label>
+                  <input
+                    type="email"
+                    value={withoutEmail ? '' : newClient.email}
+                    onChange={(e) => !withoutEmail && setNewClient({ ...newClient, email: e.target.value })}
+                    placeholder={withoutEmail ? "Email deshabilitado" : "ejemplo@email.com"}
+                    autoComplete="off"
+                    name="newclient-email"
+                    disabled={withoutEmail}
+                    className={withoutEmail ? "input-disabled" : ""}
+                  />
+                  <label className="checkbox-label" onClick={() => setWithoutEmail(!withoutEmail)}>
                     <input
-                      type="email"
-                      value={withoutEmail ? '' : newClient.email}
-                      onChange={(e) => !withoutEmail && setNewClient({ ...newClient, email: e.target.value })}
-                      placeholder={withoutEmail ? "Email deshabilitado" : "ejemplo@email.com"}
-                      autoComplete="off"
-                      name="newclient-email"
-                      disabled={withoutEmail}
-                      style={{
-                        backgroundColor: withoutEmail ? '#f5f5f5' : 'white',
-                        color: withoutEmail ? '#999' : 'inherit',
-                        cursor: withoutEmail ? 'not-allowed' : 'text'
+                      type="checkbox"
+                      checked={withoutEmail}
+                      onChange={(e) => {
+                        setWithoutEmail(e.target.checked);
+                        if (!e.target.checked) {
+                          setPreviewCredentials({ username: "", password: "" });
+                          setPreviewEdited(false);
+                        }
                       }}
                     />
-                    <label style={{
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: '8px', 
-                      cursor: 'pointer', 
-                      fontSize: '14px', 
-                      fontWeight: '500', 
-                      color: '#495057',
-                      marginTop: '4px'
-                    }} onClick={() => setWithoutEmail(!withoutEmail)}>
-                      <input
-                        type="checkbox"
-                        checked={withoutEmail}
-                        onChange={(e) => {
-                          setWithoutEmail(e.target.checked);
-                          if (!e.target.checked) {
-                            setPreviewCredentials({ username: "", password: "" });
-                            setPreviewEdited(false);
-                          }
-                        }}
-                        style={{width: '16px', height: '16px'}}
-                      />
-                      Usuario sin correo electrónico
-                    </label>
-                    {withoutEmail && (
-                      <div style={{fontSize: '12px', color: '#666', marginTop: '4px'}}>
-                        Las credenciales se mostrarán para distribución manual
-                      </div>
-                    )}
-                  </div>
+                    <span>Sin correo electronico</span>
+                  </label>
+                  {withoutEmail && (
+                    <div className="field-hint">Las credenciales se mostraran para distribucion manual</div>
+                  )}
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px", marginBottom: "15px" }}>
+              </div>
+
+              <div className="modal-section">
+                <h3>Clasificacion</h3>
+                <div className="modal-grid-3">
                   <div className="modal-field">
-                    <label>Tipo de Cliente:</label>
+                    <label>Tipo de Cliente</label>
                     <select
                       value={newClient.tipo_cliente || ""}
                       onChange={(e) => setNewClient({ ...newClient, tipo_cliente: e.target.value })}
                       name="newclient-tipo-cliente"
                     >
-                      <option value="">Seleccione un tipo</option>
+                      <option value="">Seleccione</option>
                       <option value="general">General</option>
                       <option value="propietario">Propietario</option>
                       <option value="demo">Demo</option>
@@ -1857,32 +1623,32 @@ const MembershipAdminDashboard = () => {
                     </select>
                   </div>
                   <div className="modal-field">
-                    <label>Tipo de Nivel:</label>
+                    <label>Nivel</label>
                     <select
                       value={newClient.tipo_nivel || ""}
                       onChange={(e) => setNewClient({ ...newClient, tipo_nivel: e.target.value })}
                       name="newclient-tipo-nivel"
                     >
-                      <option value="">Seleccione un nivel</option>
-                      <option value="iniciacion">Iniciación</option>
+                      <option value="">Seleccione</option>
+                      <option value="iniciacion">Iniciacion</option>
                       <option value="ponyclub">Ponyclub</option>
                       <option value="paseo">Paseo</option>
                       <option value="intermedio">Intermedio</option>
                       <option value="avanzado">Avanzado</option>
                     </select>
                   </div>
-                </div>
-                <div className="modal-field">
-                  <label>Estatus:</label>
-                  <select
-                    value={newClient.estatus || "activo"}
-                    onChange={(e) => setNewClient({ ...newClient, estatus: e.target.value })}
-                    name="newclient-estatus"
-                  >
-                    <option value="activo">Activo</option>
-                    <option value="inactivo">Inactivo</option>
-                    <option value="bloqueado">Bloqueado</option>
-                  </select>
+                  <div className="modal-field">
+                    <label>Estatus</label>
+                    <select
+                      value={newClient.estatus || "activo"}
+                      onChange={(e) => setNewClient({ ...newClient, estatus: e.target.value })}
+                      name="newclient-estatus"
+                    >
+                      <option value="activo">Activo</option>
+                      <option value="inactivo">Inactivo</option>
+                      <option value="bloqueado">Bloqueado</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
@@ -2055,7 +1821,7 @@ const MembershipAdminDashboard = () => {
 
               <div className="modal-section">
                 <h3>Información de Pagos</h3>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px", marginBottom: "15px" }}>
+                <div className="modal-grid-2">
                   <div className="modal-field">
                     <label>Monto Mensualidad *:</label>
                     <input
@@ -2088,7 +1854,7 @@ const MembershipAdminDashboard = () => {
                     />
                   </div>
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px", marginBottom: "15px" }}>
+                <div className="modal-grid-2">
                   <div className="modal-field">
                     <label>Concepto *:</label>
                     <input
@@ -2117,7 +1883,7 @@ const MembershipAdminDashboard = () => {
                     </select>
                   </div>
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px", marginBottom: "15px" }}>
+                <div className="modal-grid-2">
                   <div className="modal-field">
                     <label>Método de Pago *:</label>
                     <select
@@ -2173,51 +1939,62 @@ const MembershipAdminDashboard = () => {
         renderPortal(
           <div className="modal-overlay" onClick={closePaymentHistoryModal}>
             <div className="modal-content payment-history-modal" onClick={(e) => e.stopPropagation()}>
-              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px", borderBottom: "2px solid #8b5a2b", paddingBottom: "10px" }}>
-                <h2 style={{ margin: 0, color: "#8b5a2b", fontSize: "1.8rem" }}>Historial de Pagos - {selectedMember.name}</h2>
-                {loadingHistory && <Loader className="spin" size={20} style={{ color: "#8b5a2b" }} />}
-              </div>
+              <h2>Historial de Pagos - {selectedMember.name}</h2>
+              {loadingHistory && <Loader className="spin" size={18} style={{ color: "var(--terracotta)" }} />}
 
               {/* Historial de pagos existentes */}
               <div className="modal-section">
                 <h3>Pagos Realizados</h3>
                 {loadingHistory ? (
-                  <div style={{ textAlign: "center", padding: "20px", color: "#8b5a2b" }}>
-                    <Loader className="spin" size={32} style={{ margin: "0 auto 10px" }} />
-                    <p>Cargando historial de pagos...</p>
+                  <div className="loading-container" style={{ padding: "1.5rem" }}>
+                    <Loader className="spin loading-spinner" size={28} />
+                    <p className="loading-text" style={{ fontSize: "0.9rem" }}>Cargando historial de pagos...</p>
                   </div>
                 ) : paymentHistory === null ? (
-                  <p style={{ color: "#c17b4a", fontStyle: "italic", fontWeight: "600" }}>
-                    ⚠️ No se pudieron cargar los pagos. Intente cerrar e iniciar sesión de nuevo.
+                  <p style={{ color: "var(--terracotta)", fontStyle: "italic", fontWeight: "500", fontSize: "0.85rem" }}>
+                    No se pudieron cargar los pagos. Intente cerrar e iniciar sesion de nuevo.
                   </p>
                 ) : paymentHistory.length === 0 ? (
-                  <p style={{ color: "var(--stone-gray)", fontStyle: "italic" }}>
+                  <p style={{ color: "var(--stone-gray)", fontStyle: "italic", fontSize: "0.85rem" }}>
                     No hay pagos registrados
                   </p>
                 ) : (
                   <div className="payment-history-list">
                     {paymentHistory.map((payment, index) => (
-                      <div key={index} className="payment-item">
-                        <div className="payment-info">
+                      <div key={index} className="payment-card">
+                        <div className="payment-card-top">
                           <div className="payment-amount">${formatCurrency(payment.monto)}</div>
-                          <div className="payment-concept">Concepto: {payment.concepto || "N/A"}</div>
-                          <div className="payment-status">Estado: {payment.estatus_pago || "N/A"}</div>
-                          <div className="payment-method">Método de Pago: {payment.metodo_pago ? (payment.metodo_pago === 'link_pago' ? 'Link de Pago' : payment.metodo_pago.charAt(0).toUpperCase() + payment.metodo_pago.slice(1)) : "N/A"}</div>
-                          <div className="payment-dates">
-                            <span>Fecha de Pago: {formatDate(payment.fecha_pago)}</span>
+                          <div className="payment-card-actions">
+                            <span className={`payment-status-tag ${payment.estatus_pago === 'pagado' ? 'tag-paid' : payment.estatus_pago === 'pendiente' ? 'tag-pending' : 'tag-overdue'}`}>
+                              {payment.estatus_pago || "N/A"}
+                            </span>
+                            <button
+                              type="button"
+                              className="edit-payment-btn"
+                              onClick={() => openEditPaymentModal(payment)}
+                              title="Editar pago"
+                            >
+                              <Edit size={14} />
+                            </button>
                           </div>
-                          {payment.observaciones && (
-                            <div className="payment-observations">Observaciones: {payment.observaciones}</div>
-                          )}
                         </div>
-                        <button
-                          type="button"
-                          className="edit-payment-btn"
-                          onClick={() => openEditPaymentModal(payment)}
-                          title="Editar pago"
-                        >
-                          <Edit size={16} />
-                        </button>
+                        <div className="payment-card-details">
+                          <div className="payment-detail">
+                            <span className="payment-detail-label">Concepto</span>
+                            <span className="payment-detail-value">{payment.concepto || "N/A"}</span>
+                          </div>
+                          <div className="payment-detail">
+                            <span className="payment-detail-label">Metodo</span>
+                            <span className="payment-detail-value">{payment.metodo_pago ? (payment.metodo_pago === 'link_pago' ? 'Link de Pago' : payment.metodo_pago.charAt(0).toUpperCase() + payment.metodo_pago.slice(1)) : "N/A"}</span>
+                          </div>
+                          <div className="payment-detail">
+                            <span className="payment-detail-label">Fecha</span>
+                            <span className="payment-detail-value">{formatDate(payment.fecha_pago)}</span>
+                          </div>
+                        </div>
+                        {payment.observaciones && (
+                          <div className="payment-card-obs">{payment.observaciones}</div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -2227,36 +2004,38 @@ const MembershipAdminDashboard = () => {
               {/* Formulario para agregar nuevo pago */}
               <div className="modal-section">
                 <h3>Agregar Nuevo Pago</h3>
-                <div className="modal-field">
-                  <label>Monto *:</label>
-                  <input
-                    type="text"
-                    value={newPayment.monto === "" || newPayment.monto === 0 ? "" : formatNumberInput(newPayment.monto)}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      const parsed = parseFormattedNumber(val);
-                      setNewPayment({
-                        ...newPayment,
-                        monto: parsed === "" ? "" : parsed
-                      });
-                    }}
-                    placeholder="Ej: 18,000.00"
-                    autoComplete="off"
-                    inputMode="decimal"
-                    data-lpignore="true"
-                    data-form-type="other"
-                  />
-                </div>
-                <div className="modal-field">
-                  <label>Fecha de Pago *:</label>
-                  <input
-                    type="date"
-                    value={newPayment.fecha_pago}
-                    onChange={(e) => setNewPayment({ ...newPayment, fecha_pago: e.target.value })}
-                    autoComplete="off"
-                    data-lpignore="true"
-                    data-form-type="other"
-                  />
+                <div className="modal-grid-2">
+                  <div className="modal-field">
+                    <label>Monto *:</label>
+                    <input
+                      type="text"
+                      value={newPayment.monto === "" || newPayment.monto === 0 ? "" : formatNumberInput(newPayment.monto)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const parsed = parseFormattedNumber(val);
+                        setNewPayment({
+                          ...newPayment,
+                          monto: parsed === "" ? "" : parsed
+                        });
+                      }}
+                      placeholder="Ej: 18,000.00"
+                      autoComplete="off"
+                      inputMode="decimal"
+                      data-lpignore="true"
+                      data-form-type="other"
+                    />
+                  </div>
+                  <div className="modal-field">
+                    <label>Fecha de Pago *:</label>
+                    <input
+                      type="date"
+                      value={newPayment.fecha_pago}
+                      onChange={(e) => setNewPayment({ ...newPayment, fecha_pago: e.target.value })}
+                      autoComplete="off"
+                      data-lpignore="true"
+                      data-form-type="other"
+                    />
+                  </div>
                 </div>
                 <div className="modal-field">
                   <label>Concepto *:</label>
@@ -2270,7 +2049,7 @@ const MembershipAdminDashboard = () => {
                     data-form-type="other"
                   />
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px", marginBottom: "15px" }}>
+                <div className="modal-grid-2">
                   <div className="modal-field">
                     <label>Estado del Pago *:</label>
                     <select
@@ -2373,7 +2152,7 @@ const MembershipAdminDashboard = () => {
                   />
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px", marginBottom: "15px" }}>
+                <div className="modal-grid-2">
                   <div className="modal-field">
                     <label>Estado del Pago *:</label>
                     <select

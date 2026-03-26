@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import ReactDOM from "react-dom";
-import { Loader, UserPlus, Trash2, Edit, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader, UserPlus, Trash2, Edit, ChevronLeft, ChevronRight, Search } from "lucide-react";
 
 const CaballosAdmin = () => {
   const [caballos, setCaballos] = useState([]);
@@ -25,6 +25,10 @@ const CaballosAdmin = () => {
   const [deletingHorseId, setDeletingHorseId] = useState(null);
   const [confirmDeleteModalOpen, setConfirmDeleteModalOpen] = useState(false);
   const [horseToDelete, setHorseToDelete] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [disponibilidadFilter, setDisponibilidadFilter] = useState("");
+  const [estatusFilter, setEstatusFilter] = useState("");
+  const [especialidadFilter, setEspecialidadFilter] = useState("");
 
   // Función para mostrar notificaciones
   const showNotification = (message, type = "success") => {
@@ -276,13 +280,26 @@ const CaballosAdmin = () => {
 
   const renderPortal = (node) => ReactDOM.createPortal(node, document.body);
 
-  // Calcular paginación
-  const totalPages = Math.ceil(caballos.length / itemsPerPage);
+  // Filtrar caballos
+  const filteredCaballos = caballos.filter(c => {
+    const matchesSearch = searchTerm === "" ||
+      c.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (c.propietario_nombre && c.propietario_nombre.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesDisponibilidad = disponibilidadFilter === "" || c.disponibilidad === disponibilidadFilter;
+    const matchesEstatus = estatusFilter === "" || c.estatus === estatusFilter;
+    const matchesEspecialidad = especialidadFilter === "" ||
+      (Array.isArray(c.especialidad) ? c.especialidad.includes(especialidadFilter) :
+       c.especialidad && c.especialidad.toLowerCase().includes(especialidadFilter.toLowerCase()));
+    return matchesSearch && matchesDisponibilidad && matchesEstatus && matchesEspecialidad;
+  });
+
+  // Calcular paginación sobre filtrados
+  const totalPages = Math.ceil(filteredCaballos.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentCaballos = caballos.slice(startIndex, endIndex);
+  const currentCaballos = filteredCaballos.slice(startIndex, endIndex);
 
-  // Calcular métricas
+  // Calcular metricas (siempre sobre todos)
   const totalCaballos = caballos.length;
   const disponibles = caballos.filter(c => c.disponibilidad === "disponible").length;
   const noDisponibles = caballos.filter(c => c.disponibilidad === "no_disponible").length;
@@ -403,129 +420,99 @@ const CaballosAdmin = () => {
         </div>
       </div>
 
-      {/* Métricas - Arriba de la tabla */}
+      {/* Metricas */}
       {!loading && caballos.length > 0 && (
-        <div style={{ 
-          marginBottom: "1.5rem", 
-          display: "flex", 
-          gap: "1rem", 
-          justifyContent: "center",
-          flexWrap: "wrap"
-        }}>
-          <div style={{ 
-            padding: "1rem 1.5rem", 
-            background: "rgba(156, 175, 136, 0.1)", 
-            borderRadius: "8px",
-            border: "2px solid #9caf88"
-          }}>
-            <div style={{ fontSize: "0.85rem", color: "var(--stone-gray)", marginBottom: "0.3rem" }}>
-              Total Caballos
-            </div>
-            <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#9caf88" }}>
-              {totalCaballos}
-            </div>
+        <div className="stats-grid caballos-stats">
+          <div className="stat-card">
+            <div className="stat-card-topline topline-sage"></div>
+            <div className="stat-title">Total</div>
+            <div className="stat-value">{totalCaballos}</div>
           </div>
-          <div style={{ 
-            padding: "1rem 1.5rem", 
-            background: "rgba(156, 175, 136, 0.1)", 
-            borderRadius: "8px",
-            border: "2px solid #9caf88"
-          }}>
-            <div style={{ fontSize: "0.85rem", color: "var(--stone-gray)", marginBottom: "0.3rem" }}>
-              Disponibles
-            </div>
-            <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#9caf88" }}>
-              {disponibles}
-            </div>
+          <div className="stat-card">
+            <div className="stat-card-topline topline-sage"></div>
+            <div className="stat-title">Disponibles</div>
+            <div className="stat-value">{disponibles}</div>
           </div>
-          <div style={{ 
-            padding: "1rem 1.5rem", 
-            background: "rgba(139, 90, 43, 0.1)", 
-            borderRadius: "8px",
-            border: "2px solid #8b5a2b"
-          }}>
-            <div style={{ fontSize: "0.85rem", color: "var(--stone-gray)", marginBottom: "0.3rem" }}>
-              No Disponibles
-            </div>
-            <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#8b5a2b" }}>
-              {noDisponibles}
-            </div>
+          <div className="stat-card">
+            <div className="stat-card-topline topline-brown"></div>
+            <div className="stat-title">No Disponibles</div>
+            <div className="stat-value">{noDisponibles}</div>
           </div>
-          <div style={{ 
-            padding: "1rem 1.5rem", 
-            background: "rgba(193, 123, 74, 0.1)", 
-            borderRadius: "8px",
-            border: "2px solid #c17b4a"
-          }}>
-            <div style={{ fontSize: "0.85rem", color: "var(--stone-gray)", marginBottom: "0.3rem" }}>
-              Públicos
-            </div>
-            <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#c17b4a" }}>
-              {publicos}
-            </div>
+          <div className="stat-card">
+            <div className="stat-card-topline topline-terracotta"></div>
+            <div className="stat-title">Publicos</div>
+            <div className="stat-value">{publicos}</div>
           </div>
-          <div style={{ 
-            padding: "1rem 1.5rem", 
-            background: "rgba(212, 165, 116, 0.1)", 
-            borderRadius: "8px",
-            border: "2px solid #d4a574"
-          }}>
-            <div style={{ fontSize: "0.85rem", color: "var(--stone-gray)", marginBottom: "0.3rem" }}>
-              Privados
-            </div>
-            <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#d4a574" }}>
-              {privados}
-            </div>
+          <div className="stat-card">
+            <div className="stat-card-topline topline-light"></div>
+            <div className="stat-title">Privados</div>
+            <div className="stat-value">{privados}</div>
           </div>
-          <div style={{ 
-            padding: "1rem 1.5rem", 
-            background: "rgba(193, 123, 74, 0.1)", 
-            borderRadius: "8px",
-            border: "2px solid #c17b4a"
-          }}>
-            <div style={{ fontSize: "0.85rem", color: "var(--stone-gray)", marginBottom: "0.3rem" }}>
-              Renta
-            </div>
-            <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#c17b4a" }}>
-              {renta}
-            </div>
+          <div className="stat-card">
+            <div className="stat-card-topline topline-terracotta"></div>
+            <div className="stat-title">Renta</div>
+            <div className="stat-value">{renta}</div>
           </div>
-          <div style={{ 
-            padding: "1rem 1.5rem", 
-            background: "rgba(212, 165, 116, 0.1)", 
-            borderRadius: "8px",
-            border: "2px solid #d4a574"
-          }}>
-            <div style={{ fontSize: "0.85rem", color: "var(--stone-gray)", marginBottom: "0.3rem" }}>
-              Media Renta
+          <div className="stat-card">
+            <div className="stat-card-topline topline-light"></div>
+            <div className="stat-title">Media Renta</div>
+            <div className="stat-value">{mediaRenta}</div>
+          </div>
+        </div>
+      )}
+
+      {/* Barra de busqueda y filtros */}
+      {!loading && (
+        <div className="controls-bar">
+          <div className="controls-search">
+            <Search size={18} className="controls-search-icon" />
+            <input
+              type="text"
+              className="controls-search-input"
+              placeholder="Buscar por nombre o propietario..."
+              value={searchTerm}
+              onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+              autoComplete="off"
+            />
+          </div>
+          <div className="controls-filters">
+            <div className="controls-filter-item">
+              <label className={`controls-filter-label ${disponibilidadFilter ? "label-active" : ""}`}>Disponibilidad</label>
+              <select className={`controls-filter-select ${disponibilidadFilter ? "filter-active" : ""}`} value={disponibilidadFilter} onChange={(e) => { setDisponibilidadFilter(e.target.value); setCurrentPage(1); }}>
+                <option value="">Todos</option>
+                <option value="disponible">Disponible</option>
+                <option value="no_disponible">No disponible</option>
+              </select>
             </div>
-            <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#d4a574" }}>
-              {mediaRenta}
+            <div className="controls-filter-item">
+              <label className={`controls-filter-label ${estatusFilter ? "label-active" : ""}`}>Estatus</label>
+              <select className={`controls-filter-select ${estatusFilter ? "filter-active" : ""}`} value={estatusFilter} onChange={(e) => { setEstatusFilter(e.target.value); setCurrentPage(1); }}>
+                <option value="">Todos</option>
+                <option value="publico">Publico</option>
+                <option value="privado">Privado</option>
+                <option value="renta">Renta</option>
+                <option value="media_renta">Media Renta</option>
+              </select>
+            </div>
+            <div className="controls-filter-item">
+              <label className={`controls-filter-label ${especialidadFilter ? "label-active" : ""}`}>Especialidad</label>
+              <select className={`controls-filter-select ${especialidadFilter ? "filter-active" : ""}`} value={especialidadFilter} onChange={(e) => { setEspecialidadFilter(e.target.value); setCurrentPage(1); }}>
+                <option value="">Todas</option>
+                <option value="iniciacion">Iniciacion</option>
+                <option value="ponyclub">Ponyclub</option>
+                <option value="paseo">Paseo</option>
+                <option value="intermedio">Intermedio</option>
+                <option value="avanzado">Avanzado</option>
+              </select>
             </div>
           </div>
         </div>
       )}
-      
+
       {loading ? (
-        <div
-          style={{
-            textAlign: "center",
-            padding: "4rem 2rem",
-            background: "rgba(255, 255, 255, 0.9)",
-            borderRadius: "16px",
-            boxShadow: "0 4px 20px rgba(107,68,35,0.06)",
-          }}
-        >
-          <Loader size={40} className="spin" style={{ color: "var(--terracotta)", marginBottom: "1rem" }} />
-          <div
-            style={{
-              color: "var(--primary-brown)",
-              fontSize: "1.1rem",
-              fontWeight: "600",
-            }}
-          >
-            Cargando caballos...
-          </div>
+        <div className="loading-container">
+          <Loader size={40} className="spin loading-spinner" />
+          <div className="loading-text">Cargando caballos...</div>
         </div>
       ) : (
         <div className="table-container">
@@ -542,19 +529,12 @@ const CaballosAdmin = () => {
               </tr>
             </thead>
             <tbody>
-              {caballos.length === 0 ? (
+              {currentCaballos.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan={7}
-                    style={{
-                      textAlign: "center",
-                      padding: "3rem",
-                      color: "var(--terracotta)",
-                      fontSize: "1.1rem",
-                      fontWeight: "600",
-                    }}
-                  >
-                    No hay caballos registrados.
+                  <td colSpan={7} className="empty-state-cell">
+                    {searchTerm || disponibilidadFilter || estatusFilter || especialidadFilter
+                      ? "No se encontraron caballos con los filtros aplicados."
+                      : "No hay caballos registrados."}
                   </td>
                 </tr>
               ) : (
