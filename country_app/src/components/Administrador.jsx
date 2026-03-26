@@ -26,7 +26,7 @@ const AdminPanel = () => {
   // Fetch reservations once on mount and store them keyed by date (like the Administrador example you provided)
   useEffect(() => {
     let mounted = true
-    axios.get('https://elrefugiocountryclub.com/api/api/reservas')
+    axios.get('http://localhost:3001/api/reservas')
       .then(response => {
         const reservasPorFecha = {};
         response.data.forEach(reserva => {

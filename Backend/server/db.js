@@ -10,10 +10,10 @@ import mysql from 'mysql2/promise';
 // user: root
 // password: ElRefugio2025
 const db = mysql.createPool({
-  host: '212.227.238.213',
+  host: 'localhost',
   port: 3306,
-  user: 'dev_user',
-  password: 'elrefugio2025desarrollo',
+  user: 'root',
+  password: '',
   database: 'country_refugiodb',
   waitForConnections: true,
   connectionLimit: 5,
