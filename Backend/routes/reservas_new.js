@@ -1252,7 +1252,7 @@ router.post('/book', async (req, res) => {
     // Enviar email de confirmación si el cliente tiene correo
     try {
       const [clienteData] = await db.query(`
-        SELECT nombre, apellido, correo FROM usuarios WHERE id = ?
+        SELECT nombre, apellido, correo, tipo_nivel FROM usuarios WHERE id = ?
       `, [cliente_id]);
 
       if (clienteData.length > 0 && clienteData[0].correo && clienteData[0].correo.trim() !== '') {
@@ -1282,7 +1282,8 @@ router.post('/book', async (req, res) => {
           horaInicio: hora_inicio.slice(0, 5),
           horaFin: hora_fin.slice(0, 5),
           instructor: instructoraNombre,
-          tipoReserva: tipoReserva
+          tipoReserva: tipoReserva,
+          nivel: clienteData[0].tipo_nivel || null
         });
         console.log(`✅ Email de confirmación de reserva enviado a: ${clienteData[0].correo}`);
       }
