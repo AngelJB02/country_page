@@ -1103,6 +1103,8 @@ const MembershipAdminDashboard = () => {
       </div>
 
       {/* NAVEGACIÓN DE PESTAÑAS */}
+      <div className="tabs-nav-wrapper">
+      <span className="tabs-nav-label">Secciones</span>
       <div ref={tabsRef} className="admin-tabs">
         <button
           className={activeTab === "clientes" ? "tab-active" : "tab-inactive"}
@@ -1140,6 +1142,7 @@ const MembershipAdminDashboard = () => {
         >
           Métricas
         </button>
+      </div>
       </div>
 
       {/* CONTENIDO DE CLIENTES */}

@@ -944,10 +944,10 @@ body.no-scroll {
   }
 
   .dashboard-header.enhanced-header {
-    padding: 1.5rem;
+    padding: 1rem 1.25rem;
     flex-direction: column;
     text-align: center;
-    gap: 1rem;
+    gap: 0.75rem;
   }
 
   .header-title {
@@ -959,16 +959,16 @@ body.no-scroll {
   }
 
   .stats-grid {
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.75rem !important;
   }
 
   .stat-card {
-    padding: 1.5rem 1rem;
+    padding: 1rem 0.75rem !important;
   }
 
   .stat-value {
-    font-size: 2.5rem;
+    font-size: 1.8rem !important;
   }
 
   .enhanced-controls {
@@ -2286,51 +2286,1054 @@ body.no-scroll {
   }
 }
 
+/* TABS NAV WRAPPER */
+.tabs-nav-label {
+  display: none;
+}
+
+@media (max-width: 480px) {
+  .tabs-nav-label {
+    display: block;
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.9px;
+    color: var(--stone-gray);
+    font-weight: 600;
+    padding-left: 0.25rem;
+    margin-bottom: 0.2rem;
+  }
+
+  .admin-tabs {
+    margin-top: 0.5rem !important;
+  }
+}
+
 @media (max-width: 480px) {
   .dashboard-container {
-    padding: 0.75rem 0.5rem;
+    padding: 0.5rem 0.4rem;
+  }
+
+  .dashboard-header.enhanced-header {
+    flex-direction: row;
+    text-align: left;
+    align-items: center;
+    padding: 0.65rem 0.85rem;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .header-texts {
+    flex: 1;
+    min-width: 0;
   }
 
   .header-title {
-    font-size: 1.4rem;
+    font-size: 0.88rem;
+    line-height: 1.2;
   }
 
   .header-subtitle {
-    font-size: 0.9rem;
+    display: none;
+  }
+
+  .header-actions {
+    gap: 0.4rem;
+    flex-shrink: 0;
   }
 
   .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.75rem;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    margin-bottom: 0.75rem;
+    background: white;
+    border-radius: 10px;
+    border: 1px solid rgba(107, 68, 35, 0.1);
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(107, 68, 35, 0.06);
   }
 
   .stat-card {
-    padding: 1rem 0.75rem;
+    padding: 0.55rem 0.3rem;
+    border-radius: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-right: 1px solid rgba(107, 68, 35, 0.08) !important;
+    text-align: center;
+    background: transparent !important;
+  }
+
+  .stat-card:last-child {
+    border-right: none !important;
+  }
+
+  .stat-card-topline {
+    height: 2px;
+    border-radius: 0;
   }
 
   .stat-value {
-    font-size: 2rem;
+    font-size: 1.2rem;
+    margin-bottom: 0;
   }
 
   .stat-title {
-    font-size: 0.75rem;
+    font-size: 0.55rem;
+    margin-bottom: 0.2rem;
+    letter-spacing: 0.4px;
   }
 
   .stat-icon {
     display: none;
   }
 
+  .stat-card-header {
+    display: block;
+    margin-bottom: 0.15rem;
+  }
+
   .admin-tabs button {
-    padding: 0.6rem 1rem;
-    font-size: 0.8rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.78rem;
   }
 
   .add-client-btn {
-    padding: 0.5rem 1rem;
-    font-size: 0.85rem;
+    padding: 0.4rem 0.85rem;
+    font-size: 0.8rem;
   }
 
   .pagination-btn span {
     display: none;
+  }
+
+  /* Headers de sección en sub-pestañas (Caballos, Instructoras, Horarios) */
+  .enhanced-controls h2,
+  .controls-inner h2,
+  .hp-section-title {
+    font-size: 0.95rem !important;
+    font-weight: 600 !important;
+  }
+
+  .hp-section-subtitle {
+    font-size: 0.78rem !important;
+    margin-top: 2px !important;
+  }
+
+  .hp-header {
+    padding: 0.65rem 0.85rem !important;
+    margin-bottom: 1rem !important;
+  }
+
+  .enhanced-controls.controls-container,
+  .enhanced-controls {
+    padding: 0.6rem 0.75rem !important;
+    margin-bottom: 0.75rem !important;
+  }
+}
+
+/* ============================================
+   MOBILE CARD LAYOUT - CELULAR (480px y menor)
+   ============================================ */
+@media (max-width: 480px) {
+
+  /* --- 0. ALTERNANCIA DE TARJETAS (diferenciación visual) --- */
+  /* Clientes */
+  .tab-content-visible .members-table tbody tr:nth-child(odd) {
+    background: white;
+    border-left: 3px solid var(--terracotta);
+  }
+  .tab-content-visible .members-table tbody tr:nth-child(even) {
+    background: var(--cream);
+    border-left: 3px solid var(--sage-green);
+  }
+
+  /* Caballos */
+  .caballos-admin-container .members-table tbody tr:nth-child(odd) {
+    background: white;
+    border-left: 3px solid var(--terracotta);
+  }
+  .caballos-admin-container .members-table tbody tr:nth-child(even) {
+    background: var(--cream);
+    border-left: 3px solid var(--sage-green);
+  }
+
+  /* Instructoras */
+  .instructoras-admin-container .members-table tbody tr:nth-child(odd) {
+    background: white;
+    border-left: 3px solid var(--terracotta);
+  }
+  .instructoras-admin-container .members-table tbody tr:nth-child(even) {
+    background: var(--cream);
+    border-left: 3px solid var(--sage-green);
+  }
+
+  /* Reservas */
+  .reservas-admin-container .members-table tbody tr:nth-child(odd) {
+    background: white;
+    border-left: 3px solid var(--terracotta);
+  }
+  .reservas-admin-container .members-table tbody tr:nth-child(even) {
+    background: var(--cream);
+    border-left: 3px solid var(--sage-green);
+  }
+
+  /* Horarios Extra */
+  .hp-admin-container table tbody tr:nth-child(odd) {
+    background: white !important;
+    border-left: 3px solid var(--terracotta) !important;
+  }
+  .hp-admin-container table tbody tr:nth-child(even) {
+    background: var(--cream) !important;
+    border-left: 3px solid var(--sage-green) !important;
+  }
+
+  /* --- 1. TARJETAS DE MÉTRICAS COMPACTAS --- */
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.5rem !important;
+    margin-bottom: 0.75rem !important;
+  }
+
+  .stat-card {
+    padding: 0.65rem 0.5rem !important;
+  }
+
+  .stat-card-header {
+    gap: 0.15rem !important;
+    margin-bottom: 0.2rem !important;
+  }
+
+  .stat-value {
+    font-size: 1.4rem !important;
+    line-height: 1 !important;
+  }
+
+  .stat-title {
+    font-size: 0.6rem !important;
+    letter-spacing: 0.3px !important;
+  }
+
+  /* --- 2. OCULTAR STICKY HEADER CLONE --- */
+  .sticky-clone {
+    display: none !important;
+  }
+
+  /* --- 3. TABLE CONTAINER TRANSPARENTE (solo Clientes) --- */
+  .tab-content-visible .table-container {
+    overflow-x: visible;
+    overflow-y: visible;
+    border: none;
+    box-shadow: none;
+    background: transparent;
+    border-radius: 0;
+  }
+
+  .tab-content-visible .table-container::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* --- 4. TABLA A TARJETAS (solo Clientes) --- */
+  .tab-content-visible .members-table thead {
+    display: none;
+  }
+
+  .tab-content-visible .members-table,
+  .tab-content-visible .members-table tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .tab-content-visible .members-table tbody tr {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.4rem 0.75rem;
+    padding: 0.85rem;
+    margin-bottom: 0.6rem;
+    border: 1px solid rgba(107, 68, 35, 0.1);
+    border-radius: 10px;
+    background: white;
+    box-shadow: 0 1px 3px rgba(107, 68, 35, 0.06);
+    position: relative;
+  }
+
+  .tab-content-visible .members-table td {
+    display: block;
+    padding: 0;
+    border-bottom: none;
+    font-size: 0.82rem;
+    background: none !important;
+  }
+
+  /* Labels antes de cada celda */
+  .tab-content-visible .members-table td::before {
+    display: block;
+    font-size: 0.6rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--secondary-brown);
+    margin-bottom: 0.15rem;
+  }
+
+  /* Col 1: Nombre - ancho completo, prominente */
+  .tab-content-visible .members-table td:nth-child(1) {
+    grid-column: 1 / -1;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--dark-brown);
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid rgba(107, 68, 35, 0.08);
+  }
+  .tab-content-visible .members-table td:nth-child(1)::before {
+    content: "Nombre";
+  }
+
+  /* Col 2: Email - ancho completo */
+  .tab-content-visible .members-table td:nth-child(2) {
+    grid-column: 1 / -1;
+    padding-bottom: 0.35rem;
+  }
+  .tab-content-visible .members-table td:nth-child(2)::before {
+    content: "Email";
+  }
+
+  /* Col 3: Estado - mitad izquierda */
+  .tab-content-visible .members-table td:nth-child(3) {
+    grid-column: 1;
+  }
+  .tab-content-visible .members-table td:nth-child(3)::before {
+    content: "Estado";
+  }
+
+  /* Col 4: Nivel - mitad derecha */
+  .tab-content-visible .members-table td:nth-child(4) {
+    grid-column: 2;
+  }
+  .tab-content-visible .members-table td:nth-child(4)::before {
+    content: "Nivel";
+  }
+
+  /* Col 5: Mensualidad - mitad izquierda */
+  .tab-content-visible .members-table td:nth-child(5) {
+    grid-column: 1;
+  }
+  .tab-content-visible .members-table td:nth-child(5)::before {
+    content: "Mensualidad";
+  }
+
+  /* Col 6: Último Pago - mitad derecha */
+  .tab-content-visible .members-table td:nth-child(6) {
+    grid-column: 2;
+  }
+  .tab-content-visible .members-table td:nth-child(6)::before {
+    content: "Último Pago";
+  }
+
+  /* Col 7: Próximo Pago - mitad izquierda */
+  .tab-content-visible .members-table td:nth-child(7) {
+    grid-column: 1;
+  }
+  .tab-content-visible .members-table td:nth-child(7)::before {
+    content: "Próximo Pago";
+  }
+
+  /* Col 8: Acciones - mitad derecha, alinear botón */
+  .tab-content-visible .members-table td:nth-child(8) {
+    grid-column: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: flex-end;
+  }
+  .tab-content-visible .members-table td:nth-child(8)::before {
+    content: none;
+  }
+
+  /* Resetear colores alternos de columnas en tarjetas */
+  .tab-content-visible .members-table td:nth-child(even) {
+    background-color: transparent;
+  }
+
+  .tab-content-visible .members-table tbody tr:hover td,
+  .tab-content-visible .members-table tbody tr:hover td:nth-child(even) {
+    background-color: transparent;
+  }
+
+  .tab-content-visible .members-table tbody tr:active {
+    box-shadow: 0 2px 8px rgba(107, 68, 35, 0.12);
+  }
+
+  /* Estado vacío */
+  .tab-content-visible .members-table .empty-state-cell {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 2rem 1rem;
+  }
+
+  /* --- 5. CONTROLES COMPACTOS --- */
+  .controls-bar {
+    padding: 0.5rem;
+    gap: 0.4rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .controls-filters {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.4rem;
+    flex-direction: unset;
+  }
+
+  .controls-filter-item {
+    width: 100%;
+  }
+
+  .controls-overdue-btn {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  /* --- 6. TOUCH-FRIENDLY (min 44px) --- */
+  .tab-content-visible .members-table .status-badge,
+  .tab-content-visible .members-table .nivel-select {
+    min-height: 44px;
+    padding: 0.5rem 2rem 0.5rem 0.75rem;
+    font-size: 0.85rem;
+    width: 100%;
+    min-width: unset;
+  }
+
+  .tab-content-visible .btn.history-btn {
+    min-height: 44px;
+    padding: 0.6rem 1rem;
+    font-size: 0.82rem;
+    overflow: visible;
+  }
+
+  .controls-filter-select {
+    min-height: 44px;
+    font-size: 0.85rem;
+    padding: 0.55rem 2rem 0.55rem 0.75rem;
+  }
+
+  .controls-search {
+    min-height: 44px;
+  }
+
+  .controls-search-input {
+    min-height: 38px;
+    font-size: 0.95rem;
+  }
+
+  .controls-overdue-btn {
+    min-height: 44px;
+    justify-content: center;
+  }
+
+  /* --- TABS: 2 FILAS DE 3 EN MÓVIL --- */
+  .admin-tabs {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    overflow-x: visible !important;
+    gap: 0.3rem !important;
+    margin-top: 1rem !important;
+    margin-bottom: 1rem !important;
+  }
+
+  .admin-tabs button {
+    min-height: 44px;
+    white-space: normal !important;
+    text-align: center !important;
+    font-size: 0.75rem !important;
+    padding: 0.5rem 0.3rem !important;
+    line-height: 1.2 !important;
+  }
+
+  .pagination-btn {
+    min-height: 44px;
+    padding: 0.5rem 0.85rem;
+  }
+
+  /* --- 7. HEADER COMPACTO --- */
+  .dashboard-header.enhanced-header {
+    padding: 1rem;
+    gap: 0.75rem;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .add-client-btn {
+    flex: 1;
+    justify-content: center;
+    min-height: 44px;
+  }
+
+  /* --- 8. PAYMENT BADGES EN TARJETAS --- */
+  .tab-content-visible .payment-badge {
+    top: -6px;
+    right: -6px;
+    font-size: 0.7rem;
+    min-width: 20px;
+    height: 20px;
+    border-width: 2px;
+  }
+
+  .tab-content-visible .payment-alert {
+    top: -6px;
+    left: -6px;
+    font-size: 0.6rem;
+    padding: 2px 4px;
+  }
+
+  /* =============================================
+     CABALLOS TAB - CARD LAYOUT
+     ============================================= */
+
+  /* Caballos stats: 2 columnas compactas */
+  .caballos-stats {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.5rem !important;
+    margin-bottom: 0.75rem !important;
+  }
+
+  .caballos-stats .stat-card {
+    padding: 0.5rem 0.4rem !important;
+  }
+
+  .caballos-stats .stat-value {
+    font-size: 1.2rem !important;
+  }
+
+  .caballos-stats .stat-title {
+    font-size: 0.55rem !important;
+  }
+
+  /* Caballos table → cards */
+  .caballos-admin-container .table-container {
+    overflow-x: visible;
+    overflow-y: visible;
+    border: none;
+    box-shadow: none;
+    background: transparent;
+    border-radius: 0;
+  }
+
+  .caballos-admin-container .members-table thead {
+    display: none;
+  }
+
+  .caballos-admin-container .members-table,
+  .caballos-admin-container .members-table tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .caballos-admin-container .members-table tbody tr {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.4rem 0.75rem;
+    padding: 0.85rem;
+    margin-bottom: 0.6rem;
+    border: 1px solid rgba(107, 68, 35, 0.1);
+    border-radius: 10px;
+    background: white;
+    box-shadow: 0 1px 3px rgba(107, 68, 35, 0.06);
+  }
+
+  .caballos-admin-container .members-table td {
+    display: block;
+    padding: 0;
+    border-bottom: none;
+    font-size: 0.82rem;
+    background: none !important;
+  }
+
+  .caballos-admin-container .members-table td::before {
+    display: block;
+    font-size: 0.6rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--secondary-brown);
+    margin-bottom: 0.15rem;
+  }
+
+  /* Col 1: Nombre */
+  .caballos-admin-container .members-table td:nth-child(1) {
+    grid-column: 1 / -1;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--dark-brown);
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid rgba(107, 68, 35, 0.08);
+  }
+  .caballos-admin-container .members-table td:nth-child(1)::before { content: "Nombre"; }
+
+  /* Col 2: Propietario */
+  .caballos-admin-container .members-table td:nth-child(2) {
+    grid-column: 1 / -1;
+  }
+  .caballos-admin-container .members-table td:nth-child(2)::before { content: "Propietario"; }
+
+  /* Col 3: Disponibilidad */
+  .caballos-admin-container .members-table td:nth-child(3) { grid-column: 1; }
+  .caballos-admin-container .members-table td:nth-child(3)::before { content: "Disponibilidad"; }
+
+  /* Col 4: Estatus */
+  .caballos-admin-container .members-table td:nth-child(4) { grid-column: 2; }
+  .caballos-admin-container .members-table td:nth-child(4)::before { content: "Estatus"; }
+
+  /* Col 5: Especialidad */
+  .caballos-admin-container .members-table td:nth-child(5) { grid-column: 1; }
+  .caballos-admin-container .members-table td:nth-child(5)::before { content: "Especialidad"; }
+
+  /* Col 6: Descripción */
+  .caballos-admin-container .members-table td:nth-child(6) { grid-column: 2; }
+  .caballos-admin-container .members-table td:nth-child(6)::before { content: "Descripción"; }
+
+  /* Col 7: Acciones */
+  .caballos-admin-container .members-table td:nth-child(7) {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    padding-top: 0.4rem;
+    border-top: 1px solid rgba(107, 68, 35, 0.08);
+  }
+  .caballos-admin-container .members-table td:nth-child(7)::before { content: none; }
+
+  .caballos-admin-container .members-table .status-badge {
+    min-height: 44px;
+    width: 100%;
+    font-size: 0.85rem;
+  }
+
+  /* =============================================
+     INSTRUCTORAS TAB - CARD LAYOUT
+     ============================================= */
+  .instructoras-admin-container .table-container {
+    overflow-x: visible;
+    overflow-y: visible;
+    border: none;
+    box-shadow: none;
+    background: transparent;
+    border-radius: 0;
+  }
+
+  .instructoras-admin-container .members-table thead {
+    display: none;
+  }
+
+  .instructoras-admin-container .members-table,
+  .instructoras-admin-container .members-table tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .instructoras-admin-container .members-table tbody tr {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.4rem 0.75rem;
+    padding: 0.85rem;
+    margin-bottom: 0.6rem;
+    border: 1px solid rgba(107, 68, 35, 0.1);
+    border-radius: 10px;
+    background: white;
+    box-shadow: 0 1px 3px rgba(107, 68, 35, 0.06);
+  }
+
+  .instructoras-admin-container .members-table td {
+    display: block;
+    padding: 0;
+    border-bottom: none;
+    font-size: 0.82rem;
+    background: none !important;
+  }
+
+  .instructoras-admin-container .members-table td::before {
+    display: block;
+    font-size: 0.6rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--secondary-brown);
+    margin-bottom: 0.15rem;
+  }
+
+  /* Col 1: Nombre */
+  .instructoras-admin-container .members-table td:nth-child(1) {
+    grid-column: 1 / -1;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--dark-brown);
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid rgba(107, 68, 35, 0.08);
+  }
+  .instructoras-admin-container .members-table td:nth-child(1)::before { content: "Nombre"; }
+
+  /* Col 2: Email */
+  .instructoras-admin-container .members-table td:nth-child(2) { grid-column: 1 / -1; }
+  .instructoras-admin-container .members-table td:nth-child(2)::before { content: "Email"; }
+
+  /* Col 3: Teléfono */
+  .instructoras-admin-container .members-table td:nth-child(3) { grid-column: 1; }
+  .instructoras-admin-container .members-table td:nth-child(3)::before { content: "Teléfono"; }
+
+  /* Col 4: Especialidad */
+  .instructoras-admin-container .members-table td:nth-child(4) { grid-column: 2; }
+  .instructoras-admin-container .members-table td:nth-child(4)::before { content: "Especialidad"; }
+
+  /* Col 5: Disponibilidad */
+  .instructoras-admin-container .members-table td:nth-child(5) { grid-column: 1; }
+  .instructoras-admin-container .members-table td:nth-child(5)::before { content: "Disponibilidad"; }
+
+  /* Col 6: Fecha Registro */
+  .instructoras-admin-container .members-table td:nth-child(6) { grid-column: 2; }
+  .instructoras-admin-container .members-table td:nth-child(6)::before { content: "Fecha Registro"; }
+
+  /* Col 7: Acciones */
+  .instructoras-admin-container .members-table td:nth-child(7) {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    padding-top: 0.4rem;
+    border-top: 1px solid rgba(107, 68, 35, 0.08);
+  }
+  .instructoras-admin-container .members-table td:nth-child(7)::before { content: none; }
+
+  /* =============================================
+     RESERVAS TAB - CARD LAYOUT
+     ============================================= */
+  .reservas-admin-container .members-table thead {
+    display: none;
+  }
+
+  .reservas-admin-container .members-table,
+  .reservas-admin-container .members-table tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .reservas-admin-container .members-table tbody tr {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.4rem 0.75rem;
+    padding: 0.85rem;
+    margin-bottom: 0.6rem;
+    border: 1px solid rgba(107, 68, 35, 0.1);
+    border-radius: 10px;
+    background: white;
+    box-shadow: 0 1px 3px rgba(107, 68, 35, 0.06);
+  }
+
+  .reservas-admin-container .members-table td {
+    display: block;
+    padding: 0;
+    border-bottom: none;
+    font-size: 0.82rem;
+    background: none !important;
+  }
+
+  .reservas-admin-container .members-table td::before {
+    display: block;
+    font-size: 0.6rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--secondary-brown);
+    margin-bottom: 0.15rem;
+  }
+
+  /* Col 1: Nombre */
+  .reservas-admin-container .members-table td:nth-child(1) {
+    grid-column: 1 / -1;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--dark-brown);
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid rgba(107, 68, 35, 0.08);
+  }
+  .reservas-admin-container .members-table td:nth-child(1)::before { content: "Nombre"; }
+
+  /* Col 2: Actividad */
+  .reservas-admin-container .members-table td:nth-child(2) { grid-column: 1; }
+  .reservas-admin-container .members-table td:nth-child(2)::before { content: "Actividad"; }
+
+  /* Col 3: Fecha */
+  .reservas-admin-container .members-table td:nth-child(3) { grid-column: 2; }
+  .reservas-admin-container .members-table td:nth-child(3)::before { content: "Fecha"; }
+
+  /* Col 4: Hora */
+  .reservas-admin-container .members-table td:nth-child(4) { grid-column: 1; }
+  .reservas-admin-container .members-table td:nth-child(4)::before { content: "Hora"; }
+
+  /* Col 5: Estado */
+  .reservas-admin-container .members-table td:nth-child(5) { grid-column: 2; }
+  .reservas-admin-container .members-table td:nth-child(5)::before { content: "Estado"; }
+
+  /* Reservas table wrapper - quitar overflow */
+  .reservas-admin-container > div[style] {
+    overflow: visible !important;
+    border-radius: 0 !important;
+  }
+
+  /* Reservas stats compact */
+  .reservas-admin-container .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .reservas-admin-container .stat-card {
+    padding: 0.65rem 0.5rem;
+  }
+
+  .reservas-admin-container .stat-value {
+    font-size: 1.4rem;
+  }
+
+  /* =============================================
+     HORARIOS EXTRA TAB - RESPONSIVE
+     ============================================= */
+  .hp-admin-container {
+    padding: 10px !important;
+  }
+
+  /* Header responsive */
+  .hp-admin-container .hp-header {
+    flex-direction: column !important;
+    gap: 1rem !important;
+    padding: 1rem !important;
+    text-align: center;
+  }
+
+  .hp-admin-container .hp-header h2 {
+    font-size: 1.3rem !important;
+  }
+
+  .hp-admin-container .hp-header p {
+    font-size: 0.8rem !important;
+  }
+
+  .hp-admin-container .hp-header button {
+    width: 100% !important;
+    justify-content: center !important;
+    min-height: 44px;
+  }
+
+  /* Form grid responsive */
+  .hp-admin-container form > div {
+    grid-template-columns: 1fr !important;
+  }
+
+  .hp-admin-container .form-group select,
+  .hp-admin-container .form-group input {
+    min-height: 44px;
+    font-size: 0.9rem !important;
+  }
+
+  /* Tabla de horarios → cards */
+  .hp-admin-container table {
+    display: block !important;
+    width: 100% !important;
+  }
+
+  .hp-admin-container table thead {
+    display: none !important;
+  }
+
+  .hp-admin-container table tbody {
+    display: block !important;
+    width: 100% !important;
+  }
+
+  .hp-admin-container table tbody tr {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 0.5rem 0.75rem !important;
+    padding: 0.85rem !important;
+    margin-bottom: 0.6rem !important;
+    border: 1px solid rgba(107, 68, 35, 0.1) !important;
+    border-radius: 10px !important;
+    background: white !important;
+    box-shadow: 0 1px 3px rgba(107, 68, 35, 0.06) !important;
+  }
+
+  .hp-admin-container table tbody td {
+    display: block !important;
+    padding: 0 !important;
+    border: none !important;
+    font-size: 0.82rem !important;
+  }
+
+  .hp-admin-container table tbody td::before {
+    display: block !important;
+    font-size: 0.6rem !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    color: var(--secondary-brown) !important;
+    margin-bottom: 0.15rem !important;
+  }
+
+  /* Col 1: Cliente */
+  .hp-admin-container table tbody td:nth-child(1) {
+    grid-column: 1 / -1 !important;
+    font-weight: 700 !important;
+    padding-bottom: 0.4rem !important;
+    border-bottom: 1px solid rgba(107, 68, 35, 0.08) !important;
+  }
+  .hp-admin-container table tbody td:nth-child(1)::before { content: "Cliente" !important; }
+
+  /* Col 2: Clase/Nivel */
+  .hp-admin-container table tbody td:nth-child(2) { grid-column: 1 !important; }
+  .hp-admin-container table tbody td:nth-child(2)::before { content: "Clase / Nivel" !important; }
+
+  /* Col 3: Instructora */
+  .hp-admin-container table tbody td:nth-child(3) { grid-column: 2 !important; }
+  .hp-admin-container table tbody td:nth-child(3)::before { content: "Instructora" !important; }
+
+  /* Col 4: Periodicidad */
+  .hp-admin-container table tbody td:nth-child(4) { grid-column: 1 / -1 !important; }
+  .hp-admin-container table tbody td:nth-child(4)::before { content: "Periodicidad" !important; }
+
+  /* Col 5: Rango Horario */
+  .hp-admin-container table tbody td:nth-child(5) { grid-column: 1 !important; }
+  .hp-admin-container table tbody td:nth-child(5)::before { content: "Rango Horario" !important; }
+
+  /* Col 6: Acciones */
+  .hp-admin-container table tbody td:nth-child(6) {
+    grid-column: 2 !important;
+    text-align: right !important;
+  }
+  .hp-admin-container table tbody td:nth-child(6)::before { content: none !important; }
+
+  /* =============================================
+     MÉTRICAS TAB - RESPONSIVE
+     ============================================= */
+  .metricas-container {
+    padding: 1rem !important;
+  }
+
+  /* Filter bar responsive */
+  .metricas-filter-bar {
+    flex-direction: column !important;
+    gap: 0.75rem !important;
+    padding: 1rem !important;
+    border-radius: 12px !important;
+  }
+
+  .metricas-filter-bar button {
+    padding: 0.5rem 0.8rem !important;
+    font-size: 0.75rem !important;
+    min-height: 40px;
+  }
+
+  .metricas-filter-bar input[type="date"] {
+    min-height: 40px;
+    font-size: 0.85rem !important;
+  }
+
+  /* KPI grid → 2 columns */
+  .metricas-kpi-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.75rem !important;
+  }
+
+  /* KPI cards compactas */
+  .metricas-kpi-grid > div {
+    padding: 1rem !important;
+    border-radius: 12px !important;
+  }
+
+  .metricas-kpi-grid > div > div:last-child {
+    font-size: 1.4rem !important;
+  }
+
+  /* Ranking grid → 1 column */
+  .metricas-ranking-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+  }
+
+  /* Métricas tables overflow */
+  .metricas-container div[style*="overflow"] {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .metricas-container table {
+    min-width: 600px !important;
+  }
+
+  /* Empty state rows for all tabs */
+  .caballos-admin-container .members-table .empty-state-cell,
+  .instructoras-admin-container .members-table .empty-state-cell,
+  .reservas-admin-container .members-table td[colspan] {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 2rem 1rem !important;
+  }
+
+  /* =============================================
+     MODAL HORARIOS INSTRUCTORAS - RESPONSIVE
+     ============================================= */
+
+  /* Header "Horarios Registrados" + botón → columna */
+  .horarios-modal-header-row {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.75rem !important;
+  }
+
+  .horarios-modal-header-row button {
+    width: 100% !important;
+    justify-content: center !important;
+    min-height: 44px !important;
+  }
+
+  /* Modal en mobile: más alto para la grilla */
+  .instructoras-admin-container .modal-content,
+  .modal-content.add-client-modal {
+    max-height: 85vh !important;
+    margin: 0.5rem !important;
+    width: calc(100vw - 1rem) !important;
+    max-width: calc(100vw - 1rem) !important;
+  }
+
+  /* Título del modal que puede ser largo */
+  .modal-content h2 {
+    font-size: 1.1rem !important;
+    line-height: 1.3 !important;
+    word-break: break-word;
+  }
+
+  /* =============================================
+     HORARIOS EXTRA FORM CARD - RESPONSIVE
+     ============================================= */
+
+  /* Card del formulario */
+  .hp-form-card {
+    padding: 1rem !important;
+  }
+
+  /* Grid del form → 1 columna */
+  .hp-form-card form > div {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+  }
+
+  /* Inputs y selects del form */
+  .hp-form-card select,
+  .hp-form-card input[type="time"],
+  .hp-form-card input[type="date"] {
+    min-height: 44px !important;
+    font-size: 0.9rem !important;
+    padding: 0.6rem !important;
   }
 }

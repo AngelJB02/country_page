@@ -384,8 +384,8 @@ const HorariosPersonalizadosAdmin = () => {
         boxShadow: '0 2px 10px rgba(0,0,0,0.05)'
       }}>
         <div>
-          <h2 style={{ fontSize: '1.8rem', fontWeight: '800', color: '#2d5016', margin: 0 }}>Gestión de Horarios Especiales</h2>
-          <p style={{ color: '#666', marginTop: '4px' }}>Configura excepciones y horarios personalizados para clientes específicos</p>
+          <h2 className="hp-section-title" style={{ fontWeight: '800', color: '#2d5016', margin: 0 }}>Gestión de Horarios Especiales</h2>
+          <p className="hp-section-subtitle" style={{ color: '#666', marginTop: '4px' }}>Configura excepciones y horarios personalizados para clientes específicos</p>
         </div>
         <button 
           onClick={() => {
@@ -413,11 +413,11 @@ const HorariosPersonalizadosAdmin = () => {
       </div>
 
       {showForm && (
-        <div style={{ 
-          backgroundColor: 'white', 
-          padding: '2rem', 
-          borderRadius: '12px', 
-          boxShadow: '0 4px 20px rgba(0,0,0,0.08)', 
+        <div className="hp-form-card" style={{
+          backgroundColor: 'white',
+          padding: '2rem',
+          borderRadius: '12px',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
           marginBottom: '2.5rem',
           border: '1px solid #edf2f7',
           animation: 'slideDown 0.3s ease-out'

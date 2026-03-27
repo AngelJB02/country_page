@@ -23,7 +23,7 @@ const ReservasAdmin = ({ reservations }) => {
   };
 
   return (
-    <div className="dashboard-container">
+    <div className="reservas-admin-container">
       {/* <div className="dashboard-header enhanced-header">
         <div className="header-bg">
           <div className="header-texts">

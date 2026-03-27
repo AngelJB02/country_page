@@ -33,7 +33,7 @@ const NIVEL_COLORS = ['#4a7a2d', '#8b5a2b', '#d4a574', '#1a5276', '#6c3483'];
 const INST_COLORS  = ['#2e7d32', '#c0392b', '#1565c0', '#7b3f00', '#4a148c'];
 
 const KpiCard = ({ icon: Icon, label, value, sub, accent, light }) => (
-  <div style={{
+  <div className="metricas-kpi-card" style={{
     background: C.white, borderRadius: 16, padding: '1.4rem 1.6rem',
     boxShadow: '0 2px 12px rgba(0,0,0,0.06)', display: 'flex',
     flexDirection: 'column', gap: 8, borderLeft: `5px solid ${accent || C.green}`,
@@ -50,7 +50,7 @@ const KpiCard = ({ icon: Icon, label, value, sub, accent, light }) => (
 );
 
 const SectionCard = ({ title, badge, badgeColor = '#4a7a2d', icon: Icon, children }) => (
-  <div style={{ background: C.white, borderRadius: 20, padding: '1.8rem', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
+  <div className="metricas-section-card" style={{ background: C.white, borderRadius: 20, padding: '1.8rem', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', overflow: 'visible' }}>
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         {Icon && <Icon size={20} color={badgeColor} />}
@@ -166,7 +166,7 @@ const MetricasResumen = () => {
   );
 
   return (
-    <div style={{ background: C.bg, minHeight: '100%', padding: '2rem', fontFamily: 'inherit', position: 'relative' }}>
+    <div className="metricas-container" style={{ background: C.bg, minHeight: '100%', padding: '2rem', fontFamily: 'inherit', position: 'relative' }}>
 
       {/* Overlay de carga al cambiar filtros */}
       {loading && metricas && (
@@ -209,7 +209,7 @@ const MetricasResumen = () => {
         background: C.white, borderRadius: 20, padding: '1.2rem 2rem',
         boxShadow: '0 2px 12px rgba(0,0,0,0.05)', marginBottom: '1.8rem',
         display: 'flex', flexWrap: 'wrap', gap: '1.2rem', alignItems: 'center', justifyContent: 'space-between'
-      }}>
+      }} className="metricas-filter-bar">
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ background: C.greenLight, borderRadius: 12, padding: 10, display: 'flex' }}>
             <Activity size={22} color={C.green} />
@@ -245,7 +245,7 @@ const MetricasResumen = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.8rem', maxWidth: 1440, margin: '0 auto' }}>
 
           {/* KPIs */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.2rem' }}>
+          <div className="metricas-kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.2rem' }}>
             <KpiCard icon={CheckCircle}   label="Clases Realizadas"    value={totalClasesRealizadas} sub="Completadas en el periodo"      accent={C.green}   light={C.greenLight} />
             <KpiCard icon={AlertTriangle} label="Inasistencias"        value={totalFaltas}           sub="Alumnas que no avisaron"        accent={C.red}     light={C.redLight} />
             <KpiCard icon={TrendingUp}    label="Tasa de Asistencia"   value={`${tasaGlobal}%`}      sub="Del total de clases agendadas"  accent={C.brown}   light={C.brownLight} />
@@ -254,8 +254,8 @@ const MetricasResumen = () => {
 
           {/* Tabla por nivel */}
           <SectionCard title="Rendimiento por Nivel de Clase" badge={`${metricas.metricas_por_clase?.length} niveles`} icon={BookOpen}>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 10px' }}>
+            <div className="metricas-nivel-wrapper" style={{ overflowX: 'auto' }}>
+              <table className="metricas-nivel-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 10px' }}>
                 <thead>
                   <tr style={{ color: C.textHint, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 1 }}>
                     {['Nivel', 'Alumna Estrella', 'Mas Inasistencias', 'Horario mas Demandado', 'Clases Realizadas'].map((h, i) => (
@@ -324,7 +324,7 @@ const MetricasResumen = () => {
           </SectionCard>
 
           {/* Ranking de jinetes + Desempenyo instructoras */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.8rem' }}>
+          <div className="metricas-ranking-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.8rem' }}>
 
             {/* Top 5 Jinetes */}
             <SectionCard title="Alumnas más Constantes" badge="Top 5 del periodo" badgeColor={C.green} icon={Star}>
@@ -433,6 +433,82 @@ const MetricasResumen = () => {
       <style>{`
         .nivel-row:hover { background: #f0f4ef !important; transform: translateX(4px); }
         input[type="date"] { color-scheme: light; }
+
+        @media (max-width: 480px) {
+          .metricas-container {
+            padding: 0.6rem !important;
+          }
+
+          /* Barra de filtros compacta */
+          .metricas-filter-bar {
+            padding: 0.75rem !important;
+            gap: 0.6rem !important;
+            margin-bottom: 0.75rem !important;
+            border-radius: 14px !important;
+          }
+          .metricas-filter-bar > div:first-child { gap: 8px !important; }
+          .metricas-filter-bar > div:nth-child(2) { gap: 5px !important; }
+          .metricas-filter-bar > div:nth-child(2) button {
+            padding: 0.3rem 0.65rem !important;
+            font-size: 0.72rem !important;
+          }
+          .metricas-filter-bar > div:nth-child(3) { gap: 5px !important; width: 100%; }
+          .metricas-filter-bar > div:nth-child(3) input {
+            font-size: 0.72rem !important;
+            padding: 0.3rem 0.5rem !important;
+            flex: 1;
+          }
+
+          /* KPI 2×2 compacto — sin sub-texto */
+          .metricas-kpi-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 0.6rem !important;
+          }
+          .metricas-kpi-card {
+            padding: 0.75rem 0.8rem !important;
+            border-radius: 12px !important;
+            gap: 4px !important;
+          }
+          .metricas-kpi-card > div:first-child { gap: 5px !important; }
+          .metricas-kpi-card > div:first-child > div { padding: 5px !important; }
+          .metricas-kpi-card > div:first-child span { font-size: 0.58rem !important; }
+          .metricas-kpi-card > div:nth-child(2) { font-size: 1.5rem !important; }
+          /* Ocultar sub-texto en móvil — ocupa demasiado */
+          .metricas-kpi-card > div:nth-child(3) { display: none !important; }
+
+          /* Section cards */
+          .metricas-section-card {
+            padding: 0.9rem !important;
+            border-radius: 14px !important;
+            overflow: visible !important;
+          }
+          .metricas-section-card > div:first-child { margin-bottom: 0.75rem !important; }
+          .metricas-section-card h3 { font-size: 0.9rem !important; }
+
+          /* Tabla niveles: scroll horizontal con todo visible */
+          .metricas-nivel-wrapper {
+            overflow-x: scroll !important;
+            -webkit-overflow-scrolling: touch !important;
+            max-width: 100% !important;
+            display: block !important;
+          }
+          .metricas-nivel-table {
+            min-width: 560px !important;
+            width: auto !important;
+          }
+          .metricas-nivel-table th,
+          .metricas-nivel-table td {
+            white-space: nowrap !important;
+            padding: 0.5rem 0.6rem !important;
+            font-size: 0.78rem !important;
+          }
+
+          /* Ranking en 1 columna */
+          .metricas-ranking-grid {
+            grid-template-columns: 1fr !important;
+            gap: 0.75rem !important;
+          }
+        }
       `}</style>
     </div>
   );

@@ -38,10 +38,10 @@ const LogoutButton = ({
 
   return (
     <>
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: '1rem',
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.4rem',
         flexWrap: 'nowrap'
       }}>
         {showUserName && (
@@ -56,7 +56,7 @@ const LogoutButton = ({
             background: 'var(--cream-overlay)',
             border: '2px solid rgba(255,255,255,0.3)',
             color: 'var(--primary-brown)',
-            padding: '0.6rem 1.2rem',
+            padding: '0.4rem 0.8rem',
             borderRadius: 'var(--radius-xl)',
             boxShadow: 'var(--medium-shadow)',
             display: 'flex',
@@ -64,7 +64,7 @@ const LogoutButton = ({
             justifyContent: 'center',
             gap: '0.5rem',
             cursor: 'pointer',
-            fontSize: '0.9rem',
+            fontSize: '0.8rem',
             fontWeight: '600',
             transition: 'all 0.2s ease',
             fontFamily: 'var(--font-primary)',

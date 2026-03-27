@@ -2116,7 +2116,7 @@ const InstructorasAdmin = () => {
             <div className="modal-content add-client-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: "800px" }}>
               <h2>Horarios Disponibles - {selectedInstructorHorarios.nombre} {selectedInstructorHorarios.apellido}</h2>
               
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+              <div className="horarios-modal-header-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
                 <h3 style={{ margin: 0 }}>Horarios Registrados</h3>
                 <div style={{ display: "flex", gap: "0.5rem" }}>
                   <button 
