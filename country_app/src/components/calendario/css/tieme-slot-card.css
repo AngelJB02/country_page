@@ -1,16 +1,17 @@
 /* Styles for TimeSlotCard (tsc- prefix) */
 .tsc-card {
-  padding: 14px;
-  border-radius: 8px;
-  border: 2px solid #9caf88; /* default border */
+  padding: 12px;
+  border-radius: 12px;
+  border: 1.5px solid #c8d4bc;
   background-color: white;
   color: #6b4423;
   cursor: pointer;
   transition: all 0.2s ease;
-  min-height: 120px;
+  min-height: 100px;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 1px 4px rgba(107, 68, 35, 0.06);
 }
 
 .tsc-card.tsc--blocked,
@@ -19,10 +20,10 @@
 }
 
 .tsc-card.tsc--full {
-  /* Completo: clase llena (sin cupo), fondo naranja/terracota oscuro */
-  background-color: #b8856a !important;
-  border-color: #a67557 !important;
+  background-color: #a07560 !important;
+  border-color: #a07560 !important;
   color: white !important;
+  box-shadow: none;
 }
 
 .tsc-card.tsc--full .tsc-inner,
@@ -32,13 +33,14 @@
 }
 
 .tsc-card.tsc--blocked {
-  /* Bloqueado: color oscuro/gris para indicar no disponible (diferente de 'full') */
-  background-color: #333333 !important;
-  border-color: #2a2a2a !important;
+  background-color: #5a5a5a !important;
+  border-color: #5a5a5a !important;
   color: white !important;
+  box-shadow: none;
+  opacity: 0.7;
 }
 
-/* Cancelada por instructor: color rojo/naranja para distinguir */
+/* Cancelada por instructor */
 .tsc-card.tsc--cancelled-instructor {
   background-color: #d9534f !important;
   border-color: #c9302c !important;
@@ -63,8 +65,7 @@
   opacity: 0.95;
 }
 
-/* Asegurar que el texto interno y metadatos también sean blancos en bloqueado */
-/* Solo forzar color blanco en fondo bloqueado para .tsc-inner, .tsc-time y .tsc-horse, pero NO en .tsc-meta */
+/* Bloqueado: texto blanco */
 .tsc-card.tsc--blocked .tsc-inner,
 .tsc-card.tsc--blocked .tsc-time,
 .tsc-card.tsc--blocked .tsc-horse { color: white !important; }
@@ -73,16 +74,17 @@
   background-color: #c17b4a;
   border-color: #c17b4a;
   color: white;
+  box-shadow: 0 2px 8px rgba(193, 123, 74, 0.3);
 }
 
-/* Parcial: algunas reservas (otros usuarios) */
+/* Parcial */
 .tsc-card.tsc--partial {
-  background-color: #fff4e6; /* ligero naranja/crema */
-  border-color: #f1c27d;
+  background-color: #fff7ee;
+  border-color: #e8b87a;
   color: #6b4423;
 }
 
-/* Horario Personalizado (Extra) */
+/* Horario Personalizado */
 .tsc-card.tsc--personalized {
   border: 2px dashed #c17b4a !important;
   background-color: #fff9f0 !important;
@@ -93,83 +95,92 @@
   font-weight: bold;
 }
 
-/* Usuario: tu reserva (más destacado) */
+/* Usuario: tu reserva */
 .tsc-card.tsc--booked {
   background-color: #c17b4a;
   border-color: #c17b4a;
   color: white;
 }
 
-/* Hover lift only when available */
+/* Hover */
 .tsc-card:not(.tsc--blocked):not(.tsc--full):hover {
-  box-shadow: 0 4px 12px rgba(107, 68, 35, 0.15);
+  box-shadow: 0 4px 16px rgba(107, 68, 35, 0.14);
   transform: translateY(-2px);
 }
 
-.tsc-inner { 
-  display: flex; 
-  flex-direction: column; 
-  align-items: center; 
-  gap: 6px; 
+.tsc-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
   width: 100%;
 }
 
-.tsc-time { 
-  font-size: 16px; 
-  font-weight: 600; 
+.tsc-time {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
 }
 
-.tsc-horses { 
-  display: flex; 
-  flex-wrap: wrap; 
-  justify-content: center; 
-  gap: 3px; 
+.tsc-horses {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px;
 }
 
-.tsc-horse { 
-  font-size: 20px; 
-  opacity: 0.3; 
+.tsc-horse {
+  font-size: 16px;
+  opacity: 0.25;
+  line-height: 1;
 }
 
 .tsc-horse--filled { opacity: 1; }
 
-.tsc-meta { 
-  font-size: 11px; 
-  font-weight: 500; 
-  text-align: center; 
+.tsc-meta {
+  font-size: 10px;
+  font-weight: 600;
+  text-align: center;
   color: #6b4423;
   line-height: 1.3;
   word-break: break-word;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 
-.tsc-available-text { color: #9caf88; }
+.tsc-available-text { color: #7a9c5f; }
 
 .tsc-instructora {
-  margin-top: 4px;
-  font-size: 10px;
-  opacity: 0.9;
+  margin-top: 3px;
+  font-size: 9px;
+  opacity: 0.85;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 500;
 }
 
-/* Mensajes para estados */
-/* Mantener color blanco solo en estados con fondo oscuro */
+/* Texto blanco en fondos oscuros */
 .tsc-card.tsc--full .tsc-meta,
 .tsc-card.tsc--booked .tsc-meta,
 .tsc-card.tsc--blocked .tsc-meta {
   color: white;
 }
 
-/* Media queries para responsividad */
+/* ========================
+   RESPONSIVE
+   ======================== */
 
 /* Móviles pequeños (< 480px) */
 @media (max-width: 480px) {
   .tsc-card {
-    padding: 10px;
-    min-height: 100px;
+    padding: 10px 8px;
+    min-height: 88px;
+    border-radius: 10px;
     border-width: 1.5px;
   }
 
   .tsc-inner {
-    gap: 4px;
+    gap: 3px;
   }
 
   .tsc-time {
@@ -177,22 +188,21 @@
   }
 
   .tsc-horses {
-    gap: 2px;
+    gap: 1px;
   }
 
   .tsc-horse {
-    font-size: 16px;
+    font-size: 14px;
   }
 
   .tsc-meta {
-    font-size: 10px;
-  }
-
-  .tsc-instructora {
     font-size: 9px;
   }
 
-  /* Reducir efecto hover en móviles */
+  .tsc-instructora {
+    font-size: 8px;
+  }
+
   .tsc-card:not(.tsc--blocked):not(.tsc--full):hover {
     transform: translateY(-1px);
   }
@@ -202,7 +212,7 @@
 @media (min-width: 481px) and (max-width: 768px) {
   .tsc-card {
     padding: 12px;
-    min-height: 110px;
+    min-height: 100px;
   }
 
   .tsc-time {
@@ -210,23 +220,50 @@
   }
 
   .tsc-horse {
-    font-size: 18px;
+    font-size: 16px;
   }
 
   .tsc-meta {
-    font-size: 10.5px;
+    font-size: 10px;
   }
 }
 
-/* Tablets grandes y escritorio (> 768px) */
+/* Desktop (> 768px) */
 @media (min-width: 769px) {
   .tsc-card {
     padding: 16px;
-    min-height: 130px;
+    min-height: 120px;
   }
 
   .tsc-inner {
-    gap: 8px;
+    gap: 6px;
+  }
+
+  .tsc-time {
+    font-size: 17px;
+  }
+
+  .tsc-horse {
+    font-size: 20px;
+  }
+
+  .tsc-horses {
+    gap: 3px;
+  }
+
+  .tsc-meta {
+    font-size: 11px;
+  }
+
+  .tsc-instructora {
+    font-size: 10px;
+  }
+}
+
+/* Pantallas grandes (> 1200px) */
+@media (min-width: 1200px) {
+  .tsc-card {
+    min-height: 130px;
   }
 
   .tsc-time {
@@ -234,33 +271,6 @@
   }
 
   .tsc-horse {
-    font-size: 24px;
-  }
-
-  .tsc-horses {
-    gap: 4px;
-  }
-
-  .tsc-meta {
-    font-size: 12px;
-  }
-
-  .tsc-instructora {
-    font-size: 11px;
-  }
-}
-
-/* Pantallas muy grandes (> 1200px) */
-@media (min-width: 1200px) {
-  .tsc-card {
-    min-height: 140px;
-  }
-
-  .tsc-time {
-    font-size: 20px;
-  }
-
-  .tsc-horse {
-    font-size: 26px;
+    font-size: 22px;
   }
 }

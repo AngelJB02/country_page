@@ -148,7 +148,7 @@ const MembershipAdminDashboardLocal = () => {
   // Función para obtener las credenciales reales del servidor (con verificación de duplicados)
   const getRealCredentials = async (nombre, apellido, customPassword = null) => {
     try {
-      const response = await fetch("http://localhost:3001/api/users/preview-credentials", {
+      const response = await fetch("http://192.168.201.101:3001/api/users/preview-credentials", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ nombre, apellido, customPassword }),
@@ -186,7 +186,7 @@ const MembershipAdminDashboardLocal = () => {
   // Función para cargar conteo de pagos
   const loadPaymentCounts = useCallback(async () => {
     try {
-      const response = await fetch("http://localhost:3001/api/users/payment-counts")
+      const response = await fetch("http://192.168.201.101:3001/api/users/payment-counts")
       if (response.ok) {
         const counts = await response.json()
         const countsMap = {}
@@ -203,7 +203,7 @@ const MembershipAdminDashboardLocal = () => {
   // Función para cargar estado de pagos (vencidos, próximos a vencer)
   const loadPaymentStatus = useCallback(async () => {
     try {
-      const response = await fetch("http://localhost:3001/api/users/payment-status")
+      const response = await fetch("http://192.168.201.101:3001/api/users/payment-status")
       if (response.ok) {
         const status = await response.json()
         const statusMap = {}
@@ -366,7 +366,7 @@ const MembershipAdminDashboardLocal = () => {
     
     // Cargar historial de pagos
     try {
-      const response = await fetch(`http://localhost:3001/api/users/payment-history/${member.id}`)
+      const response = await fetch(`http://192.168.201.101:3001/api/users/payment-history/${member.id}`)
       if (response.ok) {
         const history = await response.json()
         setPaymentHistory(history)
@@ -415,7 +415,7 @@ const MembershipAdminDashboardLocal = () => {
         return
       }
 
-      const response = await fetch(`http://localhost:3001/api/users/payment/${editingPayment.id}`, {
+      const response = await fetch(`http://192.168.201.101:3001/api/users/payment/${editingPayment.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -466,7 +466,7 @@ const MembershipAdminDashboardLocal = () => {
         observaciones: newPayment.observaciones || null
       }
 
-      const response = await fetch("http://localhost:3001/api/users/add-payment", {
+      const response = await fetch("http://192.168.201.101:3001/api/users/add-payment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(paymentData),
@@ -474,7 +474,7 @@ const MembershipAdminDashboardLocal = () => {
 
       if (response.ok) {
         // Recargar historial de pagos
-        const historyResponse = await fetch(`http://localhost:3001/api/users/payment-history/${selectedMember.id}`)
+        const historyResponse = await fetch(`http://192.168.201.101:3001/api/users/payment-history/${selectedMember.id}`)
         if (historyResponse.ok) {
           const history = await historyResponse.json()
           setPaymentHistory(history)
@@ -556,7 +556,7 @@ const MembershipAdminDashboardLocal = () => {
         })
       }
 
-      const response = await fetch("http://localhost:3001/api/users/register-cliente", {
+      const response = await fetch("http://192.168.201.101:3001/api/users/register-cliente", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(clientData),
@@ -607,7 +607,7 @@ const MembershipAdminDashboardLocal = () => {
 
   const refreshUsersList = useCallback((silent = false) => {
     if (!silent) setLoading(true)
-    return fetch("http://localhost:3001/api/users/users-with-payments")
+    return fetch("http://192.168.201.101:3001/api/users/users-with-payments")
       .then((res) => res.json())
       .then((data) => {
         const mapped = data.map((u) => ({
@@ -656,7 +656,7 @@ const MembershipAdminDashboardLocal = () => {
 
       changes.id_usuario = selectedMember.id
 
-      const paymentResponse = await fetch("http://localhost:3001/api/users/payments", {
+      const paymentResponse = await fetch("http://192.168.201.101:3001/api/users/payments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(changes),
@@ -848,7 +848,7 @@ const MembershipAdminDashboardLocal = () => {
                             const newStatus = e.target.value
                             try {
                               const response = await fetch(
-                                `http://localhost:3001/api/users/update-status/${member.id}`,
+                                `http://192.168.201.101:3001/api/users/update-status/${member.id}`,
                                 {
                                   method: "PATCH",
                                   headers: { "Content-Type": "application/json" },

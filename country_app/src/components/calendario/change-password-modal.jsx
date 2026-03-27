@@ -49,7 +49,7 @@ export function ChangePasswordModal({ isOpen, onClose }) {
     
     try {
       // Actualizar contraseña enviando la contraseña actual para validación
-      const updateResponse = await fetch(`http://localhost:3001/api/users/update-password/${userData.id}`, {
+      const updateResponse = await fetch(`http://192.168.201.101:3001/api/users/update-password/${userData.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

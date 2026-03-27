@@ -232,7 +232,7 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
       }
 
       // Consultar el usuario en el backend
-      const res = await fetch(`http://localhost:3001/api/users/${userIdLocal}`);
+      const res = await fetch(`http://192.168.201.101:3001/api/users/${userIdLocal}`);
       
       console.log('🌐 Response status:', res.status);
       console.log('🌐 Response ok:', res.ok);
@@ -737,94 +737,80 @@ function MenuCalendario() {
 
   // Monitor de cambios de nivel en tiempo real
     useEffect(() => {
-      // No hacer polling si no hay usuario en sesión
       if (!userId || !localStorage.getItem('user')) return;
-  
+
       const checkUserLevel = async () => {
-        // Optimización: No hacer peticiones si la pestaña no está visible
-        if (document.hidden) return;
+        if (!localStorage.getItem('user')) return;
 
         try {
-          // Verificar nuevamente existencia de sesión antes de la llamada
-          if (!localStorage.getItem('user')) return;
-  
-          // Usar la misma URL que en handleConfirm
           const response = await fetch(`http://localhost:3001/api/users/${userId}`);
-          
           if (!response.ok) return;
-        
-        const data = await response.json();
-        const userDB = data.usuario;
-        
-        if (!userDB) return;
 
-        const currentLevel = userLevel;
-        const newLevel = userDB.tipo_nivel;
-        
-        // Si hay cambio de nivel
-        if (newLevel && currentLevel !== newLevel) {
-          console.log(`🔄 Actualización de nivel detectada: ${currentLevel} -> ${newLevel}`);
-          
-          // 1. Actualizar localStorage
-          const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-          const usuarioActualizado = {
-            ...currentUser,
-            id: userDB.id,
-            nombre: userDB.nombre,
-            rol: userDB.rol,
-            estatus: userDB.estatus,
-            tipo_cliente: userDB.tipo_cliente,
-            tipo_nivel: userDB.tipo_nivel
-          };
-          localStorage.setItem('user', JSON.stringify(usuarioActualizado));
-          
-          // 2. Actualizar estado (esto disparará el re-render de CalendarContent)
-          setUserLevel(newLevel);
-          
-          // 3. Notificar al usuario
-          toast.info(`Tu nivel ha sido actualizado a: ${newLevel}`, {
-            position: "top-center",
-            autoClose: 4000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-          });
-        }
-      } catch (error) {
-        // Silencioso para no molestar al usuario con errores de red en polling
-        console.error("Error verificando nivel de usuario:", error);
-      }
-    };
+          const data = await response.json();
+          const userDB = data.usuario;
+          if (!userDB) return;
 
-    // Verificar cada 10 segundos (optimizado para reducir carga)
-    const intervalId = setInterval(checkUserLevel, 10000);
+          const newLevel = userDB.tipo_nivel;
 
-    // Listener para eventos de storage (cambios en otras pestañas)
-    const handleStorageChange = (e) => {
-      if (e.key === 'user') {
-        const user = localStorage.getItem('user');
-        if (user) {
-          try {
-            const parsed = JSON.parse(user);
-            const newLevel = parsed.tipo_nivel;
-            if (newLevel && newLevel !== userLevel) {
-              setUserLevel(newLevel);
-            }
-          } catch (err) {
-            console.error(err);
+          if (newLevel && newLevel !== userLevel) {
+            const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+            localStorage.setItem('user', JSON.stringify({
+              ...currentUser,
+              id: userDB.id,
+              nombre: userDB.nombre,
+              rol: userDB.rol,
+              estatus: userDB.estatus,
+              tipo_cliente: userDB.tipo_cliente,
+              tipo_nivel: userDB.tipo_nivel
+            }));
+
+            setUserLevel(newLevel);
+
+            toast.info(`Tu nivel ha sido actualizado a: ${newLevel}`, {
+              position: "top-center",
+              autoClose: 4000,
+            });
           }
+        } catch (error) {
+          // Silencioso
         }
-      }
-    };
+      };
 
-    window.addEventListener('storage', handleStorageChange);
+      // Polling cada 30s (solo si la pestaña está visible)
+      const intervalId = setInterval(() => {
+        if (!document.hidden) checkUserLevel();
+      }, 30000);
 
-    return () => {
-      clearInterval(intervalId);
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, [userId, userLevel]);
+      // Checar inmediatamente al volver a la pestaña/app
+      const handleVisibility = () => {
+        if (!document.hidden) checkUserLevel();
+      };
+      document.addEventListener('visibilitychange', handleVisibility);
+
+      // Checar al hacer focus en la ventana (ej: alt-tab de vuelta)
+      const handleFocus = () => checkUserLevel();
+      window.addEventListener('focus', handleFocus);
+
+      // Cambios desde otras pestañas
+      const handleStorageChange = (e) => {
+        if (e.key === 'user') {
+          try {
+            const parsed = JSON.parse(e.newValue);
+            if (parsed?.tipo_nivel && parsed.tipo_nivel !== userLevel) {
+              setUserLevel(parsed.tipo_nivel);
+            }
+          } catch {}
+        }
+      };
+      window.addEventListener('storage', handleStorageChange);
+
+      return () => {
+        clearInterval(intervalId);
+        document.removeEventListener('visibilitychange', handleVisibility);
+        window.removeEventListener('focus', handleFocus);
+        window.removeEventListener('storage', handleStorageChange);
+      };
+    }, [userId, userLevel]);
 
   const handleLogout = () => {
     console.log("Cerrando sesión...");

@@ -7,31 +7,30 @@ export function CalendarHeader({ clientName, level, onLogout, onChangePassword }
   return (
     <header className="ch-header">
       <div className="ch-container">
-        <div className="ch-info">
-          {/* Saludo breve antes del nombre */}
-          <p className="ch-welcome">Bienvenido/a</p>
-          <h1 className="ch-title">{clientName}</h1>
-          <p className="ch-subtitle">Nivel: {level}</p>
+        <div className="ch-top">
+          <div className="ch-info">
+            <h1 className="ch-title">{clientName}</h1>
+            <span className="ch-subtitle">{level}</span>
+          </div>
+          <div className="ch-actions">
+            {onChangePassword && (
+              <button
+                onClick={onChangePassword}
+                className="ch-change-btn"
+                aria-label="Cambiar contraseña"
+              >
+                Cambiar contraseña
+              </button>
+            )}
+            <button
+              onClick={onLogout}
+              className="ch-logout-btn"
+              aria-label="Cerrar sesión"
+            >
+              Salir
+            </button>
+          </div>
         </div>
-        {/* Change password button (optional) */}
-        {onChangePassword && (
-          <button
-            onClick={onChangePassword}
-            className="ch-change-btn"
-            aria-label="Cambiar contraseña"
-          >
-            Cambiar contraseña
-          </button>
-        )}
-
-        <button
-          onClick={onLogout}
-          className="ch-logout-btn"
-          aria-label="Cerrar sesión"
-        >
-          <span className="ch-logout-icon">→</span>
-          <span>Cerrar sesión</span>
-        </button>
       </div>
     </header>
   );

@@ -414,7 +414,7 @@ const FormularioUsuario = React.memo(({ onCrearUsuario, loading }) => {
     async (nombre, apellido, customPassword = null) => {
       try {
         const response = await fetch(
-          "http://localhost:3001/api/users/preview-credentials",
+          "http://192.168.201.101:3001/api/users/preview-credentials",
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -1113,7 +1113,7 @@ const TablaUsuarios = React.memo(({ usuarios, loading, onRecargar }) => {
   const actualizarPasswordSilent = useCallback(async (id, password) => {
     try {
       const response = await fetch(
-        `http://localhost:3001/api/users/update-password/${id}`,
+        `http://192.168.201.101:3001/api/users/update-password/${id}`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -1130,7 +1130,7 @@ const TablaUsuarios = React.memo(({ usuarios, loading, onRecargar }) => {
   const actualizarCorreoSilent = useCallback(async (id, correo) => {
     try {
       const response = await fetch(
-        `http://localhost:3001/api/users/update-email/${id}`,
+        `http://192.168.201.101:3001/api/users/update-email/${id}`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },

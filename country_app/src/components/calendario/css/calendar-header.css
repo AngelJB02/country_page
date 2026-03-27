@@ -1,8 +1,9 @@
 @import url(../../../CSS/variables.css);
+
 .ch-header {
 	background-color: white;
-	border-bottom: 1px solid #D4C4B0;
-	box-shadow: 0 2px 8px rgba(107, 68, 35, 0.08);
+	border-bottom: 1px solid #e8e0d5;
+	box-shadow: 0 1px 4px rgba(107, 68, 35, 0.06);
 	position: sticky;
 	top: 0;
 	z-index: 10;
@@ -11,151 +12,177 @@
 .ch-container {
 	max-width: 1280px;
 	margin: 0 auto;
-	padding: 72px 48px;
-	/* allow absolute-centering of the inner .ch-info */
-	position: relative;
-	display: flex;
-	align-items: center;
-	justify-content: flex-end;
+	padding: 12px 16px;
 }
 
+/* Top row: info left, actions right */
+.ch-top {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+}
+
+/* Name + level inline */
 .ch-info {
 	display: flex;
-	flex-direction: column;
-	gap: 9px;
-	text-align: center;
-	/* center the info block horizontally in the header while keeping the logout button on the right */
-	position: absolute;
-	left: 50%;
-	top: 50%;
-	transform: translate(-50%, -50%);
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+	flex: 1;
 }
 
 .ch-title {
-	font-size: 40px;
+	font-size: 18px;
 	font-family: serif;
 	color: #6B4423;
-	letter-spacing: -0.025em;
+	letter-spacing: -0.02em;
 	margin: 0;
-    text-align: center;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	font-weight: 700;
+	line-height: 1.2;
 }
 
 .ch-subtitle {
-	font-size: 18px;
+	font-size: 11px;
 	color: #8B6F47;
-	/* Use a heavier weight so the subtitle appears bold */
-	font-weight: 700;
+	font-weight: 600;
 	margin: 0;
-	font-family: var(--font-accent);
-	/* remove background, show only the border */
-	background-color: transparent;
-	/* keep padding so the border surrounds the text like a badge */
-	padding: 4px 10px;
-	display: inline-block;
-	border-radius: 12px;
-	border: 1px solid var(--light-brown);
-	box-shadow: none; /* no background lift */
-	overflow: visible;
+	background-color: #f5f1e8;
+	padding: 3px 8px;
+	border-radius: 20px;
+	white-space: nowrap;
+	flex-shrink: 0;
+	line-height: 1.3;
 }
 
-/* Pequeño saludo de bienvenida situado por encima del nombre del cliente */
-.ch-welcome {
-	font-size: 20px;
-	color: #8B6F47;
-	margin: 0 0 6px 0;
-	font-weight: 500;
-	opacity: 0.95;
-	/* Use the project's accent font for UI text */
-	font-family: var(--font-accent);
-}
-
-/* Responsive fallback: on small screens stack normally to avoid overlap */
-@media (max-width: 640px) {
-	.ch-container {
-		padding: 16px 20px;
-		flex-direction: column;
-		gap: 16px;
-	}
-
-	.ch-info {
-		position: static;
-		transform: none;
-		margin: 0;
-		width: 100%;
-	}
-
-	.ch-title {
-		font-size: 28px;
-	}
-
-	.ch-welcome {
-		font-size: 16px;
-	}
-
-	.ch-subtitle {
-		font-size: 14px;
-		padding: 3px 8px;
-	}
-
-	.ch-logout-btn,
-	.ch-change-btn {
-		width: 100%;
-		justify-content: center;
-		margin-right: 0;
-		font-size: 16px;
-	}
-
-	.ch-change-btn {
-		margin-bottom: 8px;
-	}
+/* Buttons row */
+.ch-actions {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex-shrink: 0;
 }
 
 .ch-logout-btn {
 	display: inline-flex;
- 	align-items: center;
-    font-size: 18px;
- 	font-family: var(--font-accent);
- 	/* apply brown background only on the logout button */
- 	background-color: #A86A4F;
- 	gap: 8px;
- 	padding: 8px 16px;
- 	border: none;
- 	color: #ffffff;
- 	cursor: pointer;
- 	border-radius: 6px;
- 	transition: background-color 0.2s, color 0.2s, transform 0.12s;
+	align-items: center;
+	justify-content: center;
+	font-size: 12px;
+	font-family: var(--font-accent);
+	background-color: #6B4423;
+	padding: 7px 12px;
+	border: none;
+	color: #ffffff;
+	cursor: pointer;
+	border-radius: 6px;
+	transition: background-color 0.2s, transform 0.12s;
+	white-space: nowrap;
+	font-weight: 600;
 }
 
 .ch-logout-btn:hover,
 .ch-logout-btn:focus {
- 	/* slightly darker on hover */
- 	background-color: #8f513f;
- 	color: #ffffff;
- 	outline: none;
+	background-color: #4A2F17;
+	outline: none;
 }
 
 .ch-logout-btn:active {
-	transform: translateY(1px);
-}
-
-.ch-logout-icon {
-	/* keep arrow spacing consistent */
-	font-weight: 700;
+	transform: scale(0.96);
 }
 
 .ch-change-btn {
 	display: inline-flex;
 	align-items: center;
-	font-size: 16px;
+	justify-content: center;
+	font-size: 12px;
 	font-family: var(--font-accent);
 	background: transparent;
 	color: var(--primary-brown);
-	border: 1px solid var(--stone-gray);
-	padding: 8px 12px;
+	border: 1.5px solid #d4c4b0;
+	padding: 6px 10px;
 	border-radius: 6px;
-	margin-right: 8px;
 	cursor: pointer;
+	transition: all 0.15s;
+	white-space: nowrap;
+	font-weight: 500;
 }
 
 .ch-change-btn:hover { background: rgba(107,68,35,0.04); }
+.ch-change-btn:active { transform: scale(0.96); }
 
+/* ========================
+   RESPONSIVE
+   ======================== */
+
+/* Móviles pequeños: stack info arriba, actions abajo */
+@media (max-width: 420px) {
+	.ch-container {
+		padding: 10px 12px;
+	}
+
+	.ch-top {
+		flex-wrap: wrap;
+		gap: 8px;
+	}
+
+	.ch-info {
+		width: 100%;
+	}
+
+	.ch-title {
+		font-size: 16px;
+	}
+
+	.ch-actions {
+		width: 100%;
+		gap: 6px;
+	}
+
+	.ch-change-btn,
+	.ch-logout-btn {
+		flex: 1;
+		justify-content: center;
+		padding: 8px 8px;
+		font-size: 12px;
+	}
+}
+
+/* Tablets */
+@media (min-width: 641px) {
+	.ch-container {
+		padding: 14px 24px;
+	}
+
+	.ch-title {
+		font-size: 22px;
+	}
+
+	.ch-subtitle {
+		font-size: 12px;
+		padding: 3px 10px;
+	}
+
+	.ch-logout-btn,
+	.ch-change-btn {
+		font-size: 13px;
+		padding: 8px 14px;
+	}
+}
+
+/* Desktop */
+@media (min-width: 1025px) {
+	.ch-container {
+		padding: 16px 48px;
+	}
+
+	.ch-title {
+		font-size: 26px;
+	}
+
+	.ch-subtitle {
+		font-size: 13px;
+	}
+}
