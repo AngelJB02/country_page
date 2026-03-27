@@ -157,11 +157,11 @@ const HorariosPersonalizadosAdmin = () => {
     setLoading(true);
     try {
       const [hRes, cRes, iRes, clRes, icRes] = await Promise.all([
-        axios.get('http://192.168.201.101:3001/api/horarios/personalizados-all'),
-        axios.get('http://192.168.201.101:3001/api/users/all'),
-        axios.get('http://192.168.201.101:3001/api/instructoras'),
-        axios.get('http://192.168.201.101:3001/api/horarios/clases'),
-        axios.get('http://192.168.201.101:3001/api/instructoras/clases-asignadas')
+        axios.get('https://elrefugiocountryclub.com/api/api/horarios/personalizados-all'),
+        axios.get('https://elrefugiocountryclub.com/api/api/users/all'),
+        axios.get('https://elrefugiocountryclub.com/api/api/instructoras'),
+        axios.get('https://elrefugiocountryclub.com/api/api/horarios/clases'),
+        axios.get('https://elrefugiocountryclub.com/api/api/instructoras/clases-asignadas')
       ]);
       setHorarios(hRes.data);
       // Solo clientes activos (no bloqueados)
@@ -322,18 +322,18 @@ const HorariosPersonalizadosAdmin = () => {
         if (editingIds.length > 1 || (formData.tipo === 'recurrente' && formData.dias_semana.length > 1)) {
           // Grupo multi-día: borrar todos los viejos y crear nuevos por cada día seleccionado
           await Promise.all(editingIds.map(id =>
-            axios.delete(`http://192.168.201.101:3001/api/horarios/personalizados/${id}`)
+            axios.delete(`https://elrefugiocountryclub.com/api/api/horarios/personalizados/${id}`)
           ));
           const dias = formData.tipo === 'recurrente' ? formData.dias_semana : [null];
           await Promise.all(dias.map(dia => {
             const payload = { ...formData, dia_semana: dia };
-            return axios.post('http://192.168.201.101:3001/api/horarios/personalizados', payload);
+            return axios.post('https://elrefugiocountryclub.com/api/api/horarios/personalizados', payload);
           }));
           toast.success('Horario actualizado correctamente');
         } else {
           // Edición simple vía PUT
           const payload = { ...formData, dia_semana: formData.dias_semana[0] };
-          await axios.put(`http://192.168.201.101:3001/api/horarios/personalizados/${editingId}`, payload);
+          await axios.put(`https://elrefugiocountryclub.com/api/api/horarios/personalizados/${editingId}`, payload);
           toast.success('Horario actualizado correctamente');
         }
       } else {
@@ -341,7 +341,7 @@ const HorariosPersonalizadosAdmin = () => {
         await Promise.all(
           dias.map(dia => {
             const payload = { ...formData, dia_semana: dia };
-            return axios.post('http://192.168.201.101:3001/api/horarios/personalizados', payload);
+            return axios.post('https://elrefugiocountryclub.com/api/api/horarios/personalizados', payload);
           })
         );
         const count = dias.length;
@@ -358,7 +358,7 @@ const HorariosPersonalizadosAdmin = () => {
   const handleDelete = async (id) => {
     if (!window.confirm('¿Estás seguro de eliminar este horario personalizado?')) return;
     try {
-      await axios.delete(`http://192.168.201.101:3001/api/horarios/personalizados/${id}`);
+      await axios.delete(`https://elrefugiocountryclub.com/api/api/horarios/personalizados/${id}`);
       toast.success('Horario eliminado');
       fetchData();
     } catch (err) {
@@ -801,7 +801,7 @@ const HorariosPersonalizadosAdmin = () => {
                             if (!window.confirm(msg)) return;
                             try {
                               await Promise.all(grupo._ids.map(id =>
-                                axios.delete(`http://192.168.201.101:3001/api/horarios/personalizados/${id}`)
+                                axios.delete(`https://elrefugiocountryclub.com/api/api/horarios/personalizados/${id}`)
                               ));
                               toast.success(grupo._ids.length > 1 ? `${grupo._ids.length} horarios eliminados` : 'Horario eliminado');
                               fetchData();

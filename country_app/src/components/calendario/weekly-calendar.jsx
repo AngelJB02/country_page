@@ -50,7 +50,7 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
       
       try {
         setLoadingSchedule(true);
-        const response = await fetch(`http://192.168.201.101:3001/api/horarios/clase/${className}`);
+        const response = await fetch(`https://elrefugiocountryclub.com/api/api/horarios/clase/${className}`);
         if (!response.ok) {
           throw new Error('Error al cargar horarios desde la base de datos');
         }
@@ -61,7 +61,7 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
         // Cargar horarios personalizados si hay un userId
         if (userId) {
           try {
-            const pResponse = await fetch(`http://192.168.201.101:3001/api/horarios/personalizados/${userId}`);
+            const pResponse = await fetch(`https://elrefugiocountryclub.com/api/api/horarios/personalizados/${userId}`);
             if (pResponse.ok) {
               const pData = await pResponse.json();
               setPersonalSchedule(pData);
@@ -135,7 +135,7 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
       }
 
       try {
-        const res = await fetch('http://192.168.201.101:3001/api/reservas/instructor-availability/batch', {
+        const res = await fetch('https://elrefugiocountryclub.com/api/api/reservas/instructor-availability/batch', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ clase_id: claseId, slots: slotsToCheck })

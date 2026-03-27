@@ -120,7 +120,7 @@ const MetricasResumen = () => {
   const fetchMetricas = async () => {
     try {
       setLoading(true);
-      const url = `http://192.168.201.101:3001/api/reservas-admin/analytics/detailed?fecha_inicio=${fechas.inicio}&fecha_fin=${fechas.fin}`;
+      const url = `https://elrefugiocountryclub.com/api/api/reservas-admin/analytics/detailed?fecha_inicio=${fechas.inicio}&fecha_fin=${fechas.fin}`;
       const r = await fetch(url);
       if (!r.ok) throw new Error('Error al obtener metricas');
       setMetricas(await r.json());
