@@ -53,11 +53,13 @@ function formatearFecha(fechaReserva) {
 
 function emailWrapper(preheaderText, content) {
   return `<!DOCTYPE html>
-<html lang="es">
+<html lang="es" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="color-scheme" content="light only">
+  <meta name="supported-color-schemes" content="light only">
   <title>EL REFUGIO</title>
   <!--[if mso]>
   <noscript>
@@ -68,24 +70,46 @@ function emailWrapper(preheaderText, content) {
     </xml>
   </noscript>
   <![endif]-->
+  <style>
+    :root { color-scheme: light only; supported-color-schemes: light only; }
+    body, .email-bg { background-color: #f0ece7 !important; }
+    .card-bg { background-color: #ffffff !important; }
+    .cred-box { background-color: #faf8f5 !important; }
+    .cred-value { background-color: #ffffff !important; color: #1a1a1a !important; }
+    .note-warn { background-color: #fef9ef !important; }
+    .note-ok { background-color: #f0f8f0 !important; }
+    .detail-bg { background-color: #faf8f5 !important; }
+    .footer-bg { background-color: #1f1f1f !important; }
+    u + .body .gmail-blend { background: none !important; }
+
+    @media only screen and (max-width: 600px) {
+      .email-container { width: 100% !important; max-width: 100% !important; }
+      .email-padding { padding-left: 20px !important; padding-right: 20px !important; }
+      .header-padding { padding: 20px 20px !important; }
+      .cred-inner { padding: 16px 16px !important; }
+      .cred-value-box { padding: 14px 12px !important; }
+      .cta-btn { padding: 14px 32px !important; font-size: 14px !important; }
+      .footer-text { padding: 16px 20px !important; }
+    }
+  </style>
 </head>
-<body style="margin:0; padding:0; background-color:#f0ece7; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif; -webkit-font-smoothing:antialiased;">
+<body class="body" style="margin:0; padding:0; background-color:#f0ece7; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif; -webkit-font-smoothing:antialiased; -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%;">
   <!-- Preheader -->
   <div style="display:none; max-height:0; overflow:hidden; mso-hide:all;">
     ${preheaderText}
     ${'&nbsp;&zwnj;'.repeat(30)}
   </div>
 
-  <table width="100%" cellspacing="0" cellpadding="0" style="background-color:#f0ece7; padding:24px 16px;">
+  <table width="100%" cellspacing="0" cellpadding="0" class="email-bg" style="background-color:#f0ece7; padding:20px 12px;" role="presentation">
     <tr>
       <td align="center">
-        <table width="560" cellspacing="0" cellpadding="0" style="background-color:#ffffff; border-radius:12px; box-shadow:0 2px 12px rgba(139,111,78,0.1); overflow:hidden; max-width:100%;">
+        <table width="540" cellspacing="0" cellpadding="0" class="email-container card-bg" style="background-color:#ffffff; border-radius:12px; overflow:hidden; max-width:100%;" role="presentation">
           ${content}
         </table>
 
-        <table width="560" cellspacing="0" cellpadding="0" style="max-width:100%;">
+        <table width="540" cellspacing="0" cellpadding="0" class="email-container" style="max-width:100%;" role="presentation">
           <tr>
-            <td style="padding:16px 40px 8px; text-align:center;">
+            <td style="padding:14px 24px 8px; text-align:center;">
               <p style="margin:0; color:#a09484; font-size:11px; line-height:1.5;">
                 Este correo fue enviado automaticamente. No respondas a este mensaje.
               </p>
@@ -103,15 +127,15 @@ function emailHeader() {
   return `
 <!-- Header -->
 <tr>
-  <td style="background: linear-gradient(160deg, #7a5e3e 0%, #8b6f4e 40%, #a68968 100%); padding:24px 32px; text-align:center;">
+  <td class="header-padding" style="background: linear-gradient(160deg, #7a5e3e 0%, #8b6f4e 40%, #a68968 100%); padding:24px 28px; text-align:center;">
     <img src="https://elrefugiocountryclub.com/El_refugio_logo.png"
-         alt="Logo"
-         width="48"
-         style="display:inline-block; margin-bottom:8px;">
-    <h1 style="margin:0; color:#ffffff; font-size:20px; font-weight:800; letter-spacing:1.5px; text-transform:uppercase; font-family:Georgia,'Times New Roman',serif;">
+         alt="El Refugio"
+         width="44"
+         style="display:block; margin:0 auto 8px;">
+    <h1 style="margin:0; color:#ffffff; font-size:18px; font-weight:800; letter-spacing:1.5px; text-transform:uppercase; font-family:Georgia,'Times New Roman',serif;">
       EL REFUGIO
     </h1>
-    <p style="margin:0; color:rgba(255,255,255,0.65); font-size:10px; font-weight:500; letter-spacing:2px; text-transform:uppercase;">
+    <p style="margin:2px 0 0; color:rgba(255,255,255,0.65); font-size:9px; font-weight:500; letter-spacing:2px; text-transform:uppercase;">
       Country Club
     </p>
   </td>
@@ -124,10 +148,10 @@ function emailFooter() {
 <tr>
   <td style="padding:0;">
     <div style="height:2px; background:linear-gradient(90deg, #8b6f4e, #bfa47e, #8b6f4e);"></div>
-    <table width="100%" cellspacing="0" cellpadding="0" style="background:#1f1f1f;">
+    <table width="100%" cellspacing="0" cellpadding="0" class="footer-bg" style="background-color:#1f1f1f;" role="presentation">
       <tr>
-        <td style="padding:18px 32px; text-align:center;">
-          <p style="margin:0 0 2px 0; color:rgba(255,255,255,0.6); font-size:12px; font-weight:600; letter-spacing:1px;">
+        <td class="footer-text" style="padding:16px 24px; text-align:center;">
+          <p style="margin:0 0 2px 0; color:rgba(255,255,255,0.6); font-size:11px; font-weight:600; letter-spacing:1px;">
             EL REFUGIO
           </p>
           <p style="margin:0; color:rgba(255,255,255,0.3); font-size:10px;">
@@ -198,7 +222,7 @@ function detailRow(label, value, opts = {}) {
 function ctaButton(text, href = 'https://elrefugiocountryclub.com/login') {
   return `
 <div style="text-align:center; margin:20px 0 0;">
-  <a href="${href}" style="display:inline-block; background:#8b6f4e; color:#ffffff; text-decoration:none; padding:12px 36px; border-radius:8px; font-size:13px; font-weight:700; letter-spacing:0.3px;">
+  <a href="${href}" class="cta-btn" style="display:inline-block; background-color:#8b6f4e; color:#ffffff !important; text-decoration:none; padding:13px 36px; border-radius:8px; font-size:14px; font-weight:700; letter-spacing:0.3px; mso-padding-alt:0; text-align:center;">
     ${text}
   </a>
 </div>`;
@@ -223,47 +247,63 @@ router.post("/send-credentials", async (req, res) => {
       ${emailHeader()}
 
       <tr>
-        <td style="padding:28px 32px 24px;">
-          <h2 style="margin:0 0 4px 0; color:#1a1a1a; font-size:20px; font-weight:700; text-align:center;">
+        <td class="email-padding" style="padding:24px 28px 20px;">
+          <h2 style="margin:0 0 4px 0; color:#1a1a1a; font-size:18px; font-weight:700; text-align:center;">
             Bienvenido(a), ${usuarioData.nombre}
           </h2>
-          <p style="margin:0 0 20px 0; color:#888; font-size:13px; text-align:center;">
+          <p style="margin:0 0 20px 0; color:#888; font-size:13px; text-align:center; line-height:1.5;">
             Tu cuenta ha sido creada con el rol de <strong style="color:#8b6f4e;">${usuarioData.rol}</strong>
           </p>
 
           <!-- Credenciales -->
-          <table width="100%" cellspacing="0" cellpadding="0" style="background:#faf8f5; border:1px solid #e8e0d6; border-radius:10px; margin-bottom:20px;">
+          <table width="100%" cellspacing="0" cellpadding="0" class="cred-box" style="background-color:#faf8f5; border:1px solid #e8e0d6; border-radius:10px; margin-bottom:16px;" role="presentation">
             <tr>
-              <td style="padding:20px 24px;">
+              <td class="cred-inner" style="padding:18px 20px;">
                 <p style="margin:0 0 14px 0; text-align:center;">
-                  <span style="display:inline-block; background:#8b6f4e; color:#fff; font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; padding:4px 14px; border-radius:20px;">
+                  <span style="display:inline-block; background-color:#8b6f4e; color:#fff; font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; padding:4px 14px; border-radius:20px;">
                     Credenciales de Acceso
                   </span>
                 </p>
 
                 <!-- Usuario -->
-                <table width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:10px;">
+                <table width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:12px;" role="presentation">
                   <tr>
                     <td>
-                      <span style="color:#999; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:4px;"><img src="${icons.user}" alt="" width="14" height="14" style="display:inline-block; vertical-align:middle; margin-right:5px;">Usuario</span>
-                      <div style="background:#fff; border:1px solid #e0dbd5; border-radius:8px; padding:10px 14px; text-align:center;">
-                        <span style="color:#1a1a1a; font-size:15px; font-weight:700; font-family:'Courier New',monospace; letter-spacing:0.5px;">
-                          ${usuarioData.username}
-                        </span>
+                      <span style="color:#8b6f4e; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:6px;">
+                        <img src="${icons.user}" alt="" width="13" height="13" style="display:inline-block; vertical-align:middle; margin-right:4px;">Usuario
+                      </span>
+                      <div class="cred-value" style="background-color:#ffffff; border:1px solid #e0dbd5; border-radius:8px; text-align:center;">
+                        <table width="100%" cellspacing="0" cellpadding="0" role="presentation">
+                          <tr>
+                            <td class="cred-value-box" style="padding:14px 16px; text-align:center;">
+                              <span style="color:#1a1a1a; font-size:17px; font-weight:700; letter-spacing:0.3px;">
+                                ${usuarioData.username}
+                              </span>
+                            </td>
+                          </tr>
+                        </table>
                       </div>
                     </td>
                   </tr>
                 </table>
 
                 <!-- Contrasena -->
-                <table width="100%" cellspacing="0" cellpadding="0">
+                <table width="100%" cellspacing="0" cellpadding="0" role="presentation">
                   <tr>
                     <td>
-                      <span style="color:#999; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:4px;"><img src="${icons.lock}" alt="" width="14" height="14" style="display:inline-block; vertical-align:middle; margin-right:5px;">Contrasena Temporal</span>
-                      <div style="background:#fff; border:1px solid #e0dbd5; border-radius:8px; padding:10px 14px; text-align:center;">
-                        <span style="color:#1a1a1a; font-size:15px; font-weight:700; font-family:'Courier New',monospace; letter-spacing:1px;">
-                          ${usuarioData.password}
-                        </span>
+                      <span style="color:#8b6f4e; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:6px;">
+                        <img src="${icons.lock}" alt="" width="13" height="13" style="display:inline-block; vertical-align:middle; margin-right:4px;">Contrasena Temporal
+                      </span>
+                      <div class="cred-value" style="background-color:#ffffff; border:1px solid #e0dbd5; border-radius:8px; text-align:center;">
+                        <table width="100%" cellspacing="0" cellpadding="0" role="presentation">
+                          <tr>
+                            <td class="cred-value-box" style="padding:14px 16px; text-align:center;">
+                              <span style="color:#1a1a1a; font-size:17px; font-weight:700; letter-spacing:0.5px;">
+                                ${usuarioData.password}
+                              </span>
+                            </td>
+                          </tr>
+                        </table>
                       </div>
                     </td>
                   </tr>
@@ -273,11 +313,11 @@ router.post("/send-credentials", async (req, res) => {
           </table>
 
           <!-- Nota de seguridad -->
-          <table width="100%" cellspacing="0" cellpadding="0">
+          <table width="100%" cellspacing="0" cellpadding="0" role="presentation">
             <tr>
-              <td style="background:#fef9ef; border:1px solid #f5e6c4; border-radius:8px; padding:12px 16px;">
-                <p style="margin:0; color:#8b6f4e; font-size:12px; font-weight:600;">
-                  <img src="${icons.shield}" alt="" width="14" height="14" style="display:inline-block; vertical-align:middle; margin-right:5px;">Seguridad: Cambia tu contrasena en tu primer inicio de sesion. No compartas estos datos con nadie.
+              <td class="note-warn" style="background-color:#fef9ef; border:1px solid #f5e6c4; border-radius:8px; padding:12px 14px;">
+                <p style="margin:0; color:#8b6f4e; font-size:12px; font-weight:600; line-height:1.5;">
+                  <img src="${icons.shield}" alt="" width="14" height="14" style="display:inline-block; vertical-align:middle; margin-right:4px;">Cambia tu contrasena en tu primer inicio de sesion. No compartas estos datos.
                 </p>
               </td>
             </tr>
@@ -324,47 +364,63 @@ router.post("/send-updated-credentials", async (req, res) => {
       ${emailHeader()}
 
       <tr>
-        <td style="padding:28px 32px 24px;">
-          <h2 style="margin:0 0 4px 0; color:#1a1a1a; font-size:20px; font-weight:700; text-align:center;">
+        <td class="email-padding" style="padding:24px 28px 20px;">
+          <h2 style="margin:0 0 4px 0; color:#1a1a1a; font-size:18px; font-weight:700; text-align:center;">
             Contrasena Actualizada
           </h2>
-          <p style="margin:0 0 20px 0; color:#888; font-size:13px; text-align:center;">
+          <p style="margin:0 0 20px 0; color:#888; font-size:13px; text-align:center; line-height:1.5;">
             Hola <strong style="color:#8b6f4e;">${nombre}</strong>, tu contrasena ha sido actualizada exitosamente.
           </p>
 
           <!-- Credenciales -->
-          <table width="100%" cellspacing="0" cellpadding="0" style="background:#faf8f5; border:1px solid #e8e0d6; border-radius:10px; margin-bottom:20px;">
+          <table width="100%" cellspacing="0" cellpadding="0" class="cred-box" style="background-color:#faf8f5; border:1px solid #e8e0d6; border-radius:10px; margin-bottom:16px;" role="presentation">
             <tr>
-              <td style="padding:20px 24px;">
+              <td class="cred-inner" style="padding:18px 20px;">
                 <p style="margin:0 0 14px 0; text-align:center;">
-                  <span style="display:inline-block; background:#8b6f4e; color:#fff; font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; padding:4px 14px; border-radius:20px;">
+                  <span style="display:inline-block; background-color:#8b6f4e; color:#fff; font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; padding:4px 14px; border-radius:20px;">
                     Credenciales Actualizadas
                   </span>
                 </p>
 
                 <!-- Usuario -->
-                <table width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:10px;">
+                <table width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:12px;" role="presentation">
                   <tr>
                     <td>
-                      <span style="color:#999; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:4px;"><img src="${icons.user}" alt="" width="14" height="14" style="display:inline-block; vertical-align:middle; margin-right:5px;">Usuario</span>
-                      <div style="background:#fff; border:1px solid #e0dbd5; border-radius:8px; padding:10px 14px; text-align:center;">
-                        <span style="color:#1a1a1a; font-size:15px; font-weight:700; font-family:'Courier New',monospace; letter-spacing:0.5px;">
-                          ${username}
-                        </span>
+                      <span style="color:#8b6f4e; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:6px;">
+                        <img src="${icons.user}" alt="" width="13" height="13" style="display:inline-block; vertical-align:middle; margin-right:4px;">Usuario
+                      </span>
+                      <div class="cred-value" style="background-color:#ffffff; border:1px solid #e0dbd5; border-radius:8px; text-align:center;">
+                        <table width="100%" cellspacing="0" cellpadding="0" role="presentation">
+                          <tr>
+                            <td class="cred-value-box" style="padding:14px 16px; text-align:center;">
+                              <span style="color:#1a1a1a; font-size:17px; font-weight:700; letter-spacing:0.3px;">
+                                ${username}
+                              </span>
+                            </td>
+                          </tr>
+                        </table>
                       </div>
                     </td>
                   </tr>
                 </table>
 
                 <!-- Nueva contrasena -->
-                <table width="100%" cellspacing="0" cellpadding="0">
+                <table width="100%" cellspacing="0" cellpadding="0" role="presentation">
                   <tr>
                     <td>
-                      <span style="color:#999; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:4px;"><img src="${icons.key}" alt="" width="14" height="14" style="display:inline-block; vertical-align:middle; margin-right:5px;">Nueva Contrasena</span>
-                      <div style="background:#fff; border:1px solid #e0dbd5; border-radius:8px; padding:10px 14px; text-align:center;">
-                        <span style="color:#1a1a1a; font-size:15px; font-weight:700; font-family:'Courier New',monospace; letter-spacing:1px;">
-                          ${newPassword}
-                        </span>
+                      <span style="color:#8b6f4e; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:6px;">
+                        <img src="${icons.key}" alt="" width="13" height="13" style="display:inline-block; vertical-align:middle; margin-right:4px;">Nueva Contrasena
+                      </span>
+                      <div class="cred-value" style="background-color:#ffffff; border:1px solid #e0dbd5; border-radius:8px; text-align:center;">
+                        <table width="100%" cellspacing="0" cellpadding="0" role="presentation">
+                          <tr>
+                            <td class="cred-value-box" style="padding:14px 16px; text-align:center;">
+                              <span style="color:#1a1a1a; font-size:17px; font-weight:700; letter-spacing:0.5px;">
+                                ${newPassword}
+                              </span>
+                            </td>
+                          </tr>
+                        </table>
                       </div>
                     </td>
                   </tr>
@@ -374,11 +430,11 @@ router.post("/send-updated-credentials", async (req, res) => {
           </table>
 
           <!-- Nota -->
-          <table width="100%" cellspacing="0" cellpadding="0">
+          <table width="100%" cellspacing="0" cellpadding="0" role="presentation">
             <tr>
-              <td style="background:#f0f8f0; border:1px solid #c8e6c8; border-radius:8px; padding:12px 16px;">
-                <p style="margin:0; color:#2e7d32; font-size:12px; font-weight:600;">
-                  <img src="${icons.checkCircle}" alt="" width="14" height="14" style="display:inline-block; vertical-align:middle; margin-right:5px;">Tu contrasena ha sido cambiada correctamente. Manten tus credenciales seguras.
+              <td class="note-ok" style="background-color:#f0f8f0; border:1px solid #c8e6c8; border-radius:8px; padding:12px 14px;">
+                <p style="margin:0; color:#2e7d32; font-size:12px; font-weight:600; line-height:1.5;">
+                  <img src="${icons.checkCircle}" alt="" width="14" height="14" style="display:inline-block; vertical-align:middle; margin-right:4px;">Tu contrasena ha sido cambiada correctamente. Manten tus credenciales seguras.
                 </p>
               </td>
             </tr>
@@ -435,22 +491,22 @@ router.post("/send-reservation-confirmation", async (req, res) => {
       ${emailHeader()}
 
       <tr>
-        <td style="padding:28px 32px 24px;">
+        <td class="email-padding" style="padding:24px 28px 20px;">
           <!-- Badge confirmado -->
           <div style="text-align:center; margin-bottom:16px;">
-            <span style="display:inline-block; background:#e8f5e9; color:#2e7d32; font-size:12px; font-weight:700; padding:6px 18px; border-radius:20px; border:1px solid #c8e6c8;">
-              <img src="${icons.checkCircle}" alt="" width="14" height="14" style="display:inline-block; vertical-align:middle; margin-right:5px;">Reserva Confirmada
+            <span class="note-ok" style="display:inline-block; background-color:#e8f5e9; color:#2e7d32; font-size:12px; font-weight:700; padding:6px 18px; border-radius:20px; border:1px solid #c8e6c8;">
+              <img src="${icons.checkCircle}" alt="" width="14" height="14" style="display:inline-block; vertical-align:middle; margin-right:4px;">Reserva Confirmada
             </span>
           </div>
 
-          <p style="margin:0 0 20px 0; color:#666; font-size:14px; text-align:center;">
+          <p style="margin:0 0 20px 0; color:#666; font-size:14px; text-align:center; line-height:1.5;">
             Hola <strong style="color:#8b6f4e;">${nombre}</strong>, tu reserva ha sido confirmada.
           </p>
 
           <!-- Detalles -->
-          <table width="100%" cellspacing="0" cellpadding="0" style="background:#faf8f5; border:1px solid #e8e0d6; border-radius:10px; margin-bottom:16px;">
+          <table width="100%" cellspacing="0" cellpadding="0" class="detail-bg" style="background-color:#faf8f5; border:1px solid #e8e0d6; border-radius:10px; margin-bottom:16px;" role="presentation">
             <tr>
-              <td style="padding:18px 22px;">
+              <td class="cred-inner" style="padding:16px 18px;">
                 ${nivelFormateado ? detailRow('Nivel', nivelFormateado) : ''}
                 ${tipoReserva ? detailRow('Tipo', tipoReservaAmigable) : ''}
                 ${detailRow('Fecha', fechaFormateada)}
@@ -461,11 +517,11 @@ router.post("/send-reservation-confirmation", async (req, res) => {
           </table>
 
           <!-- Nota cancelacion -->
-          <table width="100%" cellspacing="0" cellpadding="0">
+          <table width="100%" cellspacing="0" cellpadding="0" role="presentation">
             <tr>
-              <td style="background:#fef9ef; border:1px solid #f5e6c4; border-radius:8px; padding:10px 14px;">
+              <td class="note-warn" style="background-color:#fef9ef; border:1px solid #f5e6c4; border-radius:8px; padding:10px 14px;">
                 <p style="margin:0; color:#8b6f4e; font-size:11px; line-height:1.5;">
-                  <img src="${icons.alertTriangle}" alt="" width="14" height="14" style="display:inline-block; vertical-align:middle; margin-right:5px;"><strong>Cancelacion:</strong> Si necesitas cancelar, hazlo con al menos 2 horas de anticipacion.
+                  <img src="${icons.alertTriangle}" alt="" width="14" height="14" style="display:inline-block; vertical-align:middle; margin-right:4px;"><strong>Cancelacion:</strong> Si necesitas cancelar, hazlo con al menos 2 horas de anticipacion.
                 </p>
               </td>
             </tr>
@@ -512,22 +568,22 @@ router.post("/send-cancellation-notification", async (req, res) => {
       ${emailHeader()}
 
       <tr>
-        <td style="padding:28px 32px 24px;">
+        <td class="email-padding" style="padding:24px 28px 20px;">
           <!-- Badge cancelado -->
           <div style="text-align:center; margin-bottom:16px;">
-            <span style="display:inline-block; background:#fdecea; color:#c0392b; font-size:12px; font-weight:700; padding:6px 18px; border-radius:20px; border:1px solid #f5c6cb;">
-              <img src="${icons.xCircle}" alt="" width="14" height="14" style="display:inline-block; vertical-align:middle; margin-right:5px;">Reserva Cancelada
+            <span style="display:inline-block; background-color:#fdecea; color:#c0392b; font-size:12px; font-weight:700; padding:6px 18px; border-radius:20px; border:1px solid #f5c6cb;">
+              <img src="${icons.xCircle}" alt="" width="14" height="14" style="display:inline-block; vertical-align:middle; margin-right:4px;">Reserva Cancelada
             </span>
           </div>
 
-          <p style="margin:0 0 20px 0; color:#666; font-size:14px; text-align:center;">
+          <p style="margin:0 0 20px 0; color:#666; font-size:14px; text-align:center; line-height:1.5;">
             Hola <strong style="color:#8b6f4e;">${nombre}</strong>, tu reserva ha sido cancelada.
           </p>
 
           <!-- Detalles -->
-          <table width="100%" cellspacing="0" cellpadding="0" style="background:#faf8f5; border:1px solid #e8e0d6; border-radius:10px; margin-bottom:16px;">
+          <table width="100%" cellspacing="0" cellpadding="0" class="detail-bg" style="background-color:#faf8f5; border:1px solid #e8e0d6; border-radius:10px; margin-bottom:16px;" role="presentation">
             <tr>
-              <td style="padding:18px 22px;">
+              <td class="cred-inner" style="padding:16px 18px;">
                 ${detailRow('Fecha', fechaFormateada, { strike: true })}
                 ${detailRow('Horario', `${horaInicio} - ${horaFin}`, { strike: true, borderBottom: !!(instructor || motivoCancelacion) })}
                 ${instructor ? detailRow('Instructor(a)', instructor, { borderBottom: !!motivoCancelacion }) : ''}
@@ -537,9 +593,9 @@ router.post("/send-cancellation-notification", async (req, res) => {
           </table>
 
           <!-- Nota -->
-          <table width="100%" cellspacing="0" cellpadding="0">
+          <table width="100%" cellspacing="0" cellpadding="0" role="presentation">
             <tr>
-              <td style="background:#fef9ef; border:1px solid #f5e6c4; border-radius:8px; padding:10px 14px;">
+              <td class="note-warn" style="background-color:#fef9ef; border:1px solid #f5e6c4; border-radius:8px; padding:10px 14px;">
                 <p style="margin:0; color:#8b6f4e; font-size:11px; line-height:1.5;">
                   Puedes hacer una nueva reserva desde la plataforma o contactarnos para reprogramar.
                 </p>
