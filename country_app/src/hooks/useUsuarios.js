@@ -1,6 +1,7 @@
 // src/hooks/useUsuarios.js
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import useAutoRefresh from './useAutoRefresh';
 
 const useUsuarios = () => {
   const [usuarios, setUsuarios] = useState([]);
@@ -10,11 +11,7 @@ const useUsuarios = () => {
   const API_URL = 'http://localhost:3001/api/users';
 
 
-  useEffect(() => {
-    obtenerUsuarios();
-  }, []);
-
-  const obtenerUsuarios = async () => {
+  const obtenerUsuarios = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -26,7 +23,10 @@ const useUsuarios = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => { obtenerUsuarios(); }, [obtenerUsuarios]);
+  const { isRefreshing } = useAutoRefresh(obtenerUsuarios, { interval: 30000 });
 
   const crearUsuario = async (nuevoUsuario) => {
     setLoading(true);
@@ -86,7 +86,7 @@ const useUsuarios = () => {
     };
 
 
-  return { usuarios, loading, error, crearUsuario, actualizarCorreo, actualizarPassword, cargarUsuarios: obtenerUsuarios };
+  return { usuarios, loading, error, isRefreshing, crearUsuario, actualizarCorreo, actualizarPassword, cargarUsuarios: obtenerUsuarios };
 };
 
 export default useUsuarios;

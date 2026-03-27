@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import ReactDOM from "react-dom"
 import "../CSS/Contabilidad.css"
 import LogoutButton from './LogoutBoton'
 import { UserPlus, Eye, XCircle, CheckCircle, Loader, Search, History, AlertTriangle, Clock, AlertCircle, Edit, Copy, ChevronLeft, ChevronRight, Users, UserCheck, UserX } from "lucide-react"
 import useRoleGuard from '../hooks/useRoleGuard';
+import useAutoRefresh from '../hooks/useAutoRefresh';
 import CaballosAdmin from "./CaballosAdmin";
 import InstructorasAdmin from "./InstructorasAdmin";
 import ReservasAdmin from "./ReservasAdmin";
@@ -259,7 +260,7 @@ const MembershipAdminDashboard = () => {
   }
 
   // Función para cargar conteo de pagos
-  const loadPaymentCounts = async () => {
+  const loadPaymentCounts = useCallback(async () => {
     try {
       const response = await fetch("http://localhost:3001/api/users/payment-counts")
       if (response.ok) {
@@ -273,10 +274,10 @@ const MembershipAdminDashboard = () => {
     } catch (error) {
       console.error("Error cargando conteo de pagos:", error)
     }
-  }
+  }, [])
 
   // Función para cargar estado de pagos (vencidos, próximos a vencer)
-  const loadPaymentStatus = async () => {
+  const loadPaymentStatus = useCallback(async () => {
     try {
       const response = await fetch("http://localhost:3001/api/users/payment-status")
       if (response.ok) {
@@ -284,25 +285,25 @@ const MembershipAdminDashboard = () => {
         const statusMap = {}
         const hoy = new Date();
         hoy.setHours(0, 0, 0, 0);
-        
+
         status.forEach(item => {
           let estado_pago = 'al_dia';
           let dias_restantes = null;
-          
+
           // Calcular próxima fecha de pago y estado
           if (item.ultimo_pago) {
             // Parsear fecha en zona horaria local
             const [year, month, day] = item.ultimo_pago.split('-').map(Number);
             const ultimoPago = new Date(year, month - 1, day);
-            
+
             // Sumar 1 mes
             const proximaFecha = new Date(ultimoPago);
             proximaFecha.setMonth(proximaFecha.getMonth() + 1);
             proximaFecha.setHours(0, 0, 0, 0);
-            
+
             const diffTime = proximaFecha - hoy;
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            
+
             if (diffDays < 0) {
               estado_pago = 'vencido';
               dias_restantes = diffDays; // Negativo
@@ -313,13 +314,13 @@ const MembershipAdminDashboard = () => {
               estado_pago = 'al_dia';
               dias_restantes = diffDays;
             }
-            
+
             // Formatear próxima fecha manualmente
             const nextYear = proximaFecha.getFullYear();
             const nextMonth = String(proximaFecha.getMonth() + 1).padStart(2, '0');
             const nextDay = String(proximaFecha.getDate()).padStart(2, '0');
             const proximaFechaStr = `${nextYear}-${nextMonth}-${nextDay}`;
-            
+
             statusMap[item.cliente_id] = {
               estado_pago: estado_pago,
               dias_restantes: dias_restantes,
@@ -333,13 +334,61 @@ const MembershipAdminDashboard = () => {
     } catch (error) {
       console.error("Error cargando estado de pagos:", error)
     }
-  }
+  }, [])
+
+  const refreshUsersList = useCallback((silent = false) => {
+    if (!silent) setLoading(true)
+    return fetch("http://localhost:3001/api/users/users-with-payments")
+      .then((res) => res.json())
+      .then((data) => {
+        const mapped = data.map((u) => {
+          let proximaFecha = "";
+          if (u.fecha_pago) {
+            const [year, month, day] = u.fecha_pago.split('-').map(Number);
+            const fechaPago = new Date(year, month - 1, day);
+            if (!isNaN(fechaPago.getTime())) {
+              fechaPago.setMonth(fechaPago.getMonth() + 1);
+              const nextYear = fechaPago.getFullYear();
+              const nextMonth = String(fechaPago.getMonth() + 1).padStart(2, '0');
+              const nextDay = String(fechaPago.getDate()).padStart(2, '0');
+              proximaFecha = `${nextYear}-${nextMonth}-${nextDay}`;
+            }
+          }
+          return {
+            id: u.id,
+            name: u.nombre + (u.apellido ? " " + u.apellido : ""),
+            email: u.email || "",
+            status: capitalizeStatus(u.estatus),
+            monthlyFee: u.monto || 0,
+            paymentDate: "",
+            lastPaymentDate: u.fecha_pago || "",
+            proximaFecha: proximaFecha,
+            rol: u.rol || "",
+            tipo_nivel: u.tipo_nivel || "",
+          };
+        })
+        setMembers(mapped)
+        if (!silent) setLoading(false)
+      })
+      .catch(() => {
+        setMembers([])
+        if (!silent) setLoading(false)
+      })
+  }, [])
+
+  // Función que refresca todos los datos de contabilidad
+  const refreshAllData = useCallback(async () => {
+    await Promise.all([refreshUsersList(true), loadPaymentCounts(), loadPaymentStatus()])
+  }, [refreshUsersList, loadPaymentCounts, loadPaymentStatus])
 
   useEffect(() => {
     refreshUsersList()
     loadPaymentCounts()
     loadPaymentStatus()
   }, [])
+
+  const anyModalOpen = modalOpen || addClientModalOpen || paymentHistoryModalOpen || editPaymentModalOpen
+  useAutoRefresh(refreshAllData, { interval: 30000, enabled: !anyModalOpen })
 
   // Implementar sticky header con scroll listener
   useEffect(() => {
@@ -561,7 +610,9 @@ const MembershipAdminDashboard = () => {
 
   // Calcular paginación
   const totalPages = Math.ceil(filteredMembers.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
+  const safePage = Math.min(currentPage, totalPages || 1)
+  if (safePage !== currentPage) setCurrentPage(safePage)
+  const startIndex = (safePage - 1) * itemsPerPage
   const endIndex = startIndex + itemsPerPage
   const currentMembers = filteredMembers.slice(startIndex, endIndex)
 
@@ -933,53 +984,6 @@ const MembershipAdminDashboard = () => {
     } finally {
       setCreatingClient(false);
     }
-  }
-
-  const refreshUsersList = () => {
-    setLoading(true)
-    fetch("http://localhost:3001/api/users/users-with-payments")
-      .then((res) => res.json())
-      .then((data) => {
-        const mapped = data.map((u) => {
-          // Calcular próxima fecha de pago: última fecha + 1 mes
-          let proximaFecha = "";
-          if (u.fecha_pago) {
-            // Parsear la fecha en zona horaria local
-            const [year, month, day] = u.fecha_pago.split('-').map(Number);
-            const fechaPago = new Date(year, month - 1, day); // month - 1 porque los meses en JS van de 0-11
-            
-            if (!isNaN(fechaPago.getTime())) {
-              // Sumar 1 mes
-              fechaPago.setMonth(fechaPago.getMonth() + 1);
-              
-              // Formatear como YYYY-MM-DD manualmente para evitar problemas de zona horaria
-              const nextYear = fechaPago.getFullYear();
-              const nextMonth = String(fechaPago.getMonth() + 1).padStart(2, '0');
-              const nextDay = String(fechaPago.getDate()).padStart(2, '0');
-              proximaFecha = `${nextYear}-${nextMonth}-${nextDay}`;
-            }
-          }
-          
-          return {
-            id: u.id,
-            name: u.nombre + (u.apellido ? " " + u.apellido : ""),
-            email: u.email || "",
-            status: capitalizeStatus(u.estatus),
-            monthlyFee: u.monto || 0,
-            paymentDate: "",
-            lastPaymentDate: u.fecha_pago || "",
-            proximaFecha: proximaFecha,
-            rol: u.rol || "",
-            tipo_nivel: u.tipo_nivel || "",
-          };
-        })
-        setMembers(mapped)
-        setLoading(false)
-      })
-      .catch(() => {
-        setMembers([])
-        setLoading(false)
-      })
   }
 
   const saveMemberChanges = async () => {

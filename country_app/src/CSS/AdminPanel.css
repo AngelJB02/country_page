@@ -332,6 +332,16 @@
     animation: spin 1s linear infinite;
 }
 
+.refresh-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.8rem;
+    color: #c17b4a;
+    opacity: 0.8;
+    font-weight: 500;
+}
+
 @keyframes spin {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }

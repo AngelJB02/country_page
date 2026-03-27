@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import ReactDOM from "react-dom"
 import "../../CSS/Contabilidad.css"
 import LogoutButton from '../LogoutBoton'
 import { UserPlus, Eye, XCircle, CheckCircle, Loader, Search, History, AlertTriangle, Clock, AlertCircle, Edit } from "lucide-react"
 import useRoleGuard from '../../hooks/useRoleGuard';
+import useAutoRefresh from '../../hooks/useAutoRefresh';
 
 const MembershipAdminDashboardLocal = () => {
   useRoleGuard(['admin', 'contabilidad']);
@@ -183,7 +184,7 @@ const MembershipAdminDashboardLocal = () => {
   }
 
   // Función para cargar conteo de pagos
-  const loadPaymentCounts = async () => {
+  const loadPaymentCounts = useCallback(async () => {
     try {
       const response = await fetch("http://localhost:3001/api/users/payment-counts")
       if (response.ok) {
@@ -197,10 +198,10 @@ const MembershipAdminDashboardLocal = () => {
     } catch (error) {
       console.error("Error cargando conteo de pagos:", error)
     }
-  }
+  }, [])
 
   // Función para cargar estado de pagos (vencidos, próximos a vencer)
-  const loadPaymentStatus = async () => {
+  const loadPaymentStatus = useCallback(async () => {
     try {
       const response = await fetch("http://localhost:3001/api/users/payment-status")
       if (response.ok) {
@@ -218,13 +219,21 @@ const MembershipAdminDashboardLocal = () => {
     } catch (error) {
       console.error("Error cargando estado de pagos:", error)
     }
-  }
+  }, [])
+
+  // Función que refresca todos los datos de contabilidad
+  const refreshAllData = useCallback(async () => {
+    await Promise.all([refreshUsersList(true), loadPaymentCounts(), loadPaymentStatus()])
+  }, [refreshUsersList, loadPaymentCounts, loadPaymentStatus])
 
   useEffect(() => {
     refreshUsersList()
     loadPaymentCounts()
     loadPaymentStatus()
   }, [])
+
+  const anyModalOpen = modalOpen || addClientModalOpen || paymentHistoryModalOpen || editPaymentModalOpen
+  useAutoRefresh(refreshAllData, { interval: 30000, enabled: !anyModalOpen })
 
   // Generar credenciales de vista previa cuando cambian nombre/apellido
   useEffect(() => {
@@ -596,9 +605,9 @@ const MembershipAdminDashboardLocal = () => {
     }
   }
 
-  const refreshUsersList = () => {
-    setLoading(true)
-    fetch("http://localhost:3001/api/users/users-with-payments")
+  const refreshUsersList = useCallback((silent = false) => {
+    if (!silent) setLoading(true)
+    return fetch("http://localhost:3001/api/users/users-with-payments")
       .then((res) => res.json())
       .then((data) => {
         const mapped = data.map((u) => ({
@@ -613,13 +622,13 @@ const MembershipAdminDashboardLocal = () => {
           rol: u.rol || "",
         }))
         setMembers(mapped)
-        setLoading(false)
+        if (!silent) setLoading(false)
       })
       .catch(() => {
         setMembers([])
-        setLoading(false)
+        if (!silent) setLoading(false)
       })
-  }
+  }, [])
 
   const saveMemberChanges = async () => {
     try {

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import axios from 'axios';
  import Contabilidad from './administrador/ContabilidadLocal';
 import LogoutButton from './LogoutBoton';
@@ -6,6 +6,7 @@ import ReservasAdmin from './administrador/ReservasAdmin';
 import HorariosPersonalizadosAdmin from './administrador/HorariosPersonalizadosAdmin';
 import { Search, Calendar, Clock, User, Loader, DollarSign, TrendingUp, TrendingDown, Download, Filter, CalendarCheck, FileText, UserPlus } from 'lucide-react';
 import '../CSS/AdminPanel.css';
+import useAutoRefresh from '../hooks/useAutoRefresh';
 const AdminPanel = () => {
   const [activeTab, setActiveTab] = useState('reservas'); // 'reservas' o 'contabilidad'
   // reservations stored as an object keyed by date (yyyy-mm-dd) to match administrador/ReservasAdmin
@@ -23,33 +24,34 @@ const AdminPanel = () => {
   const activities = ['yoga', 'pilates', 'spinning', 'crossfit', 'zumba'];
   const categories = ['Mensualidades', 'Clases individuales', 'Equipamiento', 'Servicios', 'Mantenimiento', 'Otros'];
 
-  // Fetch reservations once on mount and store them keyed by date (like the Administrador example you provided)
-  useEffect(() => {
-    let mounted = true
-    axios.get('http://localhost:3001/api/reservas')
-      .then(response => {
-        const reservasPorFecha = {};
-        response.data.forEach(reserva => {
-          let fechaKey = reserva.fecha;
-          if (typeof fechaKey === 'string' && fechaKey.includes('T')) {
-            fechaKey = fechaKey.split('T')[0];
-          } else if (typeof fechaKey === 'string' && fechaKey.length >= 10) {
-            fechaKey = fechaKey.substring(0, 10);
-          }
-          if (!reservasPorFecha[fechaKey]) reservasPorFecha[fechaKey] = [];
-          reservasPorFecha[fechaKey].push({
-            ...reserva,
-            time: reserva.horario,
-            actividad: reserva.clase_tipo || reserva.actividad
-          });
+  const fetchReservations = useCallback(async () => {
+    let mounted = true;
+    try {
+      const response = await axios.get('http://localhost:3001/api/reservas');
+      const reservasPorFecha = {};
+      response.data.forEach(reserva => {
+        let fechaKey = reserva.fecha;
+        if (typeof fechaKey === 'string' && fechaKey.includes('T')) {
+          fechaKey = fechaKey.split('T')[0];
+        } else if (typeof fechaKey === 'string' && fechaKey.length >= 10) {
+          fechaKey = fechaKey.substring(0, 10);
+        }
+        if (!reservasPorFecha[fechaKey]) reservasPorFecha[fechaKey] = [];
+        reservasPorFecha[fechaKey].push({
+          ...reserva,
+          time: reserva.horario,
+          actividad: reserva.clase_tipo || reserva.actividad
         });
-        if (mounted) setReservations(reservasPorFecha);
-      })
-      .catch(() => {
-        if (mounted) setReservations({});
       });
-    return () => { mounted = false }
+      if (mounted) setReservations(reservasPorFecha);
+    } catch {
+      if (mounted) setReservations({});
+    }
+    return () => { mounted = false; };
   }, []);
+
+  useEffect(() => { fetchReservations(); }, [fetchReservations]);
+  const { isRefreshing } = useAutoRefresh(fetchReservations, { interval: 30000 });
 
   const showNotification = (message, type = 'success') => {
     setNotification({ message, type });
@@ -114,6 +116,12 @@ const AdminPanel = () => {
             <h1 className="header-title">Panel de Administración</h1>
             <p className="header-subtitle">Gestiona reservas y contabilidad de tu plataforma</p>
           </div>
+          {isRefreshing && (
+            <div className="refresh-indicator">
+              <Loader size={16} className="spin" />
+              <span>Actualizando...</span>
+            </div>
+          )}
         </div>
       </div>
 
