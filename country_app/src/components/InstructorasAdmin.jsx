@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import useAutoRefresh from '../hooks/useAutoRefresh';
 import ReactDOM from "react-dom";
-import { Loader, UserPlus, Edit, Trash2, Calendar, Clock, Search } from "lucide-react";
+import { Loader, UserPlus, Edit, Trash2, Calendar, Clock, Search, CheckCircle, Coffee, Mail, Phone, Award, MoreVertical, Unlock, SlidersHorizontal, Info } from "lucide-react";
 
 const InstructorasAdmin = () => {
   const [instructoras, setInstructoras] = useState([]);
@@ -23,6 +24,9 @@ const InstructorasAdmin = () => {
   const [availabilityFilter, setAvailabilityFilter] = useState("disponible");
   const [creatingInstructor, setCreatingInstructor] = useState(false);
   const [updatingInstructor, setUpdatingInstructor] = useState(false);
+  const [createdInstructor, setCreatedInstructor] = useState(null); // Para el paso post-creación
+  const [openMenuId, setOpenMenuId] = useState(null);
+  const [menuPos, setMenuPos] = useState({ top: 0, left: 0, instructorId: null });
   const [deletingInstructor, setDeletingInstructor] = useState(false);
 
   // Estados para el flujo de desactivación + reasignación de reservas
@@ -86,7 +90,7 @@ const InstructorasAdmin = () => {
   // Cargar definiciones de clases (duraciones) desde el backend
   const loadClassDefinitions = async () => {
     try {
-      const res = await fetch("https://elrefugiocountryclub.com/api/api/reservas/classes");
+      const res = await fetch("http://192.168.1.68:3001/api/reservas/classes");
       if (!res.ok) return;
       const data = await res.json();
       setClassDefinitions(Array.isArray(data) ? data : []);
@@ -101,7 +105,7 @@ const InstructorasAdmin = () => {
     setLoadingClasesInstructor(true);
     try {
       const uid = selectedInstructorHorarios.usuario_id || selectedInstructorHorarios.user_id || selectedInstructorHorarios.id;
-      const res = await fetch(`https://elrefugiocountryclub.com/api/api/instructoras/clases/${uid}`);
+      const res = await fetch(`http://192.168.1.68:3001/api/instructoras/clases/${uid}`);
       if (!res.ok) {
         setClasesInstructor([]);
         return;
@@ -340,7 +344,7 @@ const InstructorasAdmin = () => {
     setLoadingHorariosSemanales(true);
     
     try {
-      const response = await fetch(`https://elrefugiocountryclub.com/api/api/instructoras/${selectedInstructorHorarios.id}/horarios`);
+      const response = await fetch(`http://192.168.1.68:3001/api/instructoras/${selectedInstructorHorarios.id}/horarios`);
       if (!response.ok) {
         throw new Error("Error al cargar horarios");
       }
@@ -424,8 +428,39 @@ const InstructorasAdmin = () => {
     );
     
     if (existingHorario) {
-      // Si existe, quitarlo completamente
+      // Quitar solo la hora clickeada, dividiendo el bloque si es necesario
+      const slotStart = timeToMinutes(timeSlot);
+      const slotEnd = slotStart + 60; // cada celda = 1 hora
+      const blockStart = timeToMinutes(existingHorario.hora_inicio);
+      const blockEnd = timeToMinutes(existingHorario.hora_fin);
+
+      // Remover el bloque original
       const updatedHorarios = currentHorarios.filter(h => h.id !== existingHorario.id);
+
+      // Crear bloque izquierdo si hay tiempo antes del slot clickeado
+      if (blockStart < slotStart) {
+        updatedHorarios.push({
+          id: `temp_${Date.now()}_${dia}_left`,
+          dia_semana: dia,
+          hora_inicio: existingHorario.hora_inicio,
+          hora_fin: timeSlot,
+          activo: true,
+          isNew: true
+        });
+      }
+
+      // Crear bloque derecho si hay tiempo después del slot clickeado
+      if (slotEnd < blockEnd) {
+        updatedHorarios.push({
+          id: `temp_${Date.now()}_${dia}_right`,
+          dia_semana: dia,
+          hora_inicio: minutesToTime(slotEnd),
+          hora_fin: existingHorario.hora_fin,
+          activo: true,
+          isNew: true
+        });
+      }
+
       setHorariosSemanales({
         ...horariosSemanales,
         [dia]: updatedHorarios
@@ -484,18 +519,18 @@ const InstructorasAdmin = () => {
       
       // Eliminar horarios que ya no existen
       const currentIds = existingHorarios.map(h => h.id);
-      const originalHorarios = await (await fetch(`https://elrefugiocountryclub.com/api/api/instructoras/${selectedInstructorHorarios.id}/horarios`)).json();
+      const originalHorarios = await (await fetch(`http://192.168.1.68:3001/api/instructoras/${selectedInstructorHorarios.id}/horarios`)).json();
       const toDelete = originalHorarios.filter(h => !currentIds.includes(h.id));
       
       // Ejecutar operaciones
       const deletePromises = toDelete.map(h => 
-        fetch(`https://elrefugiocountryclub.com/api/api/instructoras/${selectedInstructorHorarios.id}/horarios/${h.id}`, {
+        fetch(`http://192.168.1.68:3001/api/instructoras/${selectedInstructorHorarios.id}/horarios/${h.id}`, {
           method: 'DELETE'
         })
       );
       
       const updatePromises = existingHorarios.map(h =>
-        fetch(`https://elrefugiocountryclub.com/api/api/instructoras/${selectedInstructorHorarios.id}/horarios/${h.id}`, {
+        fetch(`http://192.168.1.68:3001/api/instructoras/${selectedInstructorHorarios.id}/horarios/${h.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -508,7 +543,7 @@ const InstructorasAdmin = () => {
       );
       
       const createPromises = newHorarios.map(h =>
-        fetch(`https://elrefugiocountryclub.com/api/api/instructoras/${selectedInstructorHorarios.id}/horarios`, {
+        fetch(`http://192.168.1.68:3001/api/instructoras/${selectedInstructorHorarios.id}/horarios`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -542,23 +577,23 @@ const InstructorasAdmin = () => {
   };
 
   // Cargar instructoras desde el backend
-  const loadInstructoras = async () => {
-    setLoading(true);
+  const loadInstructoras = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
-      const response = await fetch("https://elrefugiocountryclub.com/api/api/instructoras");
+      const response = await fetch("http://192.168.1.68:3001/api/instructoras");
       if (!response.ok) {
         throw new Error("Error al cargar instructoras");
       }
       const data = await response.json();
       setInstructoras(data);
-      
+
       // Cargar descansos activos para cada instructora
       await loadDescansosActivos(data);
     } catch (error) {
       console.error("Error al cargar instructoras:", error);
-      showNotification("Error al cargar instructoras", "error");
+      if (!silent) showNotification("Error al cargar instructoras", "error");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -573,7 +608,7 @@ const InstructorasAdmin = () => {
         instructorasList.map(async (instructora) => {
           try {
             const response = await fetch(
-              `https://elrefugiocountryclub.com/api/api/descansos/check/${instructora.id}?fecha=${hoy}`
+              `http://192.168.1.68:3001/api/descansos/check/${instructora.id}?fecha=${hoy}`
             );
             if (response.ok) {
               const data = await response.json();
@@ -597,11 +632,32 @@ const InstructorasAdmin = () => {
     loadInstructoras();
   }, []);
 
+  // Auto-refresh silencioso cada 30s
+  const refreshInstructoras = useCallback(() => loadInstructoras(true), []);
+  useAutoRefresh(refreshInstructoras, { interval: 30000 });
+
   // Re-evaluar conflictos cuando cambian los horarios, las clases o las definiciones
   useEffect(() => {
     if (!horariosSemanales || !selectedInstructorHorarios) return;
     detectConflicts(horariosSemanales, clasesInstructor, classDefinitions);
   }, [horariosSemanales, clasesInstructor, classDefinitions, selectedInstructorHorarios]);
+
+  // Cerrar menú dropdown al hacer clic fuera
+  useEffect(() => {
+    if (openMenuId === null) return;
+    const handleClickOutside = () => setOpenMenuId(null);
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, [openMenuId]);
+
+  // Filtrado de instructoras (usado en resumen y tabla)
+  const filteredInstructoras = instructoras.filter(inst => {
+    const matchesSearch = searchTerm === "" ||
+      (inst.nombre + " " + (inst.apellido || "")).toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (inst.correo && inst.correo.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesAvailability = availabilityFilter === "" || inst.disponibilidad === availabilityFilter;
+    return matchesSearch && matchesAvailability;
+  });
 
   const openAddInstructorModal = () => {
     setNewInstructor({
@@ -616,6 +672,7 @@ const InstructorasAdmin = () => {
 
   const closeAddInstructorModal = () => {
     setAddInstructorModalOpen(false);
+    setCreatedInstructor(null);
     setNewInstructor({
       nombre: "",
       apellido: "",
@@ -649,7 +706,7 @@ const InstructorasAdmin = () => {
     setDeleteModalOpen(true);
     setLoadingReservas(true);
     try {
-      const res = await fetch(`https://elrefugiocountryclub.com/api/api/instructoras/${instructor.id}/reservas-activas`);
+      const res = await fetch(`http://192.168.1.68:3001/api/instructoras/${instructor.id}/reservas-activas`);
       const reservas = await res.json();
       setActiveReservations(reservas);
     } catch (e) {
@@ -676,7 +733,7 @@ const InstructorasAdmin = () => {
 
     setCreatingInstructor(true);
     try {
-      const response = await fetch("https://elrefugiocountryclub.com/api/api/instructoras", {
+      const response = await fetch("http://192.168.1.68:3001/api/instructoras", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newInstructor)
@@ -689,7 +746,8 @@ const InstructorasAdmin = () => {
 
       const data = await response.json();
       showNotification(data.message || "Instructora creada correctamente", "success");
-      closeAddInstructorModal();
+      const created = data.instructora || { id: data.id, nombre: newInstructor.nombre, apellido: newInstructor.apellido };
+      setCreatedInstructor(created);
       loadInstructoras();
     } catch (error) {
       console.error("Error al crear instructora:", error);
@@ -707,7 +765,7 @@ const InstructorasAdmin = () => {
 
     setUpdatingInstructor(true);
     try {
-      const response = await fetch(`https://elrefugiocountryclub.com/api/api/instructoras/${editingInstructor.id}`, {
+      const response = await fetch(`http://192.168.1.68:3001/api/instructoras/${editingInstructor.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(editingInstructor)
@@ -743,7 +801,7 @@ const InstructorasAdmin = () => {
     try {
       // 1. Reasignar si hay reservas con sustituto asignado
       if (listaReasignaciones.length > 0) {
-        const reasignarRes = await fetch(`https://elrefugiocountryclub.com/api/api/instructoras/${instructorToDelete.id}/reasignar`, {
+        const reasignarRes = await fetch(`http://192.168.1.68:3001/api/instructoras/${instructorToDelete.id}/reasignar`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ reasignaciones: listaReasignaciones })
@@ -755,7 +813,7 @@ const InstructorasAdmin = () => {
       }
 
       // 2. Desactivar instructora
-      const deleteRes = await fetch(`https://elrefugiocountryclub.com/api/api/instructoras/${instructorToDelete.id}`, {
+      const deleteRes = await fetch(`http://192.168.1.68:3001/api/instructoras/${instructorToDelete.id}`, {
         method: "DELETE"
       });
       if (!deleteRes.ok) {
@@ -778,7 +836,7 @@ const InstructorasAdmin = () => {
   // Reactivar instructora (cambiar de no_disponible a disponible)
   const handleReactivateInstructor = async (instructor) => {
     try {
-      const response = await fetch(`https://elrefugiocountryclub.com/api/api/instructoras/${instructor.id}`, {
+      const response = await fetch(`http://192.168.1.68:3001/api/instructoras/${instructor.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json"
@@ -819,7 +877,7 @@ const InstructorasAdmin = () => {
   const loadDescansos = async (instructoraId) => {
     setLoadingDescansos(true);
     try {
-      const response = await fetch(`https://elrefugiocountryclub.com/api/api/descansos/instructora/${instructoraId}`);
+      const response = await fetch(`http://192.168.1.68:3001/api/descansos/instructora/${instructoraId}`);
       if (!response.ok) {
         throw new Error("Error al cargar descansos");
       }
@@ -919,7 +977,7 @@ const InstructorasAdmin = () => {
 
       console.log('Enviando descanso:', descansoData); // Debug
 
-      const response = await fetch("https://elrefugiocountryclub.com/api/api/descansos", {
+      const response = await fetch("http://192.168.1.68:3001/api/descansos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(descansoData)
@@ -981,7 +1039,7 @@ const InstructorasAdmin = () => {
         })
       };
 
-      const response = await fetch(`https://elrefugiocountryclub.com/api/api/descansos/${editingDescanso.id}`, {
+      const response = await fetch(`http://192.168.1.68:3001/api/descansos/${editingDescanso.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(descansoData)
@@ -1009,7 +1067,7 @@ const InstructorasAdmin = () => {
     }
 
     try {
-      const response = await fetch(`https://elrefugiocountryclub.com/api/api/descansos/${descansoId}`, {
+      const response = await fetch(`http://192.168.1.68:3001/api/descansos/${descansoId}`, {
         method: "DELETE"
       });
 
@@ -1044,7 +1102,7 @@ const InstructorasAdmin = () => {
   const loadHorarios = async (instructoraId) => {
     setLoadingHorarios(true);
     try {
-      const response = await fetch(`https://elrefugiocountryclub.com/api/api/instructoras/${instructoraId}/horarios`);
+      const response = await fetch(`http://192.168.1.68:3001/api/instructoras/${instructoraId}/horarios`);
       if (!response.ok) {
         throw new Error("Error al cargar horarios");
       }
@@ -1122,7 +1180,7 @@ const InstructorasAdmin = () => {
     }
 
     try {
-      const response = await fetch(`https://elrefugiocountryclub.com/api/api/instructoras/${selectedInstructorHorarios.id}/horarios`, {
+      const response = await fetch(`http://192.168.1.68:3001/api/instructoras/${selectedInstructorHorarios.id}/horarios`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -1157,7 +1215,7 @@ const InstructorasAdmin = () => {
     }
 
     try {
-      const response = await fetch(`https://elrefugiocountryclub.com/api/api/instructoras/${selectedInstructorHorarios.id}/horarios/${editingHorario.id}`, {
+      const response = await fetch(`http://192.168.1.68:3001/api/instructoras/${selectedInstructorHorarios.id}/horarios/${editingHorario.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json"
@@ -1190,7 +1248,7 @@ const InstructorasAdmin = () => {
     }
 
     try {
-      const response = await fetch(`https://elrefugiocountryclub.com/api/api/instructoras/${selectedInstructorHorarios.id}/horarios/${horarioId}`, {
+      const response = await fetch(`http://192.168.1.68:3001/api/instructoras/${selectedInstructorHorarios.id}/horarios/${horarioId}`, {
         method: "DELETE"
       });
 
@@ -1267,6 +1325,16 @@ const InstructorasAdmin = () => {
         </div>
       </div>
 
+      {!loading && (
+        <p style={{ margin: '0 0 0.6rem', fontSize: '0.84rem', color: 'var(--charcoal)', lineHeight: 1.5 }}>
+          Mostrando <strong>{filteredInstructoras.length} instructora{filteredInstructoras.length !== 1 ? 's' : ''}</strong>
+          {' · '}{availabilityFilter === 'disponible' ? 'Solo disponibles' : availabilityFilter === 'no_disponible' ? 'Solo no disponibles' : 'Todas'}
+          {!availabilityFilter && !searchTerm && (
+            <span style={{ fontStyle: 'italic', opacity: 0.6 }}> · Usa los filtros para ajustar la búsqueda</span>
+          )}
+        </p>
+      )}
+
       {loading ? (
         <div
           style={{
@@ -1304,13 +1372,7 @@ const InstructorasAdmin = () => {
             </thead>
             <tbody>
               {(() => {
-                const filtered = instructoras.filter(inst => {
-                  const matchesSearch = searchTerm === "" ||
-                    (inst.nombre + " " + (inst.apellido || "")).toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    (inst.correo && inst.correo.toLowerCase().includes(searchTerm.toLowerCase()));
-                  const matchesAvailability = availabilityFilter === "" || inst.disponibilidad === availabilityFilter;
-                  return matchesSearch && matchesAvailability;
-                });
+                const filtered = filteredInstructoras;
                 return filtered.length === 0 ? (
                 <tr>
                   <td
@@ -1390,102 +1452,37 @@ const InstructorasAdmin = () => {
                     </td>
                     <td>{formatDate(instructor.fecha_registro)}</td>
                     <td>
-                      <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center" }}>
+                      <div className="inst-menu-wrapper">
                         {instructor.disponibilidad === "no_disponible" ? (
                           <button
-                            className="btn-icon-action"
+                            className="inst-action-btn inst-action-reactivar"
                             onClick={() => handleReactivateInstructor(instructor)}
-                            title="Reactivar Instructora"
-                            style={{
-                              background: "linear-gradient(135deg, #4caf50, #2e7d32)",
-                              color: "white",
-                              border: "none",
-                              padding: "0.5rem 1rem",
-                              borderRadius: "8px",
-                              cursor: "pointer",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              gap: "0.5rem",
-                              fontWeight: "600",
-                              fontSize: "0.9rem"
-                            }}
                           >
-                            ✓ Reactivar
+                            <CheckCircle size={14} /> Reactivar
                           </button>
                         ) : (
                           <>
                             <button
-                              className="btn-icon-action"
-                              onClick={() => openDescansosModal(instructor)}
-                              title="Gestionar Descansos"
-                              style={{
-                                background: "linear-gradient(135deg, #9caf88, #6b8e23)",
-                                color: "white",
-                                border: "none",
-                                padding: "0.5rem",
-                                borderRadius: "8px",
-                                cursor: "pointer",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center"
+                              className="inst-menu-trigger"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (openMenuId === instructor.id) {
+                                  setOpenMenuId(null);
+                                } else {
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  const menuH = 230;
+                                  const below = window.innerHeight - rect.bottom;
+                                  setMenuPos({
+                                    top: below >= menuH ? rect.bottom + 4 : undefined,
+                                    bottom: below < menuH ? (window.innerHeight - rect.top + 4) : undefined,
+                                    left: Math.min(rect.right - 220, window.innerWidth - 230),
+                                    instructorId: instructor.id
+                                  });
+                                  setOpenMenuId(instructor.id);
+                                }
                               }}
                             >
-                              <Calendar size={16} />
-                            </button>
-                            <button
-                              className="btn-icon-action"
-                              onClick={() => openHorariosModal(instructor)}
-                              title="Gestionar Horarios"
-                              style={{
-                                background: "linear-gradient(135deg, #4a90e2, #357abd)",
-                                color: "white",
-                                border: "none",
-                                padding: "0.5rem",
-                                borderRadius: "8px",
-                                cursor: "pointer",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center"
-                              }}
-                            >
-                              <Clock size={16} />
-                            </button>
-                            <button
-                              className="btn-icon-action"
-                              onClick={() => openEditInstructorModal(instructor)}
-                              title="Editar"
-                              style={{
-                                background: "linear-gradient(135deg, #c17b4a, #8b5a2b)",
-                                color: "white",
-                                border: "none",
-                                padding: "0.5rem",
-                                borderRadius: "8px",
-                                cursor: "pointer",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center"
-                              }}
-                            >
-                              <Edit size={16} />
-                            </button>
-                            <button
-                              className="btn-icon-action"
-                              onClick={() => openDeleteModal(instructor)}
-                              title="Eliminar"
-                              style={{
-                                background: "#dc3545",
-                                color: "white",
-                                border: "none",
-                                padding: "0.5rem",
-                                borderRadius: "8px",
-                                cursor: "pointer",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center"
-                              }}
-                            >
-                              <Trash2 size={16} />
+                              <MoreVertical size={18} />
                             </button>
                           </>
                         )}
@@ -1500,6 +1497,52 @@ const InstructorasAdmin = () => {
         </div>
       )}
       
+      {/* Dropdown de acciones como portal */}
+      {openMenuId !== null && menuPos.instructorId && (() => {
+        const inst = filteredInstructoras.find(i => i.id === menuPos.instructorId) || instructoras.find(i => i.id === menuPos.instructorId);
+        if (!inst) return null;
+        return renderPortal(
+          <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} onClick={() => setOpenMenuId(null)}>
+            <div className="inst-menu-dropdown" style={{
+              position: 'fixed',
+              top: menuPos.top,
+              bottom: menuPos.bottom,
+              left: menuPos.left,
+            }} onClick={e => e.stopPropagation()}>
+              <button className="inst-menu-item" onClick={() => { openDescansosModal(inst); setOpenMenuId(null); }}>
+                <Calendar size={15} />
+                <div className="inst-menu-item-text">
+                  <span>Descansos</span>
+                  <small>Gestionar días libres</small>
+                </div>
+              </button>
+              <button className="inst-menu-item" onClick={() => { openHorariosModal(inst); setOpenMenuId(null); }}>
+                <Clock size={15} />
+                <div className="inst-menu-item-text">
+                  <span>Horarios</span>
+                  <small>Configurar disponibilidad</small>
+                </div>
+              </button>
+              <div className="inst-menu-divider" />
+              <button className="inst-menu-item" onClick={() => { openEditInstructorModal(inst); setOpenMenuId(null); }}>
+                <Edit size={15} />
+                <div className="inst-menu-item-text">
+                  <span>Editar</span>
+                  <small>Modificar datos personales</small>
+                </div>
+              </button>
+              <button className="inst-menu-item inst-menu-item-danger" onClick={() => { openDeleteModal(inst); setOpenMenuId(null); }}>
+                <Trash2 size={15} />
+                <div className="inst-menu-item-text">
+                  <span>Desactivar</span>
+                  <small>Quitar de la lista activa</small>
+                </div>
+              </button>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Modal unificado: confirmación + reasignación de reservas (Portal) */}
       {deleteModalOpen && instructorToDelete &&
         renderPortal(
@@ -1706,94 +1749,186 @@ const InstructorasAdmin = () => {
       {addInstructorModalOpen &&
         renderPortal(
           <div className="modal-overlay" onClick={closeAddInstructorModal}>
-            <div className="modal-content add-client-modal" onClick={e => e.stopPropagation()}>
-              <h2>Agregar Nueva Instructora</h2>
-              <div className="modal-section">
-                <h3>Información Personal</h3>
-                <div className="modal-field">
-                  <label>Nombre *:</label>
-                  <input
-                    type="text"
-                    value={newInstructor.nombre}
-                    onChange={e => setNewInstructor({ ...newInstructor, nombre: e.target.value })}
-                    placeholder="Nombre de la instructora"
-                    autoComplete="off"
-                    name="newinstructor-nombre"
-                  />
-                </div>
-                <div className="modal-field">
-                  <label>Apellido *:</label>
-                  <input
-                    type="text"
-                    value={newInstructor.apellido}
-                    onChange={e => setNewInstructor({ ...newInstructor, apellido: e.target.value })}
-                    placeholder="Apellido de la instructora"
-                    autoComplete="off"
-                    name="newinstructor-apellido"
-                  />
-                </div>
-                <div className="modal-field">
-                  <label>Email:</label>
-                  <input
-                    type="email"
-                    value={newInstructor.correo}
-                    onChange={e => setNewInstructor({ ...newInstructor, correo: e.target.value })}
-                    placeholder="ejemplo@email.com"
-                    autoComplete="off"
-                    name="newinstructor-email"
-                  />
-                </div>
-                <div className="modal-field">
-                  <label>Teléfono:</label>
-                  <input
-                    type="text"
-                    value={newInstructor.telefono}
-                    onChange={e => setNewInstructor({ ...newInstructor, telefono: e.target.value })}
-                    placeholder="Teléfono"
-                    autoComplete="off"
-                    name="newinstructor-telefono"
-                  />
-                </div>
-                <div className="modal-field">
-                  <label>Especialidad *:</label>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '8px 0' }}>
-                    {['iniciacion', 'ponyclub', 'intermedio', 'paseo', 'avanzado'].map(esp => {
-                      const selectedEspecialidades = newInstructor.especialidad ? newInstructor.especialidad.split(',') : [];
-                      const isChecked = selectedEspecialidades.includes(esp);
-                      
-                      return (
-                        <label key={esp} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={(e) => {
-                              let newEspecialidades = [...selectedEspecialidades];
-                              if (e.target.checked) {
-                                if (!newEspecialidades.includes(esp)) {
-                                  newEspecialidades.push(esp);
-                                }
-                              } else {
-                                newEspecialidades = newEspecialidades.filter(item => item !== esp);
-                              }
-                              setNewInstructor({ ...newInstructor, especialidad: newEspecialidades.join(',') });
-                            }}
-                            style={{ cursor: 'pointer', width: '18px', height: '18px' }}
-                          />
-                          <span style={{ textTransform: 'capitalize' }}>{esp}</span>
-                        </label>
-                      );
-                    })}
+            <div className="modal-content add-client-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '560px' }}>
+
+              {/* Paso 1: Formulario de creación */}
+              {!createdInstructor ? (
+                <>
+                  <h2>Agregar Nueva Instructora</h2>
+
+                  <div className="modal-section">
+                    <h3>Información Personal</h3>
+
+                    {/* Nombre y Apellido en dos columnas */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                      <div className="modal-field" style={{ marginBottom: 0 }}>
+                        <label>Nombre *:</label>
+                        <input
+                          type="text"
+                          value={newInstructor.nombre}
+                          onChange={e => setNewInstructor({ ...newInstructor, nombre: e.target.value })}
+                          placeholder="Nombre"
+                          autoComplete="off"
+                          name="newinstructor-nombre"
+                        />
+                      </div>
+                      <div className="modal-field" style={{ marginBottom: 0 }}>
+                        <label>Apellido *:</label>
+                        <input
+                          type="text"
+                          value={newInstructor.apellido}
+                          onChange={e => setNewInstructor({ ...newInstructor, apellido: e.target.value })}
+                          placeholder="Apellido"
+                          autoComplete="off"
+                          name="newinstructor-apellido"
+                        />
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-              <div className="modal-actions">
-                <button className="btn btn-primary" onClick={createNewInstructor} type="button" disabled={creatingInstructor}>
-                  <UserPlus size={16} /> {creatingInstructor ? "Agregando..." : "Agregar Instructora"}
-                </button>
-                <button className="btn btn-secondary" onClick={closeAddInstructorModal} type="button">
-                  Cancelar
-                </button>
-              </div>
+
+                  <div className="modal-section">
+                    <h3>Contacto</h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                      <div className="modal-field" style={{ marginBottom: 0 }}>
+                        <label><Mail size={13} style={{ marginRight: 4, verticalAlign: 'middle', opacity: 0.6 }} />Email:</label>
+                        <input
+                          type="email"
+                          value={newInstructor.correo}
+                          onChange={e => setNewInstructor({ ...newInstructor, correo: e.target.value })}
+                          placeholder="ejemplo@email.com"
+                          autoComplete="off"
+                          name="newinstructor-email"
+                        />
+                      </div>
+                      <div className="modal-field" style={{ marginBottom: 0 }}>
+                        <label><Phone size={13} style={{ marginRight: 4, verticalAlign: 'middle', opacity: 0.6 }} />Teléfono:</label>
+                        <input
+                          type="text"
+                          value={newInstructor.telefono}
+                          onChange={e => setNewInstructor({ ...newInstructor, telefono: e.target.value })}
+                          placeholder="Teléfono"
+                          autoComplete="off"
+                          name="newinstructor-telefono"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="modal-section" style={{ borderBottom: 'none', marginBottom: 0 }}>
+                    <h3><Award size={14} style={{ opacity: 0.7 }} /> Especialidades *</h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                      {['iniciacion', 'ponyclub', 'intermedio', 'paseo', 'avanzado'].map(esp => {
+                        const selectedEspecialidades = newInstructor.especialidad ? newInstructor.especialidad.split(',') : [];
+                        const isChecked = selectedEspecialidades.includes(esp);
+
+                        return (
+                          <label key={esp} className="modal-field" style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            cursor: 'pointer',
+                            margin: 0,
+                            padding: '0.55rem 0.75rem',
+                            border: isChecked ? '1.5px solid #9caf88' : '1.5px solid rgba(107, 68, 35, 0.12)',
+                            borderRadius: '8px',
+                            background: isChecked ? 'rgba(156, 175, 136, 0.08)' : 'white',
+                            transition: 'all 0.2s ease'
+                          }}>
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                let newEspecialidades = [...selectedEspecialidades];
+                                if (e.target.checked) {
+                                  if (!newEspecialidades.includes(esp)) {
+                                    newEspecialidades.push(esp);
+                                  }
+                                } else {
+                                  newEspecialidades = newEspecialidades.filter(item => item !== esp);
+                                }
+                                setNewInstructor({ ...newInstructor, especialidad: newEspecialidades.join(',') });
+                              }}
+                              style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                            />
+                            <span style={{ textTransform: 'capitalize', fontSize: '0.88rem', fontWeight: isChecked ? 600 : 400 }}>{esp}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="modal-actions">
+                    <button className="btn btn-secondary" onClick={closeAddInstructorModal} type="button">
+                      Cancelar
+                    </button>
+                    <button className="btn btn-primary" onClick={createNewInstructor} type="button" disabled={creatingInstructor}
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <UserPlus size={16} /> {creatingInstructor ? "Agregando..." : "Agregar Instructora"}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                /* Paso 2: Post-creación - Configurar horario */
+                <>
+                  <div style={{ textAlign: 'center', padding: '0.5rem 0 1rem' }}>
+                    <CheckCircle size={48} style={{ color: '#9caf88', marginBottom: '0.75rem' }} />
+                    <h2 style={{ borderBottom: 'none', paddingBottom: 0, marginBottom: '0.5rem' }}>
+                      Instructora Creada
+                    </h2>
+                    <p style={{ color: 'var(--stone-gray)', margin: 0, fontSize: '0.9rem' }}>
+                      <strong>{createdInstructor.nombre} {createdInstructor.apellido}</strong> se agregó correctamente.
+                    </p>
+                  </div>
+
+                  {/* Configurar horario */}
+                  <div style={{ textAlign: 'center', marginBottom: '0.75rem' }}>
+                    <p style={{ margin: '0 0 0.35rem', fontSize: '0.92rem', color: 'var(--dark-brown)', fontWeight: 600 }}>
+                      ¿La instructora tiene un horario específico?
+                    </p>
+                    <p style={{ margin: '0 0 0.75rem', fontSize: '0.8rem', color: 'var(--stone-gray)', lineHeight: 1.5 }}>
+                      Si no se configura, estará disponible para dar clases en cualquier horario.
+                    </p>
+                    <button
+                      className="btn btn-primary"
+                      onClick={() => {
+                        closeAddInstructorModal();
+                        const instructor = instructoras.find(i => i.id === createdInstructor.id) || createdInstructor;
+                        openHorariosModal(instructor);
+                      }}
+                      type="button"
+                      style={{
+                        width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        gap: '0.5rem', padding: '0.65rem'
+                      }}
+                    >
+                      <SlidersHorizontal size={15} /> Configurar Horario
+                    </button>
+                  </div>
+
+                  {/* Nota sobre descansos */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.6rem',
+                    padding: '0.7rem 1rem',
+                    marginBottom: '1rem',
+                    borderRadius: '8px',
+                    background: 'rgba(107, 68, 35, 0.03)',
+                    border: '1px solid rgba(107, 68, 35, 0.06)'
+                  }}>
+                    <Info size={15} style={{ color: 'var(--stone-gray)', flexShrink: 0 }} />
+                    <span style={{ fontSize: '0.78rem', color: 'var(--stone-gray)', lineHeight: 1.45 }}>
+                      Los descansos y días libres se configuran desde el menú de acciones de cada instructora.
+                    </span>
+                  </div>
+
+                  <div className="modal-actions" style={{ justifyContent: 'center' }}>
+                    <button className="btn btn-secondary" onClick={closeAddInstructorModal} type="button">
+                      Listo
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -2620,20 +2755,32 @@ const InstructorasAdmin = () => {
       {horariosSemanalesModalOpen && selectedInstructorHorarios &&
         renderPortal(
           <div className="modal-overlay" onClick={closeHorariosSemanalesModal}>
-            <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: "1000px", maxHeight: "85vh" }}>
-              <h2>Horarios Semanales - {selectedInstructorHorarios.nombre} {selectedInstructorHorarios.apellido}</h2>
-
-              <div style={{ marginBottom: "1rem", fontSize: "0.85rem", color: "var(--stone-gray)" }}>
-                <p style={{ margin: "0 0 0.5rem 0" }}>
-                  <strong>💡 Instrucciones:</strong> Haz clic en las celdas para seleccionar/deseleccionar horarios disponibles.
+            <div className="modal-content horarios-semanales-modal" onClick={e => e.stopPropagation()}>
+              <div className="horarios-semanales-header">
+                <h2 style={{ marginBottom: '0.25rem' }}>Horarios Semanales</h2>
+                <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--stone-gray)' }}>
+                  {selectedInstructorHorarios.nombre} {selectedInstructorHorarios.apellido}
                 </p>
-                <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                    <div style={{ width: "12px", height: "12px", background: "#2196f3", borderRadius: "2px" }}></div>
+              </div>
+
+              <div style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "0.5rem",
+                marginBottom: "0.75rem",
+                fontSize: "0.82rem",
+                color: "var(--stone-gray)"
+              }}>
+                <span style={{ opacity: 0.8 }}>Toca las celdas para activar/desactivar disponibilidad</span>
+                <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                    <div style={{ width: "10px", height: "10px", background: "#9caf88", borderRadius: "2px" }}></div>
                     <span>Disponible</span>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                    <div style={{ width: "12px", height: "12px", background: "#bdbdbd", borderRadius: "2px" }}></div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                    <div style={{ width: "10px", height: "10px", background: "#e8e4df", borderRadius: "2px" }}></div>
                     <span>No disponible</span>
                   </div>
                 </div>
@@ -2645,50 +2792,20 @@ const InstructorasAdmin = () => {
                   <p>Cargando horarios semanales...</p>
                 </div>
               ) : (
-                <div style={{
-                  overflowX: "auto",
-                  overflowY: "auto",
-                  maxHeight: "500px",
-                  border: "1px solid #e0e0e0",
-                  borderRadius: "8px",
-                  marginBottom: "1rem"
-                }}>
-                  <table style={{
-                    width: "100%",
-                    borderCollapse: "collapse",
-                    fontSize: "0.75rem",
-                    minWidth: "700px"
-                  }}>
+                <div className="horarios-grid-wrapper">
+                  <table className="horarios-grid-table">
                     <thead>
                       <tr>
-                        <th style={{
-                          padding: "0.5rem",
-                          border: "1px solid #e0e0e0",
-                          background: "#f5f5f5",
-                          fontWeight: "600",
-                          textAlign: "center",
-                          position: "sticky",
-                          top: 0,
-                          zIndex: 1,
-                          minWidth: "60px"
-                        }}>
-                          Hora
+                        <th className="horarios-grid-th horarios-grid-corner">
+                          <Clock size={12} style={{ opacity: 0.5 }} />
                         </th>
                         {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map(dia => {
-                          const diasMap = { 'L': 'Lun', 'M': 'Mar', 'X': 'Mié', 'J': 'Jue', 'V': 'Vie', 'S': 'Sáb', 'D': 'Dom' };
+                          const diasFull = { 'L': 'Lun', 'M': 'Mar', 'X': 'Mié', 'J': 'Jue', 'V': 'Vie', 'S': 'Sáb', 'D': 'Dom' };
+                          const diasShort = { 'L': 'L', 'M': 'M', 'X': 'X', 'J': 'J', 'V': 'V', 'S': 'S', 'D': 'D' };
                           return (
-                            <th key={dia} style={{
-                              padding: "0.5rem",
-                              border: "1px solid #e0e0e0",
-                              background: "#f5f5f5",
-                              fontWeight: "600",
-                              textAlign: "center",
-                              position: "sticky",
-                              top: 0,
-                              zIndex: 1,
-                              minWidth: "70px"
-                            }}>
-                              {diasMap[dia]}
+                            <th key={dia} className="horarios-grid-th horarios-grid-dia">
+                              <span className="dia-full">{diasFull[dia]}</span>
+                              <span className="dia-short">{diasShort[dia]}</span>
                             </th>
                           );
                         })}
@@ -2697,17 +2814,7 @@ const InstructorasAdmin = () => {
                     <tbody>
                       {generateTimeSlots().filter((_, index) => index % 2 === 0).map(timeSlot => (
                         <tr key={timeSlot}>
-                          <td style={{
-                            padding: "0.25rem",
-                            border: "1px solid #e0e0e0",
-                            background: "#f9f9f9",
-                            fontWeight: "600",
-                            textAlign: "center",
-                            fontSize: "0.7rem",
-                            position: "sticky",
-                            left: 0,
-                            zIndex: 1
-                          }}>
+                          <td className="horarios-grid-time">
                             {timeSlot}
                           </td>
                           {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map(dia => {
@@ -2720,27 +2827,10 @@ const InstructorasAdmin = () => {
                               <td
                                 key={`${dia}-${timeSlot}`}
                                 onClick={() => handleTimeSlotClick(dia, timeSlot)}
-                                style={{
-                                  padding: "0.1rem",
-                                  border: "1px solid #e0e0e0",
-                                  background: isSelected ? "#e3f2fd" : "#ffffff",
-                                  cursor: "pointer",
-                                  textAlign: "center",
-                                  transition: "all 0.15s",
-                                  userSelect: "none",
-                                  minWidth: "70px",
-                                  maxWidth: "70px"
-                                }}
-                                title={isSelected ? "Horario disponible - Click para quitar" : "Horario no disponible - Click para agregar"}
+                                className={`horarios-grid-cell ${isSelected ? 'horarios-grid-cell-active' : ''}`}
+                                title={isSelected ? "Disponible - Click para quitar" : "No disponible - Click para agregar"}
                               >
-                                <div style={{
-                                  width: "100%",
-                                  height: "16px",
-                                  borderRadius: "2px",
-                                  background: isSelected ? "#2196f3" : "#e0e0e0",
-                                  transition: "background-color 0.15s",
-                                  border: isSelected ? "1px solid #1976d2" : "1px solid #bdbdbd"
-                                }}></div>
+                                <div className="horarios-grid-block" />
                               </td>
                             );
                           })}
@@ -2753,36 +2843,24 @@ const InstructorasAdmin = () => {
 
               {/* Conflictos detectados (si aplica) */}
               {conflictos && conflictos.length > 0 && (
-                <div style={{ margin: '0 0 1rem 0', padding: '0.75rem', border: '1px solid #ffc107', background: '#fff8e1', borderRadius: 8 }}>
-                  <div style={{ fontWeight: 700, marginBottom: 8, color: '#856404' }}>{conflictos.length} conflictos detectados</div>
-                  <div style={{ maxHeight: '160px', overflowY: 'auto' }}>
+                <div style={{ margin: '0.75rem 0', padding: '0.75rem', border: '1px solid #ffc107', background: '#fff8e1', borderRadius: 8 }}>
+                  <div style={{ fontWeight: 700, marginBottom: 8, color: '#856404', fontSize: '0.85rem' }}>{conflictos.length} conflictos detectados</div>
+                  <div style={{ maxHeight: '120px', overflowY: 'auto' }}>
                     {conflictos.map(c => (
-                      <div key={c.id || `${c.date}-${c.time}`} style={{ padding: '6px 0', borderBottom: '1px solid rgba(0,0,0,0.04)', fontSize: '0.9rem' }}>
-                        <div><strong>Fecha:</strong> {c.date} {c.diaNombre ? `(${c.diaNombre})` : ''} • <strong>Hora:</strong> {c.time || c.hora_inicio} - {c.hora_fin}</div>
-                        <div style={{ color: '#6b4423' }}>{c.student || 'Sin cliente asignado'} • {c.horse || 'Sin caballo'}</div>
-                        <div style={{ color: '#6b4423' }}><em>{c.type || 'Sin tipo'}</em> • {c.razon}</div>
+                      <div key={c.id || `${c.date}-${c.time}`} style={{ padding: '4px 0', borderBottom: '1px solid rgba(0,0,0,0.04)', fontSize: '0.8rem' }}>
+                        <div><strong>{c.date}</strong> {c.diaNombre ? `(${c.diaNombre})` : ''} • {c.time || c.hora_inicio} - {c.hora_fin}</div>
+                        <div style={{ color: '#6b4423' }}>{c.student || 'Sin cliente'} • <em>{c.type || 'Sin tipo'}</em></div>
                       </div>
                     ))}
                   </div>
-                  <div style={{ marginTop: 8, fontSize: '0.85rem', color: '#856404' }}>Ajusta los bloques para que las clases queden totalmente dentro de un bloque permitido antes de guardar.</div>
+                  <div style={{ marginTop: 6, fontSize: '0.8rem', color: '#856404' }}>Ajusta los bloques antes de guardar.</div>
                 </div>
               )}
 
-              {/* Botones fijos en la parte inferior */}
-              <div style={{
-                position: "sticky",
-                bottom: 0,
-                background: "white",
-                borderTop: "1px solid #e0e0e0",
-                padding: "1rem",
-                margin: "-1rem -1rem 0 -1rem",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center"
-              }}>
-                <div style={{ fontSize: "0.9rem", color: "var(--stone-gray)" }}>
-                  <strong>📊 Resumen:</strong>
-                  {Object.values(horariosSemanales).reduce((total, horarios) => total + horarios.length, 0)} bloques de horario configurados
+              {/* Footer fijo */}
+              <div className="horarios-semanales-footer">
+                <div className="horarios-semanales-resumen">
+                  {Object.values(horariosSemanales).reduce((total, horarios) => total + horarios.length, 0)} bloques configurados
                 </div>
                 <div style={{ display: "flex", gap: "0.5rem" }}>
                   <button
@@ -2797,10 +2875,10 @@ const InstructorasAdmin = () => {
                     onClick={saveHorariosSemanales}
                     type="button"
                     disabled={loadingHorariosSemanales}
-                    style={{ minWidth: "140px" }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}
                   >
                     {loadingHorariosSemanales ? <Loader size={16} className="spin" /> : <Calendar size={16} />}
-                    {loadingHorariosSemanales ? " Guardando..." : " Guardar Cambios"}
+                    {loadingHorariosSemanales ? "Guardando..." : "Guardar"}
                   </button>
                 </div>
               </div>

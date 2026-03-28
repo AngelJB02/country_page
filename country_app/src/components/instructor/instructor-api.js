@@ -1,5 +1,5 @@
 // API service para el panel de instructoras
-const API_BASE_URL = 'https://elrefugiocountryclub.com/api/api';
+const API_BASE_URL = 'http://192.168.1.68:3001/api';
 
 /**
  * Obtiene las clases/reservas de una instructora usando el usuario_id

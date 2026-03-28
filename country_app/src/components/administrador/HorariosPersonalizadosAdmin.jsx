@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import useAutoRefresh from '../../hooks/useAutoRefresh';
 import axios from 'axios';
-import { Plus, Trash2, Calendar, Clock, User, CheckCircle, XCircle, Edit2, Save, X, Search } from 'lucide-react';
+import { Plus, Trash2, Calendar, Clock, User, CheckCircle, XCircle, Edit2, Save, X, Search, MoreVertical } from 'lucide-react';
 import { toast } from 'react-toastify';
 
 // Combobox: input con búsqueda + lista desplegable filtrable
@@ -153,34 +154,75 @@ const HorariosPersonalizadosAdmin = () => {
 
   const [formData, setFormData] = useState(initialFormState);
 
-  const fetchData = async () => {
-    setLoading(true);
+  // Filtros de tabla
+  const [hpSearchTerm, setHpSearchTerm] = useState('');
+  const [hpTipoFilter, setHpTipoFilter] = useState('vigentes');
+  const [hpSortBy, setHpSortBy] = useState('cliente');
+  const [hpOpenMenuId, setHpOpenMenuId] = useState(null);
+
+  // Cerrar menú al hacer clic fuera
+  useEffect(() => {
+    if (hpOpenMenuId === null) return;
+    const close = () => setHpOpenMenuId(null);
+    document.addEventListener('click', close);
+    return () => document.removeEventListener('click', close);
+  }, [hpOpenMenuId]);
+
+  // Conteo filtrado para el resumen
+  const hpFilteredCount = (() => {
+    const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+    return horarios.filter(hp => {
+      // Filtro tipo
+      if (hpTipoFilter === 'vigentes') {
+        if (!(hp.tipo === 'recurrente' || (hp.fecha && new Date(hp.fecha) >= hoy))) return false;
+      } else if (hpTipoFilter === 'pasados') {
+        if (!(hp.tipo === 'fecha_especifica' && hp.fecha && new Date(hp.fecha) < hoy)) return false;
+      } else if (hpTipoFilter === 'recurrente') {
+        if (hp.tipo !== 'recurrente') return false;
+      } else if (hpTipoFilter === 'fecha_especifica') {
+        if (hp.tipo !== 'fecha_especifica') return false;
+      }
+      // Filtro búsqueda
+      if (hpSearchTerm) {
+        const term = hpSearchTerm.toLowerCase();
+        const cliente = `${hp.cliente_nombre || ''} ${hp.cliente_apellido || ''}`.toLowerCase();
+        const instructora = `${hp.instructora_nombre || ''} ${hp.instructora_apellido || ''}`.toLowerCase();
+        if (!cliente.includes(term) && !instructora.includes(term)) return false;
+      }
+      return true;
+    }).length;
+  })();
+
+  const fetchData = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const [hRes, cRes, iRes, clRes, icRes] = await Promise.all([
-        axios.get('https://elrefugiocountryclub.com/api/api/horarios/personalizados-all'),
-        axios.get('https://elrefugiocountryclub.com/api/api/users/all'),
-        axios.get('https://elrefugiocountryclub.com/api/api/instructoras'),
-        axios.get('https://elrefugiocountryclub.com/api/api/horarios/clases'),
-        axios.get('https://elrefugiocountryclub.com/api/api/instructoras/clases-asignadas')
+        axios.get('http://192.168.1.68:3001/api/horarios/personalizados-all'),
+        axios.get('http://192.168.1.68:3001/api/users/all'),
+        axios.get('http://192.168.1.68:3001/api/instructoras'),
+        axios.get('http://192.168.1.68:3001/api/horarios/clases'),
+        axios.get('http://192.168.1.68:3001/api/instructoras/clases-asignadas')
       ]);
       setHorarios(hRes.data);
-      // Solo clientes activos (no bloqueados)
       setClientes(cRes.data.filter(u => u.rol === 'cliente' && u.estatus?.toLowerCase() !== 'bloqueado'));
-      // Solo instructoras disponibles
       setInstructoras(iRes.data.filter(i => i.disponibilidad === 'disponible'));
       setClases(clRes.data);
       setInstructoraClases(icRes.data);
     } catch (err) {
       console.error('Error fetching data:', err);
-      toast.error('Error al cargar datos');
+      if (!silent) toast.error('Error al cargar datos');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Auto-refresh silencioso cada 30s
+  const refreshHorarios = useCallback(() => fetchData(true), []);
+  useAutoRefresh(refreshHorarios, { interval: 30000 });
 
   const handleEdit = (grupo) => {
     // grupo puede ser un registro individual o un grupo con _ids y _dias
@@ -322,18 +364,18 @@ const HorariosPersonalizadosAdmin = () => {
         if (editingIds.length > 1 || (formData.tipo === 'recurrente' && formData.dias_semana.length > 1)) {
           // Grupo multi-día: borrar todos los viejos y crear nuevos por cada día seleccionado
           await Promise.all(editingIds.map(id =>
-            axios.delete(`https://elrefugiocountryclub.com/api/api/horarios/personalizados/${id}`)
+            axios.delete(`http://192.168.1.68:3001/api/horarios/personalizados/${id}`)
           ));
           const dias = formData.tipo === 'recurrente' ? formData.dias_semana : [null];
           await Promise.all(dias.map(dia => {
             const payload = { ...formData, dia_semana: dia };
-            return axios.post('https://elrefugiocountryclub.com/api/api/horarios/personalizados', payload);
+            return axios.post('http://192.168.1.68:3001/api/horarios/personalizados', payload);
           }));
           toast.success('Horario actualizado correctamente');
         } else {
           // Edición simple vía PUT
           const payload = { ...formData, dia_semana: formData.dias_semana[0] };
-          await axios.put(`https://elrefugiocountryclub.com/api/api/horarios/personalizados/${editingId}`, payload);
+          await axios.put(`http://192.168.1.68:3001/api/horarios/personalizados/${editingId}`, payload);
           toast.success('Horario actualizado correctamente');
         }
       } else {
@@ -341,7 +383,7 @@ const HorariosPersonalizadosAdmin = () => {
         await Promise.all(
           dias.map(dia => {
             const payload = { ...formData, dia_semana: dia };
-            return axios.post('https://elrefugiocountryclub.com/api/api/horarios/personalizados', payload);
+            return axios.post('http://192.168.1.68:3001/api/horarios/personalizados', payload);
           })
         );
         const count = dias.length;
@@ -358,7 +400,7 @@ const HorariosPersonalizadosAdmin = () => {
   const handleDelete = async (id) => {
     if (!window.confirm('¿Estás seguro de eliminar este horario personalizado?')) return;
     try {
-      await axios.delete(`https://elrefugiocountryclub.com/api/api/horarios/personalizados/${id}`);
+      await axios.delete(`http://192.168.1.68:3001/api/horarios/personalizados/${id}`);
       toast.success('Horario eliminado');
       fetchData();
     } catch (err) {
@@ -646,23 +688,88 @@ const HorariosPersonalizadosAdmin = () => {
         </div>
       )}
 
-      <div className="hp-list" style={{ 
-        backgroundColor: 'white', 
-        borderRadius: '16px', 
-        overflow: 'hidden', 
+      <div className="hp-list" style={{
+        backgroundColor: 'white',
+        borderRadius: '16px',
+        overflow: 'hidden',
         boxShadow: '0 4px 25px rgba(0,0,0,0.06)',
         border: '1px solid #edf2f7'
       }}>
+        {/* Filtros integrados en la card */}
+        <div style={{
+          display: 'flex', flexWrap: 'wrap', gap: '0.6rem', alignItems: 'center',
+          padding: '1rem 1.5rem',
+          borderBottom: '1px solid #edf2f7',
+          background: '#fafbfc'
+        }}>
+          <div style={{ position: 'relative', flex: '1 1 200px', maxWidth: '280px' }}>
+            <Search size={14} style={{ position: 'absolute', left: '0.7rem', top: '50%', transform: 'translateY(-50%)', color: '#a0aec0' }} />
+            <input
+              type="text"
+              placeholder="Buscar cliente o instructora..."
+              value={hpSearchTerm}
+              onChange={e => setHpSearchTerm(e.target.value)}
+              style={{
+                width: '100%', padding: '0.45rem 0.7rem 0.45rem 2rem',
+                border: '1.5px solid #e2e8f0', borderRadius: '7px', fontSize: '0.82rem',
+                background: 'white', color: '#2d3748', boxSizing: 'border-box'
+              }}
+            />
+          </div>
+          <select
+            value={hpTipoFilter}
+            onChange={e => setHpTipoFilter(e.target.value)}
+            style={{
+              padding: '0.45rem 1.8rem 0.45rem 0.7rem', border: '1.5px solid #e2e8f0',
+              borderRadius: '7px', fontSize: '0.82rem', background: 'white', color: '#2d3748',
+              cursor: 'pointer', appearance: 'none',
+              backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12'%3E%3Cpath fill='%23718096' d='M6 9L1 4h10z'/%3E%3C/svg%3E\")",
+              backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.6rem center'
+            }}
+          >
+            <option value="">Todos</option>
+            <option value="vigentes">Vigentes</option>
+            <option value="recurrente">Recurrentes</option>
+            <option value="fecha_especifica">Fecha única</option>
+            <option value="pasados">Pasados</option>
+          </select>
+          <select
+            value={hpSortBy}
+            onChange={e => setHpSortBy(e.target.value)}
+            style={{
+              padding: '0.45rem 1.8rem 0.45rem 0.7rem', border: '1.5px solid #e2e8f0',
+              borderRadius: '7px', fontSize: '0.82rem', background: 'white', color: '#2d3748',
+              cursor: 'pointer', appearance: 'none',
+              backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12'%3E%3Cpath fill='%23718096' d='M6 9L1 4h10z'/%3E%3C/svg%3E\")",
+              backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.6rem center'
+            }}
+          >
+            <option value="cliente">Por cliente</option>
+            <option value="instructora">Por instructora</option>
+            <option value="clase">Por clase</option>
+          </select>
+        </div>
+
+        {/* Resumen de filtros */}
+        <p style={{ margin: 0, padding: '0.5rem 1.5rem 0.6rem', fontSize: '0.82rem', color: '#4a5568', borderBottom: '1px solid #edf2f7' }}>
+          Mostrando <strong>{hpFilteredCount} horario{hpFilteredCount !== 1 ? 's' : ''}</strong>
+          {' · '}{hpTipoFilter === 'vigentes' ? 'Vigentes' : hpTipoFilter === 'recurrente' ? 'Recurrentes' : hpTipoFilter === 'fecha_especifica' ? 'Fecha única' : hpTipoFilter === 'pasados' ? 'Pasados' : 'Todos'}
+          {' · '}{hpSortBy === 'cliente' ? 'Por cliente' : hpSortBy === 'instructora' ? 'Por instructora' : 'Por clase'}
+          {!hpTipoFilter && !hpSearchTerm && (
+            <span style={{ fontStyle: 'italic', opacity: 0.6 }}> · Usa los filtros para ajustar la búsqueda</span>
+          )}
+        </p>
+
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #edf2f7' }}>
-                <th style={{ textAlign: 'left', padding: '1.2rem 1.5rem', color: '#718096', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.05em' }}>Cliente</th>
-                <th style={{ textAlign: 'left', padding: '1.2rem 1.5rem', color: '#718096', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.05em' }}>Clase / Nivel</th>
-                <th style={{ textAlign: 'left', padding: '1.2rem 1.5rem', color: '#718096', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.05em' }}>Instructora Asignada</th>
-                <th style={{ textAlign: 'left', padding: '1.2rem 1.5rem', color: '#718096', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.05em' }}>Periodicidad</th>
-                <th style={{ textAlign: 'left', padding: '1.2rem 1.5rem', color: '#718096', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.05em' }}>Rango Horario</th>
-                <th style={{ textAlign: 'center', padding: '1.2rem 1.5rem', color: '#718096', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.05em' }}>Acciones</th>
+              <tr style={{ borderBottom: '1px solid rgba(107,68,35,0.08)' }}>
+                <th style={{ textAlign: 'left', padding: '0.75rem 1.5rem', color: 'var(--secondary-brown)', textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: '0.5px', fontWeight: 700 }}>Cliente</th>
+                <th style={{ textAlign: 'left', padding: '0.75rem 1.5rem', color: 'var(--secondary-brown)', textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: '0.5px', fontWeight: 700 }}>Clase</th>
+                <th style={{ textAlign: 'left', padding: '0.75rem 1.5rem', color: 'var(--secondary-brown)', textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: '0.5px', fontWeight: 700 }}>Instructora</th>
+                <th style={{ textAlign: 'left', padding: '0.75rem 1.5rem', color: 'var(--secondary-brown)', textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: '0.5px', fontWeight: 700 }}>Periodicidad</th>
+                <th style={{ textAlign: 'left', padding: '0.75rem 1.5rem', color: 'var(--secondary-brown)', textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: '0.5px', fontWeight: 700 }}>Horario</th>
+                <th style={{ textAlign: 'center', padding: '0.75rem 1.5rem', color: 'var(--secondary-brown)', textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: '0.5px', fontWeight: 700, width: '60px' }}></th>
               </tr>
             </thead>
             <tbody>
@@ -677,15 +784,38 @@ const HorariosPersonalizadosAdmin = () => {
                 </tr>
               ) : (() => {
                 // Agrupar horarios recurrentes con mismo cliente+instructora+clase+hora en una sola fila
+                const hoy = new Date();
+                hoy.setHours(0, 0, 0, 0);
                 const diasOrden = ['L','M','X','J','V','S','D'];
                 const grupos = [];
                 const usados = new Set();
 
-                horarios.forEach(hp => {
+                // Filtrar por tipo/vigencia
+                const horariosBase = horarios.filter(hp => {
+                  if (hpTipoFilter === 'vigentes') {
+                    return hp.tipo === 'recurrente' || (hp.fecha && new Date(hp.fecha) >= hoy);
+                  }
+                  if (hpTipoFilter === 'pasados') {
+                    return hp.tipo === 'fecha_especifica' && hp.fecha && new Date(hp.fecha) < hoy;
+                  }
+                  if (hpTipoFilter === 'recurrente') return hp.tipo === 'recurrente';
+                  if (hpTipoFilter === 'fecha_especifica') return hp.tipo === 'fecha_especifica';
+                  return true;
+                });
+
+                // Filtrar por búsqueda
+                const horariosFiltered = horariosBase.filter(hp => {
+                  if (!hpSearchTerm) return true;
+                  const term = hpSearchTerm.toLowerCase();
+                  const cliente = `${hp.cliente_nombre || ''} ${hp.cliente_apellido || ''}`.toLowerCase();
+                  const instructora = `${hp.instructora_nombre || ''} ${hp.instructora_apellido || ''}`.toLowerCase();
+                  return cliente.includes(term) || instructora.includes(term);
+                });
+
+                horariosFiltered.forEach(hp => {
                   if (usados.has(hp.id)) return;
                   if (hp.tipo === 'recurrente') {
-                    // Buscar otros horarios que pertenecen al mismo grupo
-                    const hermanos = horarios.filter(h =>
+                    const hermanos = horariosFiltered.filter(h =>
                       !usados.has(h.id) &&
                       h.tipo === 'recurrente' &&
                       h.cliente_id === hp.cliente_id &&
@@ -695,7 +825,6 @@ const HorariosPersonalizadosAdmin = () => {
                       h.hora_fin === hp.hora_fin
                     );
                     hermanos.forEach(h => usados.add(h.id));
-                    // Ordenar los días según el orden canónico
                     const diasOrdenados = hermanos
                       .map(h => h.dia_semana)
                       .sort((a, b) => diasOrden.indexOf(a) - diasOrden.indexOf(b));
@@ -706,126 +835,179 @@ const HorariosPersonalizadosAdmin = () => {
                   }
                 });
 
-                return grupos.map(grupo => (
-                  <tr key={grupo._ids.join('-')} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background-color 0.2s' }}>
-                    <td style={{ padding: '1.2rem 1.5rem' }}>
-                      <div style={{ fontWeight: '700', color: '#2d3748' }}>{grupo.cliente_nombre} {grupo.cliente_apellido}</div>
-                      <div style={{ fontSize: '0.8rem', color: '#718096' }}>ID Alumno: #{grupo.cliente_id}</div>
+                // Ordenar
+                grupos.sort((a, b) => {
+                  if (hpSortBy === 'cliente') {
+                    return `${a.cliente_nombre} ${a.cliente_apellido}`.localeCompare(`${b.cliente_nombre} ${b.cliente_apellido}`);
+                  }
+                  if (hpSortBy === 'instructora') {
+                    return `${a.instructora_nombre} ${a.instructora_apellido}`.localeCompare(`${b.instructora_nombre} ${b.instructora_apellido}`);
+                  }
+                  if (hpSortBy === 'clase') {
+                    return (a.clase_nombre || '').localeCompare(b.clase_nombre || '');
+                  }
+                  return 0;
+                });
+
+                if (grupos.length === 0) {
+                  return (
+                    <tr>
+                      <td colSpan="6" style={{ textAlign: 'center', padding: '3rem', color: '#a0aec0' }}>
+                        No se encontraron horarios con los filtros aplicados.
+                      </td>
+                    </tr>
+                  );
+                }
+
+                return grupos.map(grupo => {
+                  const esPasado = grupo.tipo === 'fecha_especifica' && grupo.fecha && new Date(grupo.fecha) < hoy;
+                  return (
+                  <tr key={grupo._ids.join('-')} style={{ borderBottom: '1px solid rgba(107,68,35,0.06)', transition: 'background-color 0.15s', opacity: esPasado ? 0.45 : 1 }}>
+                    <td style={{ padding: '1rem 1.5rem' }}>
+                      <div style={{ fontWeight: '600', color: 'var(--dark-brown)', fontSize: '0.88rem' }}>{grupo.cliente_nombre} {grupo.cliente_apellido}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--stone-gray)' }}>#{grupo.cliente_id}</div>
                     </td>
-                    <td style={{ padding: '1.2rem 1.5rem' }}>
-                      <span style={{ 
-                        backgroundColor: '#f0f9ff', 
-                        color: '#0369a1',
-                        padding: '0.3rem 0.8rem', 
-                        borderRadius: '20px', 
-                        fontSize: '0.8rem',
-                        fontWeight: '600',
-                        border: '1px solid #bae6fd'
+                    <td style={{ padding: '1rem 1.5rem' }}>
+                      <span style={{
+                        backgroundColor: 'rgba(193, 123, 74, 0.08)',
+                        color: 'var(--primary-brown)',
+                        padding: '0.25rem 0.65rem',
+                        borderRadius: '6px',
+                        fontSize: '0.75rem',
+                        fontWeight: '700',
+                        letterSpacing: '0.3px',
+                        textTransform: 'uppercase'
                       }}>
-                        {grupo.clase_nombre.toUpperCase()}
+                        {grupo.clase_nombre}
                       </span>
                     </td>
-                    <td style={{ padding: '1.2rem 1.5rem' }}>
+                    <td style={{ padding: '1rem 1.5rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
-                          <User size={16} />
+                        <div style={{ width: '28px', height: '28px', borderRadius: '7px', backgroundColor: 'rgba(156,175,136,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#7a9768' }}>
+                          <User size={14} />
                         </div>
-                        <span style={{ color: '#4a5568', fontWeight: '500' }}>{grupo.instructora_nombre} {grupo.instructora_apellido}</span>
+                        <span style={{ color: 'var(--charcoal)', fontWeight: '500', fontSize: '0.88rem' }}>{grupo.instructora_nombre} {grupo.instructora_apellido}</span>
                       </div>
                     </td>
-                    <td style={{ padding: '1.2rem 1.5rem' }}>
+                    <td style={{ padding: '1rem 1.5rem' }}>
                       {grupo.tipo === 'recurrente' ? (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', alignItems: 'center' }}>
-                          <Clock size={14} style={{ color: '#059669', flexShrink: 0 }} />
-                          {grupo._dias.map(d => (
-                            <span key={d} style={{
-                              backgroundColor: '#d1fae5',
-                              color: '#065f46',
-                              padding: '0.15rem 0.5rem',
-                              borderRadius: '6px',
-                              fontSize: '0.78rem',
-                              fontWeight: '700',
-                              border: '1px solid #6ee7b7'
-                            }}>{d}</span>
-                          ))}
-                          {grupo._dias.length > 1 && (
-                            <span style={{ fontSize: '0.75rem', color: '#6b7280', marginLeft: '2px' }}>
-                              · {grupo._dias.length} días
-                            </span>
-                          )}
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', alignItems: 'center' }}>
+                          {grupo._dias.map(d => {
+                            const nombres = { L: 'Lunes', M: 'Martes', X: 'Miércoles', J: 'Jueves', V: 'Viernes', S: 'Sábado', D: 'Domingo' };
+                            return (
+                              <span key={d} style={{
+                                backgroundColor: 'rgba(156,175,136,0.15)',
+                                color: '#5a7a47',
+                                padding: '0.2rem 0.55rem',
+                                borderRadius: '4px',
+                                fontSize: '0.75rem',
+                                fontWeight: '600'
+                              }}>{nombres[d] || d}</span>
+                            );
+                          })}
                         </div>
                       ) : (
-                        <div style={{ color: '#2563eb', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: '600', fontSize: '0.9rem' }}>
-                          <Calendar size={16} /> {new Date(grupo.fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        <div>
+                          <div style={{ color: esPasado ? 'var(--stone-gray)' : 'var(--dark-brown)', display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: '500', fontSize: '0.85rem' }}>
+                            <Calendar size={14} style={{ opacity: 0.5 }} /> {new Date(grupo.fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </div>
+                          {esPasado && (
+                            <span style={{ fontSize: '0.68rem', color: '#c17b4a', fontWeight: 500 }}>Fecha pasada</span>
+                          )}
                         </div>
                       )}
                     </td>
-                    <td style={{ padding: '1.2rem 1.5rem' }}>
-                      <div style={{ 
-                        display: 'inline-flex', 
-                        alignItems: 'center', 
-                        padding: '0.4rem 0.8rem', 
-                        backgroundColor: '#fffbeb', 
-                        borderRadius: '8px',
-                        border: '1px solid #fde68a',
-                        color: '#92400e',
+                    <td style={{ padding: '1rem 1.5rem' }}>
+                      <div style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        padding: '0.3rem 0.7rem',
+                        backgroundColor: 'rgba(107,68,35,0.05)',
+                        borderRadius: '6px',
+                        color: 'var(--dark-brown)',
                         fontWeight: '700',
-                        fontSize: '0.9rem'
+                        fontSize: '0.85rem',
+                        fontFamily: 'var(--font-secondary)',
+                        letterSpacing: '0.2px'
                       }}>
                         {grupo.hora_inicio} - {grupo.hora_fin}
                       </div>
                     </td>
-                    <td style={{ padding: '1.2rem 1.5rem', textAlign: 'center' }}>
-                      <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem' }}>
-                        {/* Editar siempre disponible */}
-                        <button 
-                          onClick={() => handleEdit(grupo)}
-                          style={{ 
-                            color: '#4a5568', 
-                            backgroundColor: '#f1f5f9',
-                            border: 'none', 
-                            cursor: 'pointer', 
-                            padding: '0.6rem',
-                            borderRadius: '8px',
-                            transition: 'all 0.2s'
+                    <td style={{ padding: '1rem 1.5rem', textAlign: 'center' }}>
+                      <div style={{ position: 'relative', display: 'inline-block' }}>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const menuKey = grupo._ids.join('-');
+                            setHpOpenMenuId(hpOpenMenuId === menuKey ? null : menuKey);
                           }}
-                          title="Editar"
+                          style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            width: '34px', height: '34px', border: '1.5px solid #e2e8f0',
+                            borderRadius: '8px', background: 'white', color: '#718096',
+                            cursor: 'pointer', transition: 'all 0.15s'
+                          }}
                         >
-                          <Edit2 size={18} />
+                          <MoreVertical size={16} />
                         </button>
-                        <button 
-                          onClick={async () => {
-                            const msg = grupo._ids.length > 1
-                              ? `¿Eliminar los ${grupo._ids.length} horarios de este grupo (${grupo._dias.map(d => dayMapLong[d]).join(', ')})?`
-                              : '¿Estás seguro de eliminar este horario personalizado?';
-                            if (!window.confirm(msg)) return;
-                            try {
-                              await Promise.all(grupo._ids.map(id =>
-                                axios.delete(`https://elrefugiocountryclub.com/api/api/horarios/personalizados/${id}`)
-                              ));
-                              toast.success(grupo._ids.length > 1 ? `${grupo._ids.length} horarios eliminados` : 'Horario eliminado');
-                              fetchData();
-                            } catch {
-                              toast.error('Error al eliminar');
-                            }
-                          }}
-                          style={{ 
-                            color: '#e03131', 
-                            backgroundColor: '#fee2e2',
-                            border: 'none', 
-                            cursor: 'pointer', 
-                            padding: '0.6rem',
-                            borderRadius: '8px',
-                            transition: 'all 0.2s'
-                          }}
-                          title={grupo._ids.length > 1 ? `Eliminar grupo (${grupo._ids.length} días)` : 'Eliminar'}
-                        >
-                          <Trash2 size={18} />
-                        </button>
+                        {hpOpenMenuId === grupo._ids.join('-') && (
+                          <div onClick={e => e.stopPropagation()} style={{
+                            position: 'absolute', top: 'calc(100% + 4px)', right: 0, zIndex: 100,
+                            background: 'white', border: '1px solid #edf2f7', borderRadius: '10px',
+                            boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: '180px', padding: '4px',
+                            animation: 'slideDown 0.12s ease-out'
+                          }}>
+                            <button
+                              onClick={() => { handleEdit(grupo); setHpOpenMenuId(null); }}
+                              style={{
+                                display: 'flex', alignItems: 'center', gap: '8px', width: '100%',
+                                padding: '8px 12px', border: 'none', borderRadius: '7px',
+                                background: 'none', cursor: 'pointer', color: '#2d3748',
+                                fontSize: '0.84rem', fontWeight: 500, textAlign: 'left'
+                              }}
+                              onMouseEnter={e => e.currentTarget.style.background = '#f7fafc'}
+                              onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                            >
+                              <Edit2 size={15} style={{ color: '#4a90e2' }} />
+                              Editar horario
+                            </button>
+                            <div style={{ height: '1px', background: '#f1f5f9', margin: '3px 8px' }} />
+                            <button
+                              onClick={async () => {
+                                setHpOpenMenuId(null);
+                                const msg = grupo._ids.length > 1
+                                  ? `¿Eliminar los ${grupo._ids.length} horarios de este grupo (${grupo._dias.map(d => dayMapLong[d]).join(', ')})?`
+                                  : '¿Eliminar este horario personalizado?';
+                                if (!window.confirm(msg)) return;
+                                try {
+                                  await Promise.all(grupo._ids.map(id =>
+                                    axios.delete(`http://192.168.1.68:3001/api/horarios/personalizados/${id}`)
+                                  ));
+                                  toast.success(grupo._ids.length > 1 ? `${grupo._ids.length} horarios eliminados` : 'Horario eliminado');
+                                  fetchData();
+                                } catch {
+                                  toast.error('Error al eliminar');
+                                }
+                              }}
+                              style={{
+                                display: 'flex', alignItems: 'center', gap: '8px', width: '100%',
+                                padding: '8px 12px', border: 'none', borderRadius: '7px',
+                                background: 'none', cursor: 'pointer', color: '#e03131',
+                                fontSize: '0.84rem', fontWeight: 500, textAlign: 'left'
+                              }}
+                              onMouseEnter={e => e.currentTarget.style.background = '#fff5f5'}
+                              onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                            >
+                              <Trash2 size={15} />
+                              Eliminar
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </td>
                   </tr>
-                ));
+                );
+                });
               })()}
             </tbody>
           </table>

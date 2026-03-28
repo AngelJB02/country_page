@@ -106,7 +106,7 @@ const Login = () => {
 
     setIsLoading(true);
     try {
-      const response = await fetch("https://elrefugiocountryclub.com/api/api/login", {
+      const response = await fetch("http://192.168.1.68:3001/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -199,7 +199,7 @@ const MembershipAdminDashboard = () => {
   // Función para obtener las credenciales reales del servidor (con verificación de duplicados)
   const getRealCredentials = async (nombre, apellido, customPassword = null) => {
     try {
-      const response = await fetch("https://elrefugiocountryclub.com/api/api/users/preview-credentials", {
+      const response = await fetch("http://192.168.1.68:3001/api/users/preview-credentials", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ nombre, apellido, customPassword }),
@@ -262,7 +262,7 @@ const MembershipAdminDashboard = () => {
   // Función para cargar conteo de pagos
   const loadPaymentCounts = useCallback(async () => {
     try {
-      const response = await fetch("https://elrefugiocountryclub.com/api/api/users/payment-counts")
+      const response = await fetch("http://192.168.1.68:3001/api/users/payment-counts")
       if (response.ok) {
         const counts = await response.json()
         const countsMap = {}
@@ -279,7 +279,7 @@ const MembershipAdminDashboard = () => {
   // Función para cargar estado de pagos (vencidos, próximos a vencer)
   const loadPaymentStatus = useCallback(async () => {
     try {
-      const response = await fetch("https://elrefugiocountryclub.com/api/api/users/payment-status")
+      const response = await fetch("http://192.168.1.68:3001/api/users/payment-status")
       if (response.ok) {
         const status = await response.json()
         const statusMap = {}
@@ -338,7 +338,7 @@ const MembershipAdminDashboard = () => {
 
   const refreshUsersList = useCallback((silent = false) => {
     if (!silent) setLoading(true)
-    return fetch("https://elrefugiocountryclub.com/api/api/users/users-with-payments")
+    return fetch("http://192.168.1.68:3001/api/users/users-with-payments")
       .then((res) => res.json())
       .then((data) => {
         const mapped = data.map((u) => {
@@ -690,7 +690,7 @@ const MembershipAdminDashboard = () => {
   }
 
   const fetchPaymentHistory = async (memberId, retries = 1) => {
-    const url = `https://elrefugiocountryclub.com/api/api/users/payment-history/${memberId}`
+    const url = `http://192.168.1.68:3001/api/users/payment-history/${memberId}`
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
         const response = await fetch(url)
@@ -773,7 +773,7 @@ const MembershipAdminDashboard = () => {
         return
       }
 
-      const response = await fetch(`https://elrefugiocountryclub.com/api/api/users/payment/${editingPayment.id}`, {
+      const response = await fetch(`http://192.168.1.68:3001/api/users/payment/${editingPayment.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -826,7 +826,7 @@ const MembershipAdminDashboard = () => {
         observaciones: newPayment.observaciones || null
       }
 
-      const response = await fetch("https://elrefugiocountryclub.com/api/api/users/add-payment", {
+      const response = await fetch("http://192.168.1.68:3001/api/users/add-payment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(paymentData),
@@ -834,7 +834,7 @@ const MembershipAdminDashboard = () => {
 
       if (response.ok) {
         // Recargar historial de pagos
-        const historyResponse = await fetch(`https://elrefugiocountryclub.com/api/api/users/payment-history/${selectedMember.id}`)
+        const historyResponse = await fetch(`http://192.168.1.68:3001/api/users/payment-history/${selectedMember.id}`)
         if (historyResponse.ok) {
           const history = await historyResponse.json()
           setPaymentHistory(history)
@@ -939,7 +939,7 @@ const MembershipAdminDashboard = () => {
         observaciones: newClient.observaciones || null,
       }
 
-      const response = await fetch("https://elrefugiocountryclub.com/api/api/users/register-cliente", {
+      const response = await fetch("http://192.168.1.68:3001/api/users/register-cliente", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(clientData),
@@ -1012,7 +1012,7 @@ const MembershipAdminDashboard = () => {
 
       changes.id_usuario = selectedMember.id
 
-      const paymentResponse = await fetch("https://elrefugiocountryclub.com/api/api/users/payments", {
+      const paymentResponse = await fetch("http://192.168.1.68:3001/api/users/payments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(changes),
@@ -1052,101 +1052,68 @@ const MembershipAdminDashboard = () => {
   return (
     <div className="dashboard-container">
       {/* HEADER */}
-      <div ref={headerRef} className="dashboard-header enhanced-header">
-        <div className="header-texts">
-          <h1 className="header-title">Panel de Administrador</h1>
-          <p className="header-subtitle">Gestiona usuarios y membresías de tu plataforma</p>
+      {/* HEADER UNIFICADO */}
+      <div ref={headerRef} className="admin-header-v2">
+        <div className="admin-header-top">
+          <div className="admin-header-left">
+            <h1 className="admin-header-title">Panel de Administrador</h1>
+            <p className="admin-header-sub">Gestiona usuarios y membresías de tu plataforma</p>
+          </div>
+          <div className="admin-header-right">
+            {currentUser && (
+              <LogoutButton
+                userName={currentUser.nombre || 'Admin'}
+                showUserName={true}
+              />
+            )}
+            <button className="add-client-btn" onClick={openAddClientModal} type="button">
+              <UserPlus size={18} /> Nuevo Cliente
+            </button>
+          </div>
         </div>
-        <div className="header-actions">
-          {currentUser && (
-            <LogoutButton 
-              userName={currentUser.nombre || 'Admin'} 
-              showUserName={true}
-            />
-          )}
-          <button className="add-client-btn" onClick={openAddClientModal} type="button">
-            <UserPlus size={20} /> Nuevo Cliente
-          </button>
-        </div>
-      </div>
 
-      {/* ESTADÍSTICAS */}
-      <div ref={statsRef} className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-card-topline topline-terracotta"></div>
-          <div className="stat-card-header">
-            <Users size={24} className="stat-icon" />
-            <div className="stat-title">Usuarios Totales</div>
+        {/* Stats inline */}
+        <div ref={statsRef} className="admin-header-stats">
+          <div className="admin-stat-main">
+            <span className="admin-stat-number">{totalUsers}</span>
+            <span className="admin-stat-label">clientes</span>
           </div>
-          <div className="stat-value">{totalUsers}</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-card-topline topline-sage"></div>
-          <div className="stat-card-header">
-            <UserCheck size={24} className="stat-icon" />
-            <div className="stat-title">Activos</div>
+          <div className="admin-stat-divider" />
+          <div className="admin-stat-chip admin-stat-active">
+            <span className="admin-stat-dot" style={{ background: '#9caf88' }} />
+            <strong>{activeUsers}</strong> activos
           </div>
-          <div className="stat-value">{activeUsers}</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-card-topline topline-brown"></div>
-          <div className="stat-card-header">
-            <UserX size={24} className="stat-icon" />
-            <div className="stat-title">Bloqueados</div>
+          <div className="admin-stat-chip admin-stat-blocked">
+            <span className="admin-stat-dot" style={{ background: '#c17b4a' }} />
+            <strong>{blockedUsers}</strong> bloqueados
           </div>
-          <div className="stat-value">{blockedUsers}</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-card-topline topline-light"></div>
-          <div className="stat-card-header">
-            <Clock size={24} className="stat-icon" />
-            <div className="stat-title">Pendientes</div>
+          <div className="admin-stat-chip admin-stat-pending">
+            <span className="admin-stat-dot" style={{ background: '#b8b4a9' }} />
+            <strong>{pendingUsers}</strong> pendientes
           </div>
-          <div className="stat-value">{pendingUsers}</div>
         </div>
-      </div>
 
-      {/* NAVEGACIÓN DE PESTAÑAS */}
-      <div className="tabs-nav-wrapper">
-      <span className="tabs-nav-label">Secciones</span>
-      <div ref={tabsRef} className="admin-tabs">
-        <button
-          className={activeTab === "clientes" ? "tab-active" : "tab-inactive"}
-          onClick={() => setActiveTab("clientes")}
-        >
-          Clientes
-        </button>
-        <button
-          className={activeTab === "caballos" ? "tab-active" : "tab-inactive"}
-          onClick={() => setActiveTab("caballos")}
-        >
-          Caballos
-        </button>
-        <button
-          className={activeTab === "instructoras" ? "tab-active" : "tab-inactive"}
-          onClick={() => setActiveTab("instructoras")}
-        >
-          Instructoras
-        </button>
-        <button
-          className={activeTab === "reservas" ? "tab-active" : "tab-inactive"}
-          onClick={() => setActiveTab("reservas")}
-        >
-          Reservas
-        </button>
-        <button
-          className={activeTab === "horariosPersonalizados" ? "tab-active" : "tab-inactive"}
-          onClick={() => setActiveTab("horariosPersonalizados")}
-        >
-          Horarios Extras
-        </button>
-        <button
-          className={activeTab === "metricas" ? "tab-active" : "tab-inactive"}
-          onClick={() => setActiveTab("metricas")}
-        >
-          Métricas
-        </button>
-      </div>
+        {/* Tabs integradas */}
+        <div className="admin-header-tabs-wrapper">
+          <div className="admin-header-tabs" ref={tabsRef}>
+            {[
+              { key: 'clientes', label: 'Clientes' },
+              { key: 'caballos', label: 'Caballos' },
+              { key: 'instructoras', label: 'Instructoras' },
+              { key: 'reservas', label: 'Reservas' },
+              { key: 'horariosPersonalizados', label: 'Horarios Extras' },
+              { key: 'metricas', label: 'Métricas' },
+            ].map(tab => (
+              <button
+                key={tab.key}
+                className={activeTab === tab.key ? 'admin-tab admin-tab-active' : 'admin-tab'}
+                onClick={() => setActiveTab(tab.key)}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* CONTENIDO DE CLIENTES */}
@@ -1212,6 +1179,19 @@ const MembershipAdminDashboard = () => {
             </div>
           </div>
 
+          {/* Resumen de filtros */}
+          {!loading && (
+            <p style={{ margin: '0 0 0.6rem', fontSize: '0.84rem', color: 'var(--charcoal)', lineHeight: 1.5 }}>
+              Mostrando <strong>{filteredMembers.length} cliente{filteredMembers.length !== 1 ? 's' : ''}</strong>
+              {' · '}{statusFilter || 'Todos los estados'}
+              {' · '}{levelFilter ? levelFilter.charAt(0).toUpperCase() + levelFilter.slice(1) : 'Todos los niveles'}
+              {showOverdueFilter && ' · Solo vencidos'}
+              {!statusFilter && !levelFilter && !showOverdueFilter && !searchTerm && (
+                <span style={{ fontStyle: 'italic', opacity: 0.6 }}> · Usa los filtros para ajustar la búsqueda</span>
+              )}
+            </p>
+          )}
+
           {/* TABLA */}
           {loading ? (
             <div className="loading-container">
@@ -1273,7 +1253,7 @@ const MembershipAdminDashboard = () => {
                                 const newStatus = e.target.value
                                 try {
                                   const response = await fetch(
-                                      `https://elrefugiocountryclub.com/api/api/users/update-status/${member.id}`,
+                                      `http://192.168.1.68:3001/api/users/update-status/${member.id}`,
                                       {
                                         method: "PATCH",
                                         headers: { "Content-Type": "application/json" },
@@ -1306,7 +1286,7 @@ const MembershipAdminDashboard = () => {
                               onChange={async (e) => {
                                 const newNivel = e.target.value;
                                 try {
-                                  const response = await fetch(`https://elrefugiocountryclub.com/api/api/users/update-nivel/${member.id}`,
+                                  const response = await fetch(`http://192.168.1.68:3001/api/users/update-nivel/${member.id}`,
                                     {
                                       method: "PATCH",
                                       headers: { "Content-Type": "application/json" },

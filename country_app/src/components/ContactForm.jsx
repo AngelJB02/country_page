@@ -130,7 +130,7 @@ ${formData.mensaje || 'El cliente no incluyó mensaje adicional'}
             tipoReserva: formData.tipoEvento || 'Evento'
           };
           
-          const emailRes = await fetch('https://elrefugiocountryclub.com/api/api/email/send-reservation-confirmation', {
+          const emailRes = await fetch('http://192.168.1.68:3001/api/email/send-reservation-confirmation', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(emailPayload)

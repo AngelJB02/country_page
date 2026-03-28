@@ -2,7 +2,7 @@
 // API para obtener clases reales
 
 export async function fetchClasses() {
-  const res = await fetch('https://elrefugiocountryclub.com/api/api/reservas/classes');
+  const res = await fetch('http://192.168.1.68:3001/api/reservas/classes');
   if (!res.ok) throw new Error('Error al obtener clases');
   return res.json();
 }

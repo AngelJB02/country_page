@@ -1275,7 +1275,7 @@ router.post('/book', async (req, res) => {
                            tipoCliente === 'renta' ? 'renta' :
                            tipoCliente === 'media_renta' ? 'media_renta' : null;
 
-        await axios.post('https://elrefugiocountryclub.com/api/api/email/send-reservation-confirmation', {
+        await axios.post('http://192.168.1.68:3001/api/email/send-reservation-confirmation', {
           email: clienteData[0].correo.trim(),
           nombre: `${clienteData[0].nombre} ${clienteData[0].apellido}`,
           fechaReserva: fecha,
@@ -1492,7 +1492,7 @@ router.put('/:id/cancel/:clienteId', async (req, res) => {
           console.log(`📨 Enviando email de cancelación a ${cliente[0].correo} desde endpoint cancel cliente`);
 
           // Enviar email de cancelación (no bloquea si falla)
-          axios.post('https://elrefugiocountryclub.com/api/api/email/send-cancellation-notification', emailPayload)
+          axios.post('http://192.168.1.68:3001/api/email/send-cancellation-notification', emailPayload)
             .then(() => {
               console.log(`✅ Email de cancelación enviado correctamente a: ${cliente[0].correo}`);
             })
@@ -1980,7 +1980,7 @@ router.put('/instructor/:reservaId/attendance', async (req, res) => {
           };
 
           // Enviar email de cancelación (no bloquea si falla)
-          axios.post('https://elrefugiocountryclub.com/api/api/email/send-cancellation-notification', emailPayload)
+          axios.post('http://192.168.1.68:3001/api/email/send-cancellation-notification', emailPayload)
             .then(() => {
               console.log(`✅ Email de cancelación enviado a: ${cliente[0].correo}`);
             })
@@ -2171,7 +2171,7 @@ router.put('/instructor/:reservaId/status', async (req, res) => {
           };
 
           // Enviar email de cancelación (no bloquea si falla)
-          axios.post('https://elrefugiocountryclub.com/api/api/email/send-cancellation-notification', emailPayload)
+          axios.post('http://192.168.1.68:3001/api/email/send-cancellation-notification', emailPayload)
             .then(() => {
               console.log(`✅ Email de cancelación enviado a: ${cliente[0].correo}`);
             })
@@ -2458,7 +2458,7 @@ router.post('/instructor/cancel-from-time', async (req, res) => {
             console.log(`📨 Enviando email de cancelación a ${cliente[0].correo} con payload:`, emailPayload);
 
             // Enviar email de cancelación (no bloquea si falla)
-            axios.post('https://elrefugiocountryclub.com/api/api/email/send-cancellation-notification', emailPayload)
+            axios.post('http://192.168.1.68:3001/api/email/send-cancellation-notification', emailPayload)
               .then(() => {
                 console.log(`✅ Email de cancelación enviado correctamente a: ${cliente[0].correo}`);
               })

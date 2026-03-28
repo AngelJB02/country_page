@@ -72,7 +72,7 @@ const CaballosAdmin = () => {
 
   const loadPropietarios = async () => {
     try {
-      const response = await fetch("https://elrefugiocountryclub.com/api/api/reservas/propietarios");
+      const response = await fetch("http://192.168.1.68:3001/api/reservas/propietarios");
       if (response.ok) {
         const data = await response.json();
         setPropietarios(data);
@@ -89,7 +89,7 @@ const CaballosAdmin = () => {
   const loadCaballos = async () => {
     setLoading(true);
     try {
-      const response = await fetch("https://elrefugiocountryclub.com/api/api/caballos");
+      const response = await fetch("http://192.168.1.68:3001/api/caballos");
       if (response.ok) {
         const data = await response.json();
         setCaballos(data);
@@ -166,7 +166,7 @@ const CaballosAdmin = () => {
         descripcion: editingHorse.descripcion.trim()
       };
 
-      const response = await fetch(`https://elrefugiocountryclub.com/api/api/caballos/${editingHorse.id}`, {
+      const response = await fetch(`http://192.168.1.68:3001/api/caballos/${editingHorse.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(horseData),
@@ -203,7 +203,7 @@ const CaballosAdmin = () => {
     
     setDeletingHorseId(horseToDelete.id);
     try {
-      const response = await fetch(`https://elrefugiocountryclub.com/api/api/caballos/${horseToDelete.id}`, {
+      const response = await fetch(`http://192.168.1.68:3001/api/caballos/${horseToDelete.id}`, {
         method: "DELETE",
       });
 
@@ -248,7 +248,7 @@ const CaballosAdmin = () => {
 
       console.log('🐎 Enviando datos del caballo:', horseData);
 
-      const response = await fetch("https://elrefugiocountryclub.com/api/api/caballos", {
+      const response = await fetch("http://192.168.1.68:3001/api/caballos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(horseData),
@@ -509,6 +509,18 @@ const CaballosAdmin = () => {
         </div>
       )}
 
+      {!loading && (
+        <p style={{ margin: '0 0 0.6rem', fontSize: '0.84rem', color: 'var(--charcoal)', lineHeight: 1.5 }}>
+          Mostrando <strong>{filteredCaballos.length} caballo{filteredCaballos.length !== 1 ? 's' : ''}</strong>
+          {' · '}{disponibilidadFilter ? (disponibilidadFilter === 'disponible' ? 'Disponibles' : 'No disponibles') : 'Toda disponibilidad'}
+          {' · '}{estatusFilter ? estatusFilter.charAt(0).toUpperCase() + estatusFilter.slice(1).replace('_', ' ') : 'Todos los estatus'}
+          {' · '}{especialidadFilter ? especialidadFilter.charAt(0).toUpperCase() + especialidadFilter.slice(1) : 'Todas las especialidades'}
+          {!disponibilidadFilter && !estatusFilter && !especialidadFilter && !searchTerm && (
+            <span style={{ fontStyle: 'italic', opacity: 0.6 }}> · Usa los filtros para ajustar la búsqueda</span>
+          )}
+        </p>
+      )}
+
       {loading ? (
         <div className="loading-container">
           <Loader size={40} className="spin loading-spinner" />
@@ -552,7 +564,7 @@ const CaballosAdmin = () => {
                           const newDisponibilidad = e.target.value;
                           try {
                             const response = await fetch(
-                              `https://elrefugiocountryclub.com/api/api/caballos/${caballo.id}/disponibilidad`,
+                              `http://192.168.1.68:3001/api/caballos/${caballo.id}/disponibilidad`,
                               {
                                 method: "PATCH",
                                 headers: { "Content-Type": "application/json" },
@@ -591,7 +603,7 @@ const CaballosAdmin = () => {
                           const newEstatus = e.target.value;
                           try {
                             const response = await fetch(
-                              `https://elrefugiocountryclub.com/api/api/caballos/${caballo.id}/estatus`,
+                              `http://192.168.1.68:3001/api/caballos/${caballo.id}/estatus`,
                               {
                                 method: "PATCH",
                                 headers: { "Content-Type": "application/json" },

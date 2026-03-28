@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import useAutoRefresh from '../hooks/useAutoRefresh';
 import { Loader, Calendar, ChevronLeft, ChevronRight, Search } from "lucide-react";
 
 const ReservasAdmin = () => {
@@ -21,51 +22,53 @@ const ReservasAdmin = () => {
   };
 
   // Cargar reservas desde el backend
-  const loadReservas = async () => {
-    setLoading(true);
+  const loadReservas = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
-      let url = "https://elrefugiocountryclub.com/api/api/reservas-admin";
+      let url = "http://192.168.1.68:3001/api/reservas-admin";
       const params = new URLSearchParams();
-      
+
       if (filtroTiempo === "dia") {
-        // Filtrar por fecha específica
         params.append("fecha", fechaSeleccionada);
       } else if (filtroTiempo === "semana") {
-        // Calcular inicio y fin de semana
         const fechaBase = new Date(fechaSeleccionada);
         const inicioSemana = new Date(fechaBase);
         inicioSemana.setDate(fechaBase.getDate() - fechaBase.getDay());
         const finSemana = new Date(inicioSemana);
         finSemana.setDate(inicioSemana.getDate() + 6);
-        
+
         params.append("fecha_inicio", inicioSemana.toISOString().split("T")[0]);
         params.append("fecha_fin", finSemana.toISOString().split("T")[0]);
       }
-      
+
       const queryString = params.toString();
       if (queryString) {
         url += `?${queryString}`;
       }
-      
+
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error("Error al cargar reservas");
       }
-      
+
       const data = await response.json();
       setReservas(data);
     } catch (error) {
       console.error("Error al cargar reservas:", error);
-      showNotification("Error al cargar reservas", "error");
+      if (!silent) showNotification("Error al cargar reservas", "error");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
     loadReservas();
-    setCurrentPage(1); // Resetear a la primera página cuando cambian los filtros
+    setCurrentPage(1);
   }, [filtroTiempo, fechaSeleccionada]);
+
+  // Auto-refresh silencioso cada 30s
+  const refreshReservas = useCallback(() => loadReservas(true), [filtroTiempo, fechaSeleccionada]);
+  useAutoRefresh(refreshReservas, { interval: 30000 });
 
   // Implementar sticky header para la tabla de reservas (clon + sincronización de anchos)
   useEffect(() => {
@@ -360,6 +363,18 @@ const ReservasAdmin = () => {
           </div>
         )}
       </div>
+
+      {/* Resumen de filtros */}
+      {!loading && (
+        <p style={{ margin: '0 0 0.6rem', fontSize: '0.84rem', color: 'var(--charcoal)', lineHeight: 1.5 }}>
+          Mostrando <strong>{filteredReservas.length} reserva{filteredReservas.length !== 1 ? 's' : ''}</strong>
+          {' · '}{estadoFilter ? estadoFilter.charAt(0).toUpperCase() + estadoFilter.slice(1) : 'Todos los estados'}
+          {' · '}{filtroTiempo === 'dia' ? 'Por día' : 'Por semana'}
+          {!estadoFilter && !searchTerm && (
+            <span style={{ fontStyle: 'italic', opacity: 0.6 }}> · Usa los filtros para ajustar la búsqueda</span>
+          )}
+        </p>
+      )}
 
       {/* Tabla de reservas */}
       {loading ? (
