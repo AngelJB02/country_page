@@ -90,6 +90,14 @@
   background-color: #fff9f0 !important;
 }
 
+/* Horario Personalizado con instructor no disponible */
+.tsc-card.tsc--personalized-unavailable {
+  border: 2px dashed #c17b4a !important;
+  background-color: #fff9f0 !important;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .tsc-personalized-text {
   color: #c17b4a;
   font-weight: bold;

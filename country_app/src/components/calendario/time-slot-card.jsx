@@ -4,7 +4,7 @@ import './css/tieme-slot-card.css'
 // Tarjeta de franja horaria: muestra hora, plazas y estado (disponible/reservada/bloqueada).
 // Usa clases CSS prefijadas `tsc-` y responde a click/Enter/Space para seleccionar la franja.
 
-export function TimeSlotCard({ time, capacity, bookedCount, isBookedByUser, isBlocked, isWithin2Hours, hasPassed, userStatus, instructoraNombre, motivoCancelacion, isPersonalized, onClick }) {
+export function TimeSlotCard({ time, capacity, bookedCount, isBookedByUser, isBlocked, isWithin2Hours, hasPassed, userStatus, instructoraNombre, motivoCancelacion, isPersonalized, personalizedInstructorUnavailable, onClick }) {
   const isFull = bookedCount >= capacity;
   const availableSpots = capacity - bookedCount;
   const hasSomeBookings = bookedCount > 0 && bookedCount < capacity;
@@ -32,19 +32,27 @@ export function TimeSlotCard({ time, capacity, bookedCount, isBookedByUser, isBl
   }
 
   // Clase adicional para horarios personalizados
-  if (isPersonalized && !userHasBooking && !isBlocked && !isFull) {
+  const isUnavailablePersonalized = personalizedInstructorUnavailable && !userHasBooking;
+
+  if (isUnavailablePersonalized) {
+    stateClass = 'tsc--personalized-unavailable';
+  } else if (isPersonalized && !userHasBooking && !isBlocked && !isFull) {
     stateClass += ' tsc--personalized';
   }
 
+  const isClickable = !isBlocked && !isFull && !isUnavailablePersonalized;
+
   const handleKeyDown = (e) => {
-    if ((e.key === 'Enter' || e.key === ' ') && !isBlocked && !isFull) {
+    if ((e.key === 'Enter' || e.key === ' ') && isClickable) {
       e.preventDefault();
       onClick && onClick();
     }
   };
 
   let metaText = null;
-  if (isBlocked) {
+  if (isUnavailablePersonalized) {
+    metaText = <span className="tsc-personalized-text">Instructor asignado no disponible</span>;
+  } else if (isBlocked) {
     // Mensaje específico según el tipo de bloqueo
     if (hasPassed) {
       metaText = 'Clase finalizada';
@@ -68,10 +76,10 @@ export function TimeSlotCard({ time, capacity, bookedCount, isBookedByUser, isBl
   return (
     <div
       className={`tsc-card ${stateClass}`}
-      onClick={!isBlocked && !isFull ? onClick : undefined}
-      onKeyDown={!isBlocked && !isFull ? handleKeyDown : undefined}
-      role={!isBlocked && !isFull ? 'button' : undefined}
-      tabIndex={!isBlocked && !isFull ? 0 : -1}
+      onClick={isClickable ? onClick : undefined}
+      onKeyDown={isClickable ? handleKeyDown : undefined}
+      role={isClickable ? 'button' : undefined}
+      tabIndex={isClickable ? 0 : -1}
     >
       <div className="tsc-inner">
         <div className="tsc-time">{time}</div>

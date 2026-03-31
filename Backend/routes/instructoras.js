@@ -774,7 +774,7 @@ router.get('/:id/reservas-activas', async (req, res) => {
                     WHEN 7 THEN 'S'
                   END
                 )
-                AND ? BETWEEN ih_match.hora_inicio AND ih_match.hora_fin
+                AND ? >= ih_match.hora_inicio AND ? < ih_match.hora_fin
             )
           )
 
@@ -803,7 +803,7 @@ router.get('/:id/reservas-activas', async (req, res) => {
         reserva.clase_id,        // JOIN instructora_clase
         id,                      // i.id <> instructora que se va
         reserva.fecha,           // DAYOFWEEK para horario (dia_semana)
-        reserva.hora_inicio,     // hora dentro del horario
+        reserva.hora_inicio, reserva.hora_inicio, // >= hora_inicio AND < hora_fin
         reserva.fecha,           // DAYOFWEEK para descanso recurrente
         reserva.fecha,           // descanso por rango de fecha
       ]);

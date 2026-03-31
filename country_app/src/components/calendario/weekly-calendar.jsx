@@ -50,7 +50,7 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
       
       try {
         setLoadingSchedule(true);
-        const response = await fetch(`http://192.168.1.68:3001/api/horarios/clase/${className}`);
+        const response = await fetch(`http://192.168.201.101:3001/api/horarios/clase/${className}`);
         if (!response.ok) {
           throw new Error('Error al cargar horarios desde la base de datos');
         }
@@ -61,7 +61,7 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
         // Cargar horarios personalizados si hay un userId
         if (userId) {
           try {
-            const pResponse = await fetch(`http://192.168.1.68:3001/api/horarios/personalizados/${userId}`);
+            const pResponse = await fetch(`http://192.168.201.101:3001/api/horarios/personalizados/${userId}`);
             if (pResponse.ok) {
               const pData = await pResponse.json();
               setPersonalSchedule(pData);
@@ -135,7 +135,7 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
       }
 
       try {
-        const res = await fetch('http://192.168.1.68:3001/api/reservas/instructor-availability/batch', {
+        const res = await fetch('http://192.168.201.101:3001/api/reservas/instructor-availability/batch', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ clase_id: claseId, slots: slotsToCheck })
@@ -280,7 +280,7 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
       const capacity = getCapacityForSlot(day, time, realDate);
 
       // Si es personalizado, marcarlo para visualización
-      const isPersonalized = personalSchedule.some(hp => {
+      const matchingPersonalized = personalSchedule.find(hp => {
         if (hp.clase_nombre.toLowerCase() !== className.toLowerCase()) return false;
         if (hp.hora_inicio !== time) return false;
         if (hp.tipo === 'fecha_especifica') {
@@ -290,6 +290,8 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
         }
         return false;
       });
+      const isPersonalized = !!matchingPersonalized;
+      const personalizedInstructorUnavailable = isPersonalized && matchingPersonalized.instructora_disponibilidad !== 'disponible';
 
       // Consultar disponibilidad de instructoras para este slot (siempre que exista el mapa)
       const availabilityKey = `${slotDateStr}|${time}`;
@@ -398,7 +400,8 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
         userStatus, // nuevo: estatus de la reserva del usuario (si existe)
         instructoraNombre,
         motivoCancelacion, // motivo de cancelación si existe
-        isPersonalized // Flag para destacar visualmente
+        isPersonalized, // Flag para destacar visualmente
+        personalizedInstructorUnavailable // Flag: instructor del horario personalizado no disponible
       });
     });
     return slots;
@@ -548,6 +551,7 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
                     instructoraNombre={slot.instructoraNombre}
                     motivoCancelacion={slot.motivoCancelacion}
                     isPersonalized={slot.isPersonalized}
+                    personalizedInstructorUnavailable={slot.personalizedInstructorUnavailable}
                     onClick={() => onSlotClick(slot)}
                   />
                 );

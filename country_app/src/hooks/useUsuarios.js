@@ -8,7 +8,7 @@ const useUsuarios = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const API_URL = 'http://192.168.1.68:3001/api/users';
+  const API_URL = 'http://192.168.201.101:3001/api/users';
 
 
   const obtenerUsuarios = useCallback(async () => {

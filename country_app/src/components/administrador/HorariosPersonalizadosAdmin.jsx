@@ -197,11 +197,11 @@ const HorariosPersonalizadosAdmin = () => {
     if (!silent) setLoading(true);
     try {
       const [hRes, cRes, iRes, clRes, icRes] = await Promise.all([
-        axios.get('http://192.168.1.68:3001/api/horarios/personalizados-all'),
-        axios.get('http://192.168.1.68:3001/api/users/all'),
-        axios.get('http://192.168.1.68:3001/api/instructoras'),
-        axios.get('http://192.168.1.68:3001/api/horarios/clases'),
-        axios.get('http://192.168.1.68:3001/api/instructoras/clases-asignadas')
+        axios.get('http://192.168.201.101:3001/api/horarios/personalizados-all'),
+        axios.get('http://192.168.201.101:3001/api/users/all'),
+        axios.get('http://192.168.201.101:3001/api/instructoras'),
+        axios.get('http://192.168.201.101:3001/api/horarios/clases'),
+        axios.get('http://192.168.201.101:3001/api/instructoras/clases-asignadas')
       ]);
       setHorarios(hRes.data);
       setClientes(cRes.data.filter(u => u.rol === 'cliente' && u.estatus?.toLowerCase() !== 'bloqueado'));
@@ -364,18 +364,18 @@ const HorariosPersonalizadosAdmin = () => {
         if (editingIds.length > 1 || (formData.tipo === 'recurrente' && formData.dias_semana.length > 1)) {
           // Grupo multi-día: borrar todos los viejos y crear nuevos por cada día seleccionado
           await Promise.all(editingIds.map(id =>
-            axios.delete(`http://192.168.1.68:3001/api/horarios/personalizados/${id}`)
+            axios.delete(`http://192.168.201.101:3001/api/horarios/personalizados/${id}`)
           ));
           const dias = formData.tipo === 'recurrente' ? formData.dias_semana : [null];
           await Promise.all(dias.map(dia => {
             const payload = { ...formData, dia_semana: dia };
-            return axios.post('http://192.168.1.68:3001/api/horarios/personalizados', payload);
+            return axios.post('http://192.168.201.101:3001/api/horarios/personalizados', payload);
           }));
           toast.success('Horario actualizado correctamente');
         } else {
           // Edición simple vía PUT
           const payload = { ...formData, dia_semana: formData.dias_semana[0] };
-          await axios.put(`http://192.168.1.68:3001/api/horarios/personalizados/${editingId}`, payload);
+          await axios.put(`http://192.168.201.101:3001/api/horarios/personalizados/${editingId}`, payload);
           toast.success('Horario actualizado correctamente');
         }
       } else {
@@ -383,7 +383,7 @@ const HorariosPersonalizadosAdmin = () => {
         await Promise.all(
           dias.map(dia => {
             const payload = { ...formData, dia_semana: dia };
-            return axios.post('http://192.168.1.68:3001/api/horarios/personalizados', payload);
+            return axios.post('http://192.168.201.101:3001/api/horarios/personalizados', payload);
           })
         );
         const count = dias.length;
@@ -400,7 +400,7 @@ const HorariosPersonalizadosAdmin = () => {
   const handleDelete = async (id) => {
     if (!window.confirm('¿Estás seguro de eliminar este horario personalizado?')) return;
     try {
-      await axios.delete(`http://192.168.1.68:3001/api/horarios/personalizados/${id}`);
+      await axios.delete(`http://192.168.201.101:3001/api/horarios/personalizados/${id}`);
       toast.success('Horario eliminado');
       fetchData();
     } catch (err) {
@@ -883,10 +883,15 @@ const HorariosPersonalizadosAdmin = () => {
                     </td>
                     <td style={{ padding: '1rem 1.5rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <div style={{ width: '28px', height: '28px', borderRadius: '7px', backgroundColor: 'rgba(156,175,136,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#7a9768' }}>
-                          <User size={14} />
+                        <div style={{ width: '28px', height: '28px', borderRadius: '7px', backgroundColor: grupo.instructora_disponibilidad !== 'disponible' ? 'rgba(224,49,49,0.10)' : 'rgba(156,175,136,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: grupo.instructora_disponibilidad !== 'disponible' ? '#e03131' : '#7a9768' }}>
+                          {grupo.instructora_disponibilidad !== 'disponible' ? <XCircle size={14} /> : <User size={14} />}
                         </div>
-                        <span style={{ color: 'var(--charcoal)', fontWeight: '500', fontSize: '0.88rem' }}>{grupo.instructora_nombre} {grupo.instructora_apellido}</span>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span style={{ color: grupo.instructora_disponibilidad !== 'disponible' ? '#e03131' : 'var(--charcoal)', fontWeight: '500', fontSize: '0.88rem' }}>{grupo.instructora_nombre} {grupo.instructora_apellido}</span>
+                          {grupo.instructora_disponibilidad !== 'disponible' && (
+                            <span style={{ fontSize: '0.68rem', color: '#e03131', fontWeight: 600 }}>Instructora no disponible</span>
+                          )}
+                        </div>
                       </div>
                     </td>
                     <td style={{ padding: '1rem 1.5rem' }}>
@@ -981,7 +986,7 @@ const HorariosPersonalizadosAdmin = () => {
                                 if (!window.confirm(msg)) return;
                                 try {
                                   await Promise.all(grupo._ids.map(id =>
-                                    axios.delete(`http://192.168.1.68:3001/api/horarios/personalizados/${id}`)
+                                    axios.delete(`http://192.168.201.101:3001/api/horarios/personalizados/${id}`)
                                   ));
                                   toast.success(grupo._ids.length > 1 ? `${grupo._ids.length} horarios eliminados` : 'Horario eliminado');
                                   fetchData();

@@ -99,10 +99,10 @@ const calcularInstructorasDisponibles = async (clase_id, fecha, hora_inicio) => 
             WHERE ih_match.instructora_id = i.id
               AND ih_match.dia_semana = ?
               AND ih_match.activo = 1
-              AND ? BETWEEN ih_match.hora_inicio AND ih_match.hora_fin
+              AND ? >= ih_match.hora_inicio AND ? < ih_match.hora_fin
           )
         )
-    `, [clase_id, diaSemanaMySQL, formatTimeForMySQL(hora_inicio)]);
+    `, [clase_id, diaSemanaMySQL, formatTimeForMySQL(hora_inicio), formatTimeForMySQL(hora_inicio)]);
     
     console.log(`🔍 Todas las instructoras aptas para clase ${clase_id} el día ${diaSemanaMySQL} a las ${hora_inicio}:`, todasAptas.map(i => i.id));
     
@@ -1118,7 +1118,7 @@ router.post('/book', async (req, res) => {
                 WHERE ih_match.instructora_id = i.id
                   AND ih_match.dia_semana = ?
                   AND ih_match.activo = 1
-                  AND ? BETWEEN ih_match.hora_inicio AND ih_match.hora_fin
+                  AND ? >= ih_match.hora_inicio AND ? < ih_match.hora_fin
               )
             )
             AND r.instructora_id NOT IN (
@@ -1132,7 +1132,7 @@ router.post('/book', async (req, res) => {
           GROUP BY r.instructora_id
           HAVING alumnos_en_slot < ?
           LIMIT 1
-        `, [clase_id, fechaMySQL, formatTimeForMySQL(hora_inicio), clase_id, diaSemanaMySQL, formatTimeForMySQL(hora_inicio), diaSemanaMySQL, fechaMySQL, cupoMaximoAjustado]);
+        `, [clase_id, fechaMySQL, formatTimeForMySQL(hora_inicio), clase_id, diaSemanaMySQL, formatTimeForMySQL(hora_inicio), formatTimeForMySQL(hora_inicio), diaSemanaMySQL, fechaMySQL, cupoMaximoAjustado]);
 
         // Si hay una instructora que ya tiene alumnos en este slot y clase específica, asignarle
         if (instructoraActual.length > 0) {
@@ -1180,11 +1180,11 @@ router.post('/book', async (req, res) => {
               WHERE ih_match.instructora_id = i.id
                 AND ih_match.dia_semana = ?
                 AND ih_match.activo = 1
-                AND ? BETWEEN ih_match.hora_inicio AND ih_match.hora_fin
+                AND ? >= ih_match.hora_inicio AND ? < ih_match.hora_fin
             )
           )
           AND i.id NOT IN (
-            SELECT d.instructora_id FROM descansos d 
+            SELECT d.instructora_id FROM descansos d
             WHERE (
               (d.es_recurrente = 1 AND d.dia_semana = ?)
               OR
@@ -1192,7 +1192,7 @@ router.post('/book', async (req, res) => {
             )
           )
           AND i.id NOT IN (
-            SELECT r.instructora_id FROM reservas r 
+            SELECT r.instructora_id FROM reservas r
             WHERE r.fecha = ?
               AND r.hora_inicio = ?
               AND r.estatus IN ('pendiente','confirmada')
@@ -1202,7 +1202,7 @@ router.post('/book', async (req, res) => {
         fecha, fecha, fecha, fecha, // para calcular semana de la reserva
         fecha, hora_inicio, hora_fin, // para detectar clases consecutivas
         clase_id,
-        diaSemanaMySQL, formatTimeForMySQL(hora_inicio), // para horarios disponibles
+        diaSemanaMySQL, formatTimeForMySQL(hora_inicio), formatTimeForMySQL(hora_inicio), // para horarios disponibles
         diaSemanaMySQL, // para descansos recurrentes
         fechaMySQL, // para descansos no recurrentes
         fecha,
@@ -1275,7 +1275,7 @@ router.post('/book', async (req, res) => {
                            tipoCliente === 'renta' ? 'renta' :
                            tipoCliente === 'media_renta' ? 'media_renta' : null;
 
-        await axios.post('http://192.168.1.68:3001/api/email/send-reservation-confirmation', {
+        await axios.post('http://192.168.201.101:3001/api/email/send-reservation-confirmation', {
           email: clienteData[0].correo.trim(),
           nombre: `${clienteData[0].nombre} ${clienteData[0].apellido}`,
           fechaReserva: fecha,
@@ -1492,7 +1492,7 @@ router.put('/:id/cancel/:clienteId', async (req, res) => {
           console.log(`📨 Enviando email de cancelación a ${cliente[0].correo} desde endpoint cancel cliente`);
 
           // Enviar email de cancelación (no bloquea si falla)
-          axios.post('http://192.168.1.68:3001/api/email/send-cancellation-notification', emailPayload)
+          axios.post('http://192.168.201.101:3001/api/email/send-cancellation-notification', emailPayload)
             .then(() => {
               console.log(`✅ Email de cancelación enviado correctamente a: ${cliente[0].correo}`);
             })
@@ -1980,7 +1980,7 @@ router.put('/instructor/:reservaId/attendance', async (req, res) => {
           };
 
           // Enviar email de cancelación (no bloquea si falla)
-          axios.post('http://192.168.1.68:3001/api/email/send-cancellation-notification', emailPayload)
+          axios.post('http://192.168.201.101:3001/api/email/send-cancellation-notification', emailPayload)
             .then(() => {
               console.log(`✅ Email de cancelación enviado a: ${cliente[0].correo}`);
             })
@@ -2171,7 +2171,7 @@ router.put('/instructor/:reservaId/status', async (req, res) => {
           };
 
           // Enviar email de cancelación (no bloquea si falla)
-          axios.post('http://192.168.1.68:3001/api/email/send-cancellation-notification', emailPayload)
+          axios.post('http://192.168.201.101:3001/api/email/send-cancellation-notification', emailPayload)
             .then(() => {
               console.log(`✅ Email de cancelación enviado a: ${cliente[0].correo}`);
             })
@@ -2458,7 +2458,7 @@ router.post('/instructor/cancel-from-time', async (req, res) => {
             console.log(`📨 Enviando email de cancelación a ${cliente[0].correo} con payload:`, emailPayload);
 
             // Enviar email de cancelación (no bloquea si falla)
-            axios.post('http://192.168.1.68:3001/api/email/send-cancellation-notification', emailPayload)
+            axios.post('http://192.168.201.101:3001/api/email/send-cancellation-notification', emailPayload)
               .then(() => {
                 console.log(`✅ Email de cancelación enviado correctamente a: ${cliente[0].correo}`);
               })

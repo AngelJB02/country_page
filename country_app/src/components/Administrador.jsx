@@ -27,7 +27,7 @@ const AdminPanel = () => {
   const fetchReservations = useCallback(async () => {
     let mounted = true;
     try {
-      const response = await axios.get('http://192.168.1.68:3001/api/reservas');
+      const response = await axios.get('http://192.168.201.101:3001/api/reservas');
       const reservasPorFecha = {};
       response.data.forEach(reserva => {
         let fechaKey = reserva.fecha;

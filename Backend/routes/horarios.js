@@ -397,7 +397,7 @@ router.get('/clases', async (req, res) => {
 router.get('/personalizados-all', async (req, res) => {
   try {
     const [rows] = await db.execute(`
-      SELECT 
+      SELECT
         hp.id,
         hp.cliente_id,
         hp.instructora_id,
@@ -411,6 +411,7 @@ router.get('/personalizados-all', async (req, res) => {
         c.nombre as clase_nombre,
         i.nombre as instructora_nombre,
         i.apellido as instructora_apellido,
+        i.disponibilidad as instructora_disponibilidad,
         u.nombre as cliente_nombre,
         u.apellido as cliente_apellido
       FROM horarios_personalizados hp
@@ -493,7 +494,8 @@ router.get('/personalizados/:userId', async (req, res) => {
         c.nombre as clase_nombre,
         c.duracion_min,
         i.nombre as instructora_nombre,
-        i.apellido as instructora_apellido
+        i.apellido as instructora_apellido,
+        i.disponibilidad as instructora_disponibilidad
       FROM horarios_personalizados hp
       INNER JOIN clases c ON hp.clase_id = c.id
       INNER JOIN instructoras i ON hp.instructora_id = i.id
