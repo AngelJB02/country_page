@@ -60,10 +60,6 @@ const getDiaSemanaMySQL = (fecha) => {
   const diasMap = { 0: 'D', 1: 'L', 2: 'M', 3: 'X', 4: 'J', 5: 'V', 6: 'S' };
   const diaMySQL = diasMap[diaSemana];
   
-  // Debug: verificar que el cálculo sea correcto
-  const nombreDia = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'][diaSemana];
-  console.log(`📅 Fecha: ${fecha} → Día JS: ${diaSemana} (${nombreDia}) → MySQL: ${diaMySQL}`);
-  
   return diaMySQL;
 };
 
@@ -104,39 +100,14 @@ const calcularInstructorasDisponibles = async (clase_id, fecha, hora_inicio) => 
         )
     `, [clase_id, diaSemanaMySQL, formatTimeForMySQL(hora_inicio), formatTimeForMySQL(hora_inicio)]);
     
-    console.log(`🔍 Todas las instructoras aptas para clase ${clase_id} el día ${diaSemanaMySQL} a las ${hora_inicio}:`, todasAptas.map(i => i.id));
-    
-    // DEBUG: Ver horarios de cada instructora para entender por qué se incluye o excluye
-    for (const instructora of todasAptas) {
-      const [horarios] = await db.query(`
-        SELECT dia_semana, hora_inicio, hora_fin 
-        FROM instructora_horarios 
-        WHERE instructora_id = ? AND activo = 1
-      `, [instructora.id]);
-      console.log(`  Instructora ${instructora.id}: ${horarios.length === 0 ? 'SIN horarios (disponible siempre)' : JSON.stringify(horarios)}`);
-    }
-    
-    // Verificar descansos para estas instructoras
-    // Si no hay instructoras aptas, no hay descansos que verificar
     if (todasAptas.length === 0) {
-      console.log(`⚠️ No hay instructoras aptas para clase ${clase_id}`);
       return 0;
     }
     
-    // Primero, verificar TODOS los descansos recurrentes de estas instructoras (para debug)
     const idsInstructoras = todasAptas.map(i => i.id);
     const placeholders = idsInstructoras.map(() => '?').join(',');
-    
-    const [todosDescansos] = await db.query(`
-      SELECT d.instructora_id, d.es_recurrente, d.dia_semana, d.fecha_inicio, d.fecha_fin
-      FROM descansos d
-      WHERE d.instructora_id IN (${placeholders})
-        AND d.es_recurrente = 1
-    `, idsInstructoras);
-    
-    console.log(`🔍 TODOS los descansos recurrentes de estas instructoras:`, todosDescansos);
-    
-    // Ahora buscar descansos que aplican para este día/fecha específica
+
+    // Buscar descansos que aplican para este día/fecha específica
     const [descansosEncontrados] = await db.query(`
       SELECT d.instructora_id, d.es_recurrente, d.dia_semana, d.fecha_inicio, d.fecha_fin
       FROM descansos d
@@ -148,14 +119,9 @@ const calcularInstructorasDisponibles = async (clase_id, fecha, hora_inicio) => 
         )
     `, [...idsInstructoras, diaSemanaMySQL, fechaMySQL]);
     
-    console.log(`🔍 Descansos encontrados para día ${diaSemanaMySQL} (${fecha}):`, descansosEncontrados);
-    
     // Filtrar instructoras en descanso
     const instructorasEnDescanso = new Set(descansosEncontrados.map(d => d.instructora_id));
     const instructorasDisponibles = todasAptas.filter(i => !instructorasEnDescanso.has(i.id));
-    
-    console.log(`📊 Instructoras en descanso:`, Array.from(instructorasEnDescanso));
-    console.log(`✅ Instructoras disponibles: ${instructorasDisponibles.length} de ${todasAptas.length}`);
     
     return Math.max(0, instructorasDisponibles.length);
   } catch (err) {
@@ -378,7 +344,7 @@ const verificarRestriccionesCliente = async (clienteId, fecha, tipoCliente) => {
     // Excepción especial: el usuario con id 8 puede tener más de una reserva activa
     // (permitir múltiples reservas únicamente para este cliente)
     if (String(clienteId) === '8') {
-      console.log('🔓 Excepción aplicada: cliente 8 puede crear múltiples reservas activas');
+      // Excepción: cliente 8 puede crear múltiples reservas activas
       return { permitido: true };
     }
 
@@ -890,7 +856,6 @@ router.get('/available-slots/:clienteId', async (req, res) => {
       const instructorasDisponibles = await calcularInstructorasDisponibles(clase_id, fecha, hora);
 
       if (instructorasDisponibles === 0) {
-        console.log(`⚠️ Horario ${hora} no disponible: no hay instructoras disponibles`);
         continue; // Saltar este horario si no hay instructoras
       }
 
@@ -902,9 +867,7 @@ router.get('/available-slots/:clienteId', async (req, res) => {
         // Para iniciación/ponyclub, el cupo es igual al número de instructoras disponibles
         cupoMaximoAjustado = instructorasDisponibles;
 
-        if (cupoMaximoAjustado < infoClase.cupo_max) {
-          console.log(`⚠️ Cupo ajustado por disponibilidad: ${cupoMaximoAjustado} (original: ${infoClase.cupo_max})`);
-        }
+        // cupo ajustado si hay menos instructoras que cupo_max
       }
 
       // Verificar cupo disponible
@@ -964,23 +927,6 @@ router.post('/book', async (req, res) => {
     }, { zone: 'America/Cancun' });
     const diferenciaHoras = fechaHoraReserva.diff(ahora, 'hours').hours;
 
-    // Log para debugging - SIEMPRE se ejecuta
-    console.log('\n=== VALIDACIÓN DE RESERVA ===');
-    console.log('Cliente ID:', cliente_id);
-    console.log('Clase ID:', clase_id);
-    console.log('Fecha recibida:', fecha);
-    console.log('Hora inicio recibida:', hora_inicio);
-    console.log('---');
-    console.log('Hora actual (Cancún):', ahora.toISO());
-    console.log('Hora actual (readable):', ahora.toFormat('yyyy-MM-dd HH:mm:ss'));
-    console.log('---');
-    console.log('Hora de la reserva (Cancún):', fechaHoraReserva.toISO());
-    console.log('Hora de la reserva (readable):', fechaHoraReserva.toFormat('yyyy-MM-dd HH:mm:ss'));
-    console.log('---');
-    console.log('Diferencia en horas:', diferenciaHoras.toFixed(2));
-    console.log('¿Pasa validación? (>= 2):', diferenciaHoras >= 2);
-    console.log('=============================\n');
-
     if (diferenciaHoras < 2) {
       return res.status(400).json({ 
         error: 'Las reservas deben hacerse al menos 2 horas antes (horario Cancún)' 
@@ -1034,19 +980,17 @@ router.post('/book', async (req, res) => {
       // Para iniciación/ponyclub, el cupo es igual al número de instructoras disponibles
       cupoMaximoAjustado = instructorasDisponibles;
       
-      console.log(`⚠️ Cupo ajustado para reserva: ${cupoMaximoAjustado} (instructoras disponibles: ${instructorasDisponibles})`);
     }
 
     // Verificar cupo disponible
     const [reservasExistentes] = await db.query(`
       SELECT COUNT(*) as ocupadas FROM reservas
       WHERE fecha = ? AND clase_id = ?
-      AND hora_inicio = ? 
+      AND hora_inicio = ?
       AND estatus IN ('pendiente', 'confirmada')
     `, [formatDateForMySQL(fecha), clase_id, hora_inicio]);
 
     if (reservasExistentes[0].ocupadas >= cupoMaximoAjustado) {
-      console.log('⚠️ Verificación de cupo: reservasExistentes=', reservasExistentes[0].ocupadas, 'cupoMaximoAjustado=', cupoMaximoAjustado);
       return res.status(400).json({ 
         error: 'No hay espacios disponibles en este horario' 
       });
@@ -1082,7 +1026,7 @@ router.post('/book', async (req, res) => {
 
     if (horarioPersonalizado.length > 0) {
       instructora_id = horarioPersonalizado[0].instructora_id;
-      console.log(`✨ Usando instructora personalizada: ${instructora_id} para el cliente ${cliente_id}`);
+      // Usando instructora personalizada
     }
 
     // Si NO se asignó por horario personalizado, usar lógica automática
@@ -1137,11 +1081,11 @@ router.post('/book', async (req, res) => {
         // Si hay una instructora que ya tiene alumnos en este slot y clase específica, asignarle
         if (instructoraActual.length > 0) {
           instructora_id = instructoraActual[0].instructora_id;
-          console.log(`✅ Asignando a instructora existente en el slot (tiene ${instructoraActual[0].alumnos_en_slot} alumnos)`);
+          // Asignando a instructora existente en el slot
         }
       } else {
         // Para INICIACIÓN: NO buscar instructoras con alumnos, siempre asignar una nueva
-        console.log(`📚 Clase de INICIACIÓN detectada - cada alumno tendrá su propia instructora`);
+        // Clase de iniciación - cada alumno tendrá su propia instructora
       }
     }
 
@@ -1220,7 +1164,7 @@ router.post('/book', async (req, res) => {
         const instructoraSeleccionada = pool[randomIndex];
         
         instructora_id = instructoraSeleccionada.instructora_id;
-        console.log(`🎲 Primera reserva del horario - Asignación ALEATORIA a ${instructoraSeleccionada.nombre} ${instructoraSeleccionada.apellido} (${randomIndex + 1}/${pool.length} disponibles, consecutivas: ${instructoraSeleccionada.clases_consecutivas})`);
+        // Primera reserva del horario - asignación aleatoria
       }
     }
 
@@ -1732,50 +1676,6 @@ router.put('/instructor/:reservaId/assign-horse', async (req, res) => {
           ? infoReserva.fecha.split('T')[0]
           : infoReserva.fecha;
 
-      console.log('🔍 Verificando conflictos para:', {
-        caballo_id,
-        fecha: infoReserva.fecha,
-        fechaNormalizada,
-        reservaId,
-        hora_inicio: infoReserva.hora_inicio,
-        hora_fin: infoReserva.hora_fin,
-        tipoClase,
-        cooldownNuevaClase
-      });
-
-      // Primero verificar qué reservas tiene este caballo asignado
-      const [reservasCaballo] = await db.query(`
-        SELECT r.id, r.hora_inicio, r.hora_fin, cl.nombre as tipo_clase
-        FROM reservas r
-        JOIN clases cl ON cl.id = r.clase_id
-        WHERE r.caballo_id = ?
-          AND DATE(r.fecha) = ?
-          AND r.id <> ?
-          AND r.estatus IN ('pendiente','confirmada','completada')
-      `, [caballo_id, fechaNormalizada, reservaId]);
-      console.log('🔍 Reservas encontradas con este caballo:', reservasCaballo);
-
-      // Verificar manualmente si hay conflictos para debugging
-      if (reservasCaballo.length > 0) {
-        reservasCaballo.forEach(reserva => {
-          const horaInicioReserva = reserva.hora_inicio;
-          const horaFinReserva = reserva.hora_fin;
-          const horaFinNueva = infoReserva.hora_fin;
-          const cooldownFin = `DATE_ADD('${horaFinNueva}', INTERVAL ${cooldownNuevaClase} HOUR)`;
-          
-          console.log('🔍 Verificando conflicto manualmente:', {
-            reservaId: reserva.id,
-            reservaHoraInicio: horaInicioReserva,
-            reservaHoraFin: horaFinReserva,
-            nuevaHoraFin: horaFinNueva,
-            cooldown: cooldownNuevaClase,
-            cooldownFin: cooldownFin,
-            verificacion1: `${horaInicioReserva} >= ${horaFinNueva} = ${horaInicioReserva >= horaFinNueva}`,
-            verificacion2: `${horaInicioReserva} < DATE_ADD(${horaFinNueva}, INTERVAL ${cooldownNuevaClase} HOUR)`
-          });
-        });
-      }
-
       const [conflictos] = await db.query(`
         SELECT 
           r.id,
@@ -1842,11 +1742,6 @@ router.put('/instructor/:reservaId/assign-horse', async (req, res) => {
         cooldownNuevaClase // para cooldown de esta clase - verificación 3: cooldown
       ]);
 
-      console.log('🔍 Resultado de verificación de conflictos:', {
-        conflictosEncontrados: conflictos.length,
-        conflictos: conflictos
-      });
-
       if (conflictos.length > 0) {
         const conflicto = conflictos[0];
         const alumno = `${conflicto.alumno_nombre || ''} ${conflicto.alumno_apellido || ''}`.trim() || 'otra clase';
@@ -1860,8 +1755,6 @@ router.put('/instructor/:reservaId/assign-horse', async (req, res) => {
             tipo: conflicto.tipo_clase
           }
         });
-      } else {
-        console.log('✅ No se encontraron conflictos, procediendo con la asignación');
       }
     }
 
@@ -2590,25 +2483,18 @@ router.post('/instructor-availability/batch', async (req, res) => {
       return res.status(400).json({ error: 'Parámetros inválidos. Se requiere clase_id y slots[]' });
     }
 
-    // LOG: mostrar lo que llega para depuración
-    console.log('POST /instructor-availability/batch recibidos:', { clase_id, slotsCount: slots.length });
-
-    // Mapear y consultar en paralelo
     const checks = await Promise.all(slots.map(async (s) => {
       try {
         const fecha = s.fecha;
         const hora = s.hora;
         const disponibles = await calcularInstructorasDisponibles(clase_id, fecha, hora);
-        const result = { fecha, hora, disponibles };
-        console.log('  check ->', result);
-        return result;
+        return { fecha, hora, disponibles };
       } catch (err) {
         console.error('Error comprobando slot', s, err);
         return { fecha: s.fecha, hora: s.hora, disponibles: 0, error: err.message };
       }
     }));
 
-    console.log('Respondiendo instructor-availability/batch con', checks.length, 'resultados');
     res.json({ results: checks });
   } catch (err) {
     console.error('Error en batch instructor availability:', err);
