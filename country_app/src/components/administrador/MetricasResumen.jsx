@@ -247,7 +247,7 @@ const MetricasResumen = () => {
           {/* KPIs */}
           <div className="metricas-kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.2rem' }}>
             <KpiCard icon={CheckCircle}   label="Clases Realizadas"    value={totalClasesRealizadas} sub="Completadas en el periodo"      accent={C.green}   light={C.greenLight} />
-            <KpiCard icon={AlertTriangle} label="Inasistencias"        value={totalFaltas}           sub="Alumnas que no avisaron"        accent={C.red}     light={C.redLight} />
+            <KpiCard icon={AlertTriangle} label="Inasistencias"        value={totalFaltas}           sub="Faltas totales sin aviso"        accent={C.red}     light={C.redLight} />
             <KpiCard icon={TrendingUp}    label="Tasa de Asistencia"   value={`${tasaGlobal}%`}      sub="Del total de clases agendadas"  accent={C.brown}   light={C.brownLight} />
             <KpiCard icon={Clock}         label="Horario mas Demandado" value={metricas.horario_estrella?.hora_inicio?.substring(0,5) ?? '--:--'} sub={`${metricas.horario_estrella?.total ?? 0} reservas acumuladas`} accent="#1565c0" light="#e3f2fd" />
           </div>
@@ -288,13 +288,17 @@ const MetricasResumen = () => {
                             : <span style={{ color: C.textHint }}>-</span>}
                         </td>
                         <td style={{ padding: '1rem' }}>
-                          {clase.peor_cliente
-                            ? <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                <Avatar name={clase.peor_cliente.nombre} bg={C.redLight} fg={C.red} />
-                                <div>
-                                  <div style={{ fontWeight: 600, fontSize: '0.88rem', color: C.red }}>{clase.peor_cliente.nombre}</div>
-                                  <div style={{ fontSize: '0.72rem', color: '#e57373' }}>{clase.peor_cliente.total} inasistencias</div>
-                                </div>
+                          {clase.peores_clientes?.length > 0
+                            ? <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                {clase.peores_clientes.map((pc, pi) => (
+                                  <div key={pi} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                    <Avatar name={pc.nombre} bg={C.redLight} fg={C.red} size={32} />
+                                    <div>
+                                      <div style={{ fontWeight: 600, fontSize: '0.85rem', color: C.red }}>{pc.nombre}</div>
+                                      <div style={{ fontSize: '0.7rem', color: '#e57373' }}>{pc.total} {Number(pc.total) === 1 ? 'inasistencia' : 'inasistencias'}</div>
+                                    </div>
+                                  </div>
+                                ))}
                               </div>
                             : <span style={{ color: C.textHint }}>Sin registros</span>}
                         </td>

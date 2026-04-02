@@ -371,15 +371,15 @@ router.get('/analytics/detailed', async (req, res) => {
         AND r.observaciones LIKE '%No asistió%'
         AND r.fecha BETWEEN ? AND ? 
         GROUP BY r.cliente_id 
-        ORDER BY total DESC LIMIT 1
+        ORDER BY total DESC
       `, [cl.id, fecha_inicio, fecha_fin]);
 
       // 4. Horario con más demanda (considerando lo que se reservó originalmente: completada + pendiente)
       const [topHourRow] = await db.query(`
-        SELECT hora_inicio, COUNT(*) as total 
-        FROM reservas 
+        SELECT hora_inicio, COUNT(*) as total
+        FROM reservas
         WHERE clase_id = ? AND estatus IN ('completada', 'pendiente') AND fecha BETWEEN ? AND ?
-        GROUP BY hora_inicio 
+        GROUP BY hora_inicio
         ORDER BY total DESC LIMIT 1
       `, [cl.id, fecha_inicio, fecha_fin]);
 
@@ -387,10 +387,10 @@ router.get('/analytics/detailed', async (req, res) => {
         id: cl.id,
         nombre: cl.nombre,
         total: totalAsistencias,
-        cancelaciones: totalFaltas, 
+        cancelaciones: totalFaltas,
         cancelaciones_validas: totalCancelacionesValidas,
         mejor_cliente: topClientRow[0] || null,
-        peor_cliente: topCancellerRow[0] || null,
+        peores_clientes: topCancellerRow.length > 0 ? topCancellerRow : null,
         horario_top: topHourRow[0] || null
       });
     }
