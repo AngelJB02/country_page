@@ -32,10 +32,6 @@ const db = mysql.createPool({
 
 
 // Manejo de errores de conexión
-db.on('connection', () => {
-  console.log('✅ Nueva conexión establecida a la base de datos');
-});
-
 db.on('error', (err) => {
   console.error('❌ Error en la conexión de base de datos:', err);
   if (err.code === 'PROTOCOL_CONNECTION_LOST' || err.code === 'ECONNRESET') {
