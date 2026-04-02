@@ -31,7 +31,7 @@ const ReservasAdmin = () => {
   const loadReservas = async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      let url = "http://192.168.201.101:3001/api/reservas-admin";
+      let url = "https://elrefugiocountryclub.com/api/api/reservas-admin";
       const params = new URLSearchParams();
 
       if (filtroTiempo === "dia") {
