@@ -6,8 +6,14 @@ const ReservasAdmin = () => {
   const [reservas, setReservas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [notification, setNotification] = useState({ show: false, message: "", type: "" });
-  const [filtroTiempo, setFiltroTiempo] = useState("dia"); // "dia" o "semana"
+  const [filtroTiempo, setFiltroTiempo] = useState("dia"); // "dia", "semana", "mes", "personalizado"
   const [fechaSeleccionada, setFechaSeleccionada] = useState(new Date().toISOString().split("T")[0]);
+  const [mesSeleccionado, setMesSeleccionado] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
+  const [fechaInicio, setFechaInicio] = useState(new Date().toISOString().split("T")[0]);
+  const [fechaFin, setFechaFin] = useState(new Date().toISOString().split("T")[0]);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [estadoFilter, setEstadoFilter] = useState("");
@@ -39,6 +45,15 @@ const ReservasAdmin = () => {
 
         params.append("fecha_inicio", inicioSemana.toISOString().split("T")[0]);
         params.append("fecha_fin", finSemana.toISOString().split("T")[0]);
+      } else if (filtroTiempo === "mes") {
+        const [year, month] = mesSeleccionado.split("-").map(Number);
+        const inicioMes = new Date(year, month - 1, 1);
+        const finMes = new Date(year, month, 0); // último día del mes
+        params.append("fecha_inicio", inicioMes.toISOString().split("T")[0]);
+        params.append("fecha_fin", finMes.toISOString().split("T")[0]);
+      } else if (filtroTiempo === "personalizado") {
+        params.append("fecha_inicio", fechaInicio);
+        params.append("fecha_fin", fechaFin);
       }
 
       const queryString = params.toString();
@@ -64,10 +79,10 @@ const ReservasAdmin = () => {
   useEffect(() => {
     loadReservas();
     setCurrentPage(1);
-  }, [filtroTiempo, fechaSeleccionada]);
+  }, [filtroTiempo, fechaSeleccionada, mesSeleccionado, fechaInicio, fechaFin]);
 
   // Auto-refresh silencioso cada 30s
-  const refreshReservas = useCallback(() => loadReservas(true), [filtroTiempo, fechaSeleccionada]);
+  const refreshReservas = useCallback(() => loadReservas(true), [filtroTiempo, fechaSeleccionada, mesSeleccionado, fechaInicio, fechaFin]);
   useAutoRefresh(refreshReservas, { interval: 30000 });
 
   // Implementar sticky header para la tabla de reservas (clon + sincronización de anchos)
@@ -264,8 +279,46 @@ const ReservasAdmin = () => {
     inicioSemana.setDate(fechaBase.getDate() - fechaBase.getDay());
     const finSemana = new Date(inicioSemana);
     finSemana.setDate(inicioSemana.getDate() + 6);
-    
+
     return `${formatDate(inicioSemana.toISOString().split("T")[0])} - ${formatDate(finSemana.toISOString().split("T")[0])}`;
+  };
+
+  const getNombreMes = () => {
+    const [year, month] = mesSeleccionado.split("-").map(Number);
+    const date = new Date(year, month - 1, 1);
+    return date.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+  };
+
+  const getResumenRango = () => {
+    if (filtroTiempo === "dia") {
+      return formatDate(fechaSeleccionada);
+    } else if (filtroTiempo === "semana") {
+      return getRangoSemana();
+    } else if (filtroTiempo === "mes") {
+      const [year, month] = mesSeleccionado.split("-").map(Number);
+      const inicio = new Date(year, month - 1, 1);
+      const fin = new Date(year, month, 0);
+      return `${formatDate(inicio.toISOString().split("T")[0])} - ${formatDate(fin.toISOString().split("T")[0])}`;
+    } else {
+      return `${formatDate(fechaInicio)} - ${formatDate(fechaFin)}`;
+    }
+  };
+
+  const getPaginationPages = () => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    const pages = [];
+    pages.push(1);
+    let start = Math.max(2, currentPage - 1);
+    let end = Math.min(totalPages - 1, currentPage + 1);
+    if (currentPage <= 3) { start = 2; end = 4; }
+    if (currentPage >= totalPages - 2) { start = totalPages - 3; end = totalPages - 1; }
+    if (start > 2) pages.push("...");
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (end < totalPages - 1) pages.push("...");
+    pages.push(totalPages);
+    return pages;
   };
 
   return (
@@ -331,21 +384,76 @@ const ReservasAdmin = () => {
         <div className="controls-filters">
           <div className="controls-filter-item">
             <label className="controls-filter-label">Periodo</label>
-            <select className="controls-filter-select" value={filtroTiempo} onChange={(e) => setFiltroTiempo(e.target.value)}>
-              <option value="dia">Por dia</option>
-              <option value="semana">Por semana</option>
-            </select>
+            <div className="periodo-pills">
+              {[
+                { value: "dia", label: "Día" },
+                { value: "semana", label: "Semana" },
+                { value: "mes", label: "Mes" },
+                { value: "personalizado", label: "Personalizado" },
+              ].map(op => (
+                <button
+                  key={op.value}
+                  type="button"
+                  className={`periodo-pill${filtroTiempo === op.value ? " periodo-pill-active" : ""}`}
+                  onClick={() => setFiltroTiempo(op.value)}
+                >
+                  {op.label}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="controls-filter-item">
-            <label className="controls-filter-label">Fecha</label>
-            <input
-              type="date"
-              className="controls-filter-select"
-              value={fechaSeleccionada}
-              onChange={(e) => setFechaSeleccionada(e.target.value)}
-              style={{ minWidth: "140px" }}
-            />
-          </div>
+          {(filtroTiempo === "dia" || filtroTiempo === "semana") && (
+            <div className="controls-filter-item">
+              <label className="controls-filter-label">Fecha</label>
+              <input
+                type="date"
+                className="controls-filter-select"
+                value={fechaSeleccionada}
+                onChange={(e) => setFechaSeleccionada(e.target.value)}
+                onClick={(e) => { e.preventDefault(); e.target.showPicker(); }}
+                style={{ minWidth: "140px", cursor: "pointer" }}
+              />
+            </div>
+          )}
+          {filtroTiempo === "mes" && (
+            <div className="controls-filter-item">
+              <label className="controls-filter-label">Mes</label>
+              <input
+                type="month"
+                className="controls-filter-select"
+                value={mesSeleccionado}
+                onChange={(e) => setMesSeleccionado(e.target.value)}
+                onClick={(e) => { e.preventDefault(); e.target.showPicker(); }}
+                style={{ minWidth: "160px", cursor: "pointer" }}
+              />
+            </div>
+          )}
+          {filtroTiempo === "personalizado" && (
+            <>
+              <div className="controls-filter-item">
+                <label className="controls-filter-label">Desde</label>
+                <input
+                  type="date"
+                  className="controls-filter-select"
+                  value={fechaInicio}
+                  onChange={(e) => setFechaInicio(e.target.value)}
+                  onClick={(e) => { e.preventDefault(); e.target.showPicker(); }}
+                  style={{ minWidth: "140px", cursor: "pointer" }}
+                />
+              </div>
+              <div className="controls-filter-item">
+                <label className="controls-filter-label">Hasta</label>
+                <input
+                  type="date"
+                  className="controls-filter-select"
+                  value={fechaFin}
+                  onChange={(e) => setFechaFin(e.target.value)}
+                  onClick={(e) => { e.preventDefault(); e.target.showPicker(); }}
+                  style={{ minWidth: "140px", cursor: "pointer" }}
+                />
+              </div>
+            </>
+          )}
           <div className="controls-filter-item">
             <label className={`controls-filter-label ${estadoFilter ? "label-active" : ""}`}>Estado</label>
             <select className={`controls-filter-select ${estadoFilter ? "filter-active" : ""}`} value={estadoFilter} onChange={(e) => { setEstadoFilter(e.target.value); setCurrentPage(1); }}>
@@ -362,6 +470,16 @@ const ReservasAdmin = () => {
             Semana: {getRangoSemana()}
           </div>
         )}
+        {filtroTiempo === "mes" && (
+          <div style={{ fontSize: "0.8rem", color: "var(--secondary-brown)", fontWeight: "500", textTransform: "capitalize" }}>
+            Mes: {getNombreMes()}
+          </div>
+        )}
+        {filtroTiempo === "personalizado" && (
+          <div style={{ fontSize: "0.8rem", color: "var(--secondary-brown)", fontWeight: "500" }}>
+            Rango: {formatDate(fechaInicio)} - {formatDate(fechaFin)}
+          </div>
+        )}
       </div>
 
       {/* Resumen de filtros */}
@@ -369,7 +487,7 @@ const ReservasAdmin = () => {
         <p style={{ margin: '0 0 0.6rem', fontSize: '0.84rem', color: 'var(--charcoal)', lineHeight: 1.5 }}>
           Mostrando <strong>{filteredReservas.length} reserva{filteredReservas.length !== 1 ? 's' : ''}</strong>
           {' · '}{estadoFilter ? estadoFilter.charAt(0).toUpperCase() + estadoFilter.slice(1) : 'Todos los estados'}
-          {' · '}{filtroTiempo === 'dia' ? 'Por día' : 'Por semana'}
+          {' · '}{getResumenRango()}
           {!estadoFilter && !searchTerm && (
             <span style={{ fontStyle: 'italic', opacity: 0.6 }}> · Usa los filtros para ajustar la búsqueda</span>
           )}
@@ -406,7 +524,11 @@ const ReservasAdmin = () => {
                       ? "No se encontraron reservas con los filtros aplicados."
                       : filtroTiempo === "dia"
                         ? `No hay reservas para el ${formatDate(fechaSeleccionada)}`
-                        : "No hay reservas para la semana seleccionada"
+                        : filtroTiempo === "semana"
+                          ? "No hay reservas para la semana seleccionada"
+                          : filtroTiempo === "mes"
+                            ? `No hay reservas para ${getNombreMes()}`
+                            : "No hay reservas para el rango seleccionado"
                     }
                   </td>
                 </tr>
@@ -494,14 +616,18 @@ const ReservasAdmin = () => {
             <span>Anterior</span>
           </button>
           <div className="pagination-numbers">
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-              <button
-                key={page}
-                className={currentPage === page ? "pagination-page pagination-page-active" : "pagination-page"}
-                onClick={() => setCurrentPage(page)}
-              >
-                {page}
-              </button>
+            {getPaginationPages().map((page, idx) => (
+              page === "..." ? (
+                <span key={`dots-${idx}`} className="pagination-dots">...</span>
+              ) : (
+                <button
+                  key={page}
+                  className={currentPage === page ? "pagination-page pagination-page-active" : "pagination-page"}
+                  onClick={() => setCurrentPage(page)}
+                >
+                  {page}
+                </button>
+              )
             ))}
           </div>
           <button

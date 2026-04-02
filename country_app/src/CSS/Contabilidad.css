@@ -2009,6 +2009,13 @@ body.no-scroll {
   font-weight: 700 !important;
 }
 
+.pagination-dots {
+  padding: 0 0.3rem;
+  color: var(--secondary-brown);
+  font-weight: 600;
+  user-select: none;
+}
+
 .pagination-info {
   margin-left: 1rem;
   color: var(--secondary-brown);
@@ -2272,6 +2279,44 @@ body.no-scroll {
   font-weight: 700;
 }
 
+/* Periodo pills / segmented buttons */
+.periodo-pills {
+  display: flex;
+  border: 1.5px solid rgba(107, 68, 35, 0.12);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--cream);
+}
+
+.periodo-pill {
+  padding: 0.45rem 0.75rem;
+  border: none;
+  background: transparent;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--secondary-brown);
+  cursor: pointer;
+  font-family: var(--font-secondary);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  border-right: 1px solid rgba(107, 68, 35, 0.1);
+}
+
+.periodo-pill:last-child {
+  border-right: none;
+}
+
+.periodo-pill:hover:not(.periodo-pill-active) {
+  background: rgba(193, 123, 74, 0.08);
+  color: var(--primary-brown);
+}
+
+.periodo-pill-active {
+  background: var(--terracotta);
+  color: white;
+  font-weight: 600;
+}
+
 .controls-overdue-btn {
   display: flex;
   align-items: center;
@@ -2342,6 +2387,17 @@ body.no-scroll {
   .controls-filter-select,
   .controls-overdue-btn {
     width: 100%;
+  }
+
+  .periodo-pills {
+    width: 100%;
+  }
+
+  .periodo-pill {
+    flex: 1;
+    text-align: center;
+    padding: 0.5rem 0.4rem;
+    font-size: 0.75rem;
   }
 }
 
