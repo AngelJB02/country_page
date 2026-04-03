@@ -42,7 +42,7 @@ const HeroSection = () => {
   };
 
   return (
-    <section id="hero" style={{ position: 'relative', width: '100%', height: '100vh', overflow: 'hidden' }}>
+    <section id="hero" style={{ position: 'relative', width: '100%', height: '100vh', overflow: 'hidden', paddingTop: '80px' }}>
       {/* Background Swiper */}
       <Swiper
         modules={[Autoplay, EffectFade]}
@@ -53,11 +53,11 @@ const HeroSection = () => {
         autoplay={{ delay: 5000, disableOnInteraction: false }}
         speed={1500}
         loop
-        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+        style={{ position: 'absolute', inset: 0, width: '100%', height: 'calc(100vh - 80px)' }}
       >
         {slides.map((slide, index) => (
           <SwiperSlide key={index}>
-            <div style={{ position: 'relative', width: '100%', height: '100vh' }}>
+            <div style={{ position: 'relative', width: '100%', height: 'calc(100vh - 80px)' }}>
               <img
                 src={slide.image}
                 alt={`El Refugio - ${slide.title}`}

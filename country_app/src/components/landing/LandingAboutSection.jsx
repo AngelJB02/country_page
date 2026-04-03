@@ -1,5 +1,5 @@
 import React from 'react';
-import { Leaf, Home, Users } from 'lucide-react';
+import { Leaf, Home, Users, Star } from 'lucide-react';
 import ElRefugio from '../../img/ElrefugioCountryclub.webp';
 
 const LandingAboutSection = () => {
@@ -7,156 +7,211 @@ const LandingAboutSection = () => {
     {
       icon: Leaf,
       title: 'Entorno Natural',
-      description:
-        'Rodeado de vegetacion y paisajes que brindan un ambiente de paz y tranquilidad, perfecto para desconectar.',
+      description: 'Rodeado de vegetacion y paisajes que brindan un ambiente de paz y tranquilidad.',
     },
     {
       icon: Home,
-      title: 'Instalaciones Completas',
-      description:
-        'Espacios versatiles y bien equipados para todo tipo de eventos, con comodidades modernas.',
+      title: 'Instalaciones Premium',
+      description: 'Espacios versatiles y bien equipados para todo tipo de eventos.',
     },
     {
       icon: Users,
       title: 'Servicio Personalizado',
-      description:
-        'Atencion dedicada para hacer realidad la celebracion de tus suenos, cuidando cada detalle.',
+      description: 'Atencion dedicada para hacer realidad la celebracion de tus suenos.',
+    },
+    {
+      icon: Star,
+      title: 'Experiencia Unica',
+      description: 'Cada evento es una experiencia memorable e irrepetible.',
     },
   ];
 
   return (
-    <section id="nosotros" style={{ padding: '100px 0', backgroundColor: '#F5F1E8' }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px' }}>
-        {/* Section Header */}
-        <div style={{ textAlign: 'center', marginBottom: '64px' }}>
-          <h2 style={{
-            fontFamily: "'Playfair Display', Georgia, serif",
-            fontSize: 'clamp(2rem, 4vw, 3rem)',
-            color: '#1c1917',
-            marginBottom: '16px',
-            fontWeight: 600,
-          }}>
-            Sobre El Refugio
-          </h2>
-          <p style={{
-            color: '#57534e',
-            fontSize: '18px',
-            maxWidth: '600px',
-            margin: '0 auto',
-            lineHeight: 1.7,
-          }}>
-            Un espacio unico donde la naturaleza y la elegancia se encuentran
-            para crear momentos inolvidables.
-          </p>
-        </div>
-
-        {/* Main Content - Grid */}
+    <section id="nosotros" style={{ backgroundColor: '#FAF8F5', padding: '120px 0' }}>
+      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 24px' }}>
+        
+        {/* Split Layout - Magazine Style */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+          gridTemplateColumns: 'repeat(12, 1fr)',
           gap: '48px',
           alignItems: 'center',
-          marginBottom: '64px',
-        }}>
-          {/* Image */}
-          <div style={{
-            borderRadius: '24px',
-            overflow: 'hidden',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15)',
-          }}>
-            <img
-              src={ElRefugio}
-              alt="El Refugio Country Club - Vista panoramica"
-              style={{
-                width: '100%',
-                height: '450px',
-                objectFit: 'cover',
-                display: 'block',
-              }}
-              loading="lazy"
-            />
+          marginBottom: '100px',
+        }}
+        className="about-grid"
+        >
+          {/* Image Column - Takes 7 columns */}
+          <div style={{ gridColumn: 'span 7' }} className="about-image-col">
+            <div style={{
+              position: 'relative',
+            }}>
+              <img
+                src={ElRefugio}
+                alt="El Refugio Country Club - Vista panoramica"
+                style={{
+                  width: '100%',
+                  height: '600px',
+                  objectFit: 'cover',
+                  borderRadius: '8px',
+                  boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                  display: 'block',
+                }}
+                loading="lazy"
+              />
+              {/* Decorative accent */}
+              <div style={{
+                position: 'absolute',
+                bottom: '-24px',
+                right: '-24px',
+                width: '200px',
+                height: '200px',
+                backgroundColor: '#835634',
+                borderRadius: '8px',
+                zIndex: -1,
+              }} className="decorative-accent" />
+            </div>
           </div>
 
-          {/* Text Content */}
-          <div style={{
-            backgroundColor: '#fff',
-            borderRadius: '24px',
-            padding: '40px',
-            boxShadow: '0 10px 40px -10px rgba(107, 68, 35, 0.1)',
-            border: '1px solid rgba(107, 68, 35, 0.1)',
-          }}>
+          {/* Text Column - Takes 5 columns */}
+          <div style={{ gridColumn: 'span 5' }} className="about-text-col">
+            {/* Eyebrow */}
             <p style={{
-              color: '#44403c',
-              fontSize: '18px',
-              lineHeight: 1.8,
+              fontFamily: "'Inter', sans-serif",
+              fontSize: '13px',
+              fontWeight: 600,
+              letterSpacing: '2px',
+              textTransform: 'uppercase',
+              color: '#92400e',
+              marginBottom: '16px',
+            }}>
+              Nuestra Historia
+            </p>
+
+            {/* Title */}
+            <h2 style={{
+              fontFamily: "'Playfair Display', Georgia, serif",
+              fontSize: 'clamp(2.5rem, 4vw, 3.5rem)',
+              color: '#1c1917',
+              fontWeight: 500,
+              lineHeight: 1.1,
+              marginBottom: '32px',
+            }}>
+              Sobre El Refugio
+            </h2>
+
+            {/* Subtitle */}
+            <p style={{
+              fontFamily: "'Playfair Display', Georgia, serif",
+              fontSize: '20px',
+              fontStyle: 'italic',
+              color: '#92400e',
               marginBottom: '24px',
+              lineHeight: 1.6,
             }}>
-              En El Refugio, cada evento se convierte en una experiencia
-              unica. Nuestro espacio combina la tranquilidad del entorno
-              natural con instalaciones modernas y elegantes.
+              Un espacio donde la naturaleza y la elegancia se encuentran para crear momentos inolvidables.
             </p>
+
+            {/* Body Text */}
             <p style={{
-              color: '#57534e',
+              fontFamily: "'Inter', sans-serif",
               fontSize: '16px',
+              color: '#57534e',
               lineHeight: 1.8,
+              marginBottom: '20px',
             }}>
-              Creamos el ambiente perfecto para cualquier celebracion
-              especial, desde bodas intimas hasta grandes eventos
-              corporativos. Nuestro compromiso es hacer de tu evento un
-              momento memorable.
+              En El Refugio, cada evento se convierte en una experiencia unica. Nuestro espacio combina la tranquilidad del entorno natural con instalaciones modernas y elegantes, creando el ambiente perfecto para cualquier celebracion especial.
             </p>
+
+            <p style={{
+              fontFamily: "'Inter', sans-serif",
+              fontSize: '16px',
+              color: '#57534e',
+              lineHeight: 1.8,
+              marginBottom: '32px',
+            }}>
+              Desde bodas intimas hasta grandes eventos corporativos, nuestro compromiso es hacer de tu evento un momento memorable que perdure en el tiempo.
+            </p>
+
+            {/* CTA Link */}
+            <a
+              href="#contacto"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontFamily: "'Inter', sans-serif",
+                fontSize: '14px',
+                fontWeight: 600,
+                letterSpacing: '1px',
+                textTransform: 'uppercase',
+                color: '#835634',
+                textDecoration: 'none',
+                borderBottom: '2px solid #835634',
+                paddingBottom: '4px',
+                transition: 'all 0.3s ease',
+              }}
+              onMouseOver={(e) => {
+                e.target.style.color = '#92400e';
+                e.target.style.borderBottomColor = '#92400e';
+              }}
+              onMouseOut={(e) => {
+                e.target.style.color = '#835634';
+                e.target.style.borderBottomColor = '#835634';
+              }}
+            >
+              Conoce mas sobre nosotros
+              <span style={{ fontSize: '18px' }}>→</span>
+            </a>
           </div>
         </div>
 
         {/* Features Grid */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-          gap: '24px',
-        }}>
+          gridTemplateColumns: 'repeat(4, 1fr)',
+          gap: '32px',
+        }}
+        className="features-grid"
+        >
           {features.map((feature, index) => {
             const IconComponent = feature.icon;
             return (
               <div
                 key={index}
                 style={{
-                  backgroundColor: '#fff',
-                  borderRadius: '20px',
-                  padding: '32px',
-                  boxShadow: '0 4px 20px rgba(107, 68, 35, 0.08)',
-                  border: '1px solid rgba(107, 68, 35, 0.08)',
-                  transition: 'all 0.3s ease',
+                  textAlign: 'center',
+                  padding: '32px 24px',
+                  transition: 'transform 0.3s ease',
                 }}
                 onMouseOver={(e) => {
                   e.currentTarget.style.transform = 'translateY(-4px)';
-                  e.currentTarget.style.boxShadow = '0 20px 40px rgba(107, 68, 35, 0.12)';
                 }}
                 onMouseOut={(e) => {
                   e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 4px 20px rgba(107, 68, 35, 0.08)';
                 }}
               >
                 <div style={{
                   marginBottom: '20px',
                   display: 'inline-flex',
-                  padding: '12px',
-                  backgroundColor: 'rgba(146, 64, 14, 0.1)',
-                  borderRadius: '12px',
+                  padding: '16px',
+                  backgroundColor: 'rgba(131, 86, 52, 0.1)',
+                  borderRadius: '50%',
                 }}>
-                  <IconComponent size={28} color="#92400e" strokeWidth={1.5} />
+                  <IconComponent size={28} color="#835634" strokeWidth={1.5} />
                 </div>
                 <h3 style={{
                   fontFamily: "'Playfair Display', Georgia, serif",
                   fontSize: '20px',
                   color: '#1c1917',
                   marginBottom: '12px',
-                  fontWeight: 600,
+                  fontWeight: 500,
                 }}>
                   {feature.title}
                 </h3>
                 <p style={{
+                  fontFamily: "'Inter', sans-serif",
                   color: '#57534e',
-                  fontSize: '15px',
+                  fontSize: '14px',
                   lineHeight: 1.7,
                 }}>
                   {feature.description}
@@ -166,6 +221,37 @@ const LandingAboutSection = () => {
           })}
         </div>
       </div>
+
+      <style>{`
+        @media (max-width: 1024px) {
+          .about-grid {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 48px !important;
+          }
+          .about-image-col,
+          .about-text-col {
+            grid-column: span 12 !important;
+          }
+          .about-image-col img {
+            height: 400px !important;
+          }
+          .decorative-accent {
+            display: none !important;
+          }
+          .features-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+          }
+        }
+        @media (max-width: 640px) {
+          .features-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .about-image-col img {
+            height: 300px !important;
+          }
+        }
+      `}</style>
     </section>
   );
 };

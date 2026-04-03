@@ -2,17 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Menu, X } from 'lucide-react';
 
 const LandingNavbar = () => {
-  const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 50);
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
   const scrollToSection = (sectionId) => {
     const element = document.getElementById(sectionId);
@@ -49,10 +39,8 @@ const LandingNavbar = () => {
         left: 0,
         right: 0,
         zIndex: 50,
-        transition: 'all 0.3s ease',
-        backgroundColor: isScrolled ? 'rgba(255, 255, 255, 0.95)' : 'transparent',
-        backdropFilter: isScrolled ? 'blur(12px)' : 'none',
-        boxShadow: isScrolled ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : 'none',
+        backgroundColor: '#835634',
+        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
       }}
     >
       <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 24px' }}>
@@ -70,8 +58,7 @@ const LandingNavbar = () => {
                 fontSize: '18px',
                 fontWeight: 600,
                 letterSpacing: '1px',
-                color: isScrolled ? '#6B4423' : '#fff',
-                transition: 'color 0.3s ease',
+                color: '#FEFBF6',
               }}
             >
               EL REFUGIO
@@ -99,7 +86,7 @@ const LandingNavbar = () => {
                     fontSize: '14px',
                     fontWeight: 500,
                     letterSpacing: '0.5px',
-                    color: isScrolled ? '#44403c' : '#fff',
+                    color: '#FEFBF6',
                     cursor: 'pointer',
                     transition: 'opacity 0.3s ease',
                     padding: '8px 0',
@@ -118,7 +105,7 @@ const LandingNavbar = () => {
                   fontSize: '14px',
                   fontWeight: 500,
                   letterSpacing: '0.5px',
-                  color: isScrolled ? '#44403c' : '#fff',
+                  color: '#FEFBF6',
                   textDecoration: 'none',
                   transition: 'opacity 0.3s ease',
                 }}
@@ -132,22 +119,22 @@ const LandingNavbar = () => {
               <button
                 onClick={() => scrollToSection('contacto')}
                 style={{
-                  backgroundColor: '#92400e',
-                  color: '#fff',
+                  backgroundColor: '#FEFBF6',
+                  color: '#835634',
                   padding: '10px 20px',
                   borderRadius: '9999px',
                   fontSize: '14px',
-                  fontWeight: 500,
+                  fontWeight: 600,
                   border: 'none',
                   cursor: 'pointer',
                   transition: 'all 0.3s ease',
                 }}
                 onMouseOver={(e) => {
-                  e.target.style.backgroundColor = '#78350f';
+                  e.target.style.backgroundColor = '#F5F1E8';
                   e.target.style.transform = 'scale(1.05)';
                 }}
                 onMouseOut={(e) => {
-                  e.target.style.backgroundColor = '#92400e';
+                  e.target.style.backgroundColor = '#FEFBF6';
                   e.target.style.transform = 'scale(1)';
                 }}
               >
@@ -165,7 +152,7 @@ const LandingNavbar = () => {
               background: 'none',
               border: 'none',
               cursor: 'pointer',
-              color: isScrolled ? '#1c1917' : '#fff',
+              color: '#FEFBF6',
             }}
             className="mobile-menu-btn"
             aria-label="Toggle menu"
@@ -181,8 +168,7 @@ const LandingNavbar = () => {
           position: 'fixed',
           inset: 0,
           top: '80px',
-          backgroundColor: 'rgba(255, 255, 255, 0.98)',
-          backdropFilter: 'blur(12px)',
+          backgroundColor: '#835634',
           transform: isMobileMenuOpen ? 'translateX(0)' : 'translateX(100%)',
           transition: 'transform 0.3s ease',
           zIndex: 40,
@@ -207,7 +193,7 @@ const LandingNavbar = () => {
                   border: 'none',
                   fontSize: '18px',
                   fontWeight: 500,
-                  color: '#44403c',
+                  color: '#FEFBF6',
                   cursor: 'pointer',
                   transition: 'color 0.3s ease',
                 }}
@@ -222,7 +208,7 @@ const LandingNavbar = () => {
               style={{
                 fontSize: '18px',
                 fontWeight: 500,
-                color: '#44403c',
+                color: '#FEFBF6',
                 textDecoration: 'none',
               }}
             >
@@ -233,12 +219,12 @@ const LandingNavbar = () => {
             <button
               onClick={() => scrollToSection('contacto')}
               style={{
-                backgroundColor: '#92400e',
-                color: '#fff',
+                backgroundColor: '#FEFBF6',
+                color: '#835634',
                 padding: '12px 32px',
                 borderRadius: '9999px',
                 fontSize: '16px',
-                fontWeight: 500,
+                fontWeight: 600,
                 border: 'none',
                 cursor: 'pointer',
               }}
