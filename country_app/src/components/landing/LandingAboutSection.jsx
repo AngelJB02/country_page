@@ -25,71 +25,145 @@ const LandingAboutSection = () => {
   ];
 
   return (
-    <section id="nosotros" className="py-20 md:py-28 bg-cream-100">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="nosotros" style={{ padding: '100px 0', backgroundColor: '#F5F1E8' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px' }}>
         {/* Section Header */}
-        <div className="text-center mb-16">
-          <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl text-stone-900 font-semibold mb-4">
+        <div style={{ textAlign: 'center', marginBottom: '64px' }}>
+          <h2 style={{
+            fontFamily: "'Playfair Display', Georgia, serif",
+            fontSize: 'clamp(2rem, 4vw, 3rem)',
+            color: '#1c1917',
+            marginBottom: '16px',
+            fontWeight: 600,
+          }}>
             Sobre El Refugio
           </h2>
-          <p className="text-stone-600 text-lg max-w-2xl mx-auto text-balance">
+          <p style={{
+            color: '#57534e',
+            fontSize: '18px',
+            maxWidth: '600px',
+            margin: '0 auto',
+            lineHeight: 1.7,
+          }}>
             Un espacio unico donde la naturaleza y la elegancia se encuentran
             para crear momentos inolvidables.
           </p>
         </div>
 
-        {/* Main Content - Bento Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center mb-16">
+        {/* Main Content - Grid */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+          gap: '48px',
+          alignItems: 'center',
+          marginBottom: '64px',
+        }}>
           {/* Image */}
-          <div className="relative rounded-3xl overflow-hidden shadow-xl group">
+          <div style={{
+            borderRadius: '24px',
+            overflow: 'hidden',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15)',
+          }}>
             <img
               src={ElRefugio}
               alt="El Refugio Country Club - Vista panoramica"
-              className="w-full h-80 md:h-[450px] object-cover transition-transform duration-700 group-hover:scale-105"
+              style={{
+                width: '100%',
+                height: '450px',
+                objectFit: 'cover',
+                display: 'block',
+              }}
               loading="lazy"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
           </div>
 
           {/* Text Content */}
-          <div className="flex flex-col justify-center">
-            <div className="bg-white rounded-3xl p-8 md:p-10 shadow-lg border border-stone-100">
-              <p className="text-stone-700 text-lg leading-relaxed mb-6">
-                En El Refugio, cada evento se convierte en una experiencia
-                unica. Nuestro espacio combina la tranquilidad del entorno
-                natural con instalaciones modernas y elegantes.
-              </p>
-              <p className="text-stone-600 leading-relaxed">
-                Creamos el ambiente perfecto para cualquier celebracion
-                especial, desde bodas intimas hasta grandes eventos
-                corporativos. Nuestro compromiso es hacer de tu evento un
-                momento memorable.
-              </p>
-            </div>
+          <div style={{
+            backgroundColor: '#fff',
+            borderRadius: '24px',
+            padding: '40px',
+            boxShadow: '0 10px 40px -10px rgba(107, 68, 35, 0.1)',
+            border: '1px solid rgba(107, 68, 35, 0.1)',
+          }}>
+            <p style={{
+              color: '#44403c',
+              fontSize: '18px',
+              lineHeight: 1.8,
+              marginBottom: '24px',
+            }}>
+              En El Refugio, cada evento se convierte en una experiencia
+              unica. Nuestro espacio combina la tranquilidad del entorno
+              natural con instalaciones modernas y elegantes.
+            </p>
+            <p style={{
+              color: '#57534e',
+              fontSize: '16px',
+              lineHeight: 1.8,
+            }}>
+              Creamos el ambiente perfecto para cualquier celebracion
+              especial, desde bodas intimas hasta grandes eventos
+              corporativos. Nuestro compromiso es hacer de tu evento un
+              momento memorable.
+            </p>
           </div>
         </div>
 
         {/* Features Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {features.map((feature, index) => (
-            <div
-              key={index}
-              className="bg-white rounded-2xl p-8 shadow-md hover:shadow-lg transition-all duration-300 border border-stone-100 group hover:-translate-y-1"
-            >
-              <div className="mb-5 inline-flex p-3 bg-amber-800/10 rounded-xl group-hover:bg-amber-800/20 transition-colors">
-                <feature.icon
-                  className="w-7 h-7 text-amber-800"
-                  strokeWidth={1.5}
-                />
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gap: '24px',
+        }}>
+          {features.map((feature, index) => {
+            const IconComponent = feature.icon;
+            return (
+              <div
+                key={index}
+                style={{
+                  backgroundColor: '#fff',
+                  borderRadius: '20px',
+                  padding: '32px',
+                  boxShadow: '0 4px 20px rgba(107, 68, 35, 0.08)',
+                  border: '1px solid rgba(107, 68, 35, 0.08)',
+                  transition: 'all 0.3s ease',
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-4px)';
+                  e.currentTarget.style.boxShadow = '0 20px 40px rgba(107, 68, 35, 0.12)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 20px rgba(107, 68, 35, 0.08)';
+                }}
+              >
+                <div style={{
+                  marginBottom: '20px',
+                  display: 'inline-flex',
+                  padding: '12px',
+                  backgroundColor: 'rgba(146, 64, 14, 0.1)',
+                  borderRadius: '12px',
+                }}>
+                  <IconComponent size={28} color="#92400e" strokeWidth={1.5} />
+                </div>
+                <h3 style={{
+                  fontFamily: "'Playfair Display', Georgia, serif",
+                  fontSize: '20px',
+                  color: '#1c1917',
+                  marginBottom: '12px',
+                  fontWeight: 600,
+                }}>
+                  {feature.title}
+                </h3>
+                <p style={{
+                  color: '#57534e',
+                  fontSize: '15px',
+                  lineHeight: 1.7,
+                }}>
+                  {feature.description}
+                </p>
               </div>
-              <h3 className="font-serif text-xl text-stone-900 font-semibold mb-3">
-                {feature.title}
-              </h3>
-              <p className="text-stone-600 leading-relaxed">
-                {feature.description}
-              </p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>

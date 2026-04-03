@@ -87,64 +87,114 @@ const LandingEventsSection = () => {
   };
 
   return (
-    <section id="eventos" className="py-20 md:py-28 bg-stone-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="eventos" style={{ padding: '100px 0', backgroundColor: '#fafaf9' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px' }}>
         {/* Section Header */}
-        <div className="text-center mb-16">
-          <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl text-stone-900 font-semibold mb-4">
+        <div style={{ textAlign: 'center', marginBottom: '64px' }}>
+          <h2 style={{
+            fontFamily: "'Playfair Display', Georgia, serif",
+            fontSize: 'clamp(2rem, 4vw, 3rem)',
+            color: '#1c1917',
+            marginBottom: '16px',
+            fontWeight: 600,
+          }}>
             Nuestros Eventos
           </h2>
-          <p className="text-stone-600 text-lg max-w-2xl mx-auto text-balance">
+          <p style={{
+            color: '#57534e',
+            fontSize: '18px',
+            maxWidth: '600px',
+            margin: '0 auto',
+            lineHeight: 1.7,
+          }}>
             Descubre los diferentes tipos de celebraciones que puedes realizar
             en El Refugio
           </p>
         </div>
 
-        {/* Bento Grid Layout */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-fr">
-          {eventos.map((evento, index) => (
+        {/* Events Grid */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+          gap: '24px',
+        }}>
+          {eventos.map((evento) => (
             <div
               key={evento.id}
               onClick={() => handleEventClick(evento)}
-              className={`group relative bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 ${
-                evento.featured ? 'md:col-span-2 lg:col-span-1 lg:row-span-2' : ''
-              } ${evento.clickable ? 'cursor-pointer' : ''}`}
+              style={{
+                backgroundColor: '#fff',
+                borderRadius: '20px',
+                overflow: 'hidden',
+                boxShadow: '0 4px 20px rgba(107, 68, 35, 0.08)',
+                border: '1px solid rgba(107, 68, 35, 0.08)',
+                transition: 'all 0.3s ease',
+                cursor: evento.clickable ? 'pointer' : 'default',
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.transform = 'translateY(-4px)';
+                e.currentTarget.style.boxShadow = '0 20px 40px rgba(107, 68, 35, 0.12)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 20px rgba(107, 68, 35, 0.08)';
+              }}
             >
               {/* Image */}
-              <div
-                className={`relative overflow-hidden ${
-                  evento.featured ? 'h-64 lg:h-72' : 'h-48 md:h-52'
-                }`}
-              >
+              <div style={{ height: '200px', overflow: 'hidden', position: 'relative' }}>
                 <img
                   src={evento.imagen}
                   alt={evento.titulo}
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    transition: 'transform 0.5s ease',
+                  }}
                   loading="lazy"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+                <div style={{
+                  position: 'absolute',
+                  inset: 0,
+                  background: 'linear-gradient(180deg, transparent 50%, rgba(0,0,0,0.3) 100%)',
+                }} />
               </div>
 
               {/* Content */}
-              <div className="p-6">
-                <h3 className="font-serif text-xl md:text-2xl text-stone-900 font-semibold mb-3">
+              <div style={{ padding: '24px' }}>
+                <h3 style={{
+                  fontFamily: "'Playfair Display', Georgia, serif",
+                  fontSize: '22px',
+                  color: '#1c1917',
+                  marginBottom: '12px',
+                  fontWeight: 600,
+                }}>
                   {evento.titulo}
                 </h3>
-                <p className="text-stone-600 text-sm md:text-base mb-4 leading-relaxed">
+                <p style={{
+                  color: '#57534e',
+                  fontSize: '15px',
+                  lineHeight: 1.7,
+                  marginBottom: '16px',
+                }}>
                   {evento.descripcion}
                 </p>
 
                 {/* Features List */}
-                <ul className="space-y-2">
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                   {evento.caracteristicas.map((caracteristica, idx) => (
                     <li
                       key={idx}
-                      className="flex items-center gap-2 text-sm text-stone-600"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        marginBottom: '8px',
+                        fontSize: '14px',
+                        color: '#57534e',
+                      }}
                     >
-                      <Check
-                        className="w-4 h-4 text-amber-700 flex-shrink-0"
-                        strokeWidth={2}
-                      />
+                      <Check size={16} color="#92400e" strokeWidth={2} />
                       <span>{caracteristica}</span>
                     </li>
                   ))}
@@ -152,7 +202,15 @@ const LandingEventsSection = () => {
 
                 {/* Arrow for clickable items */}
                 {evento.clickable && (
-                  <div className="mt-4 flex items-center gap-2 text-amber-800 font-medium text-sm group-hover:gap-3 transition-all">
+                  <div style={{
+                    marginTop: '16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    color: '#92400e',
+                    fontWeight: 500,
+                    fontSize: '14px',
+                  }}>
                     <span>Ver mas</span>
                     <ArrowRight size={16} />
                   </div>

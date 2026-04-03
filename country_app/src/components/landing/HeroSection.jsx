@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Autoplay, EffectFade } from 'swiper/modules';
@@ -42,7 +42,7 @@ const HeroSection = () => {
   };
 
   return (
-    <section id="hero" className="relative w-full h-screen overflow-hidden">
+    <section id="hero" style={{ position: 'relative', width: '100%', height: '100vh', overflow: 'hidden' }}>
       {/* Background Swiper */}
       <Swiper
         modules={[Autoplay, EffectFade]}
@@ -53,31 +53,49 @@ const HeroSection = () => {
         autoplay={{ delay: 5000, disableOnInteraction: false }}
         speed={1500}
         loop
-        className="absolute inset-0 w-full h-full"
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
       >
         {slides.map((slide, index) => (
           <SwiperSlide key={index}>
-            <div className="relative w-full h-screen">
+            <div style={{ position: 'relative', width: '100%', height: '100vh' }}>
               <img
                 src={slide.image}
                 alt={`El Refugio - ${slide.title}`}
-                className="w-full h-full object-cover"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 loading={index === 0 ? 'eager' : 'lazy'}
               />
               {/* Dark overlay for text contrast */}
-              <div className="absolute inset-0 bg-black/40" />
+              <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.4)' }} />
             </div>
           </SwiperSlide>
         ))}
       </Swiper>
 
       {/* Content Overlay */}
-      <div className="absolute inset-0 z-10 flex flex-col items-center justify-center px-4">
-        <div className="text-center max-w-4xl mx-auto">
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        zIndex: 10,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '0 16px',
+      }}>
+        <div style={{ textAlign: 'center', maxWidth: '900px', margin: '0 auto' }}>
           {/* Animated Title */}
           <h1
             key={`title-${activeIndex}`}
-            className="font-serif text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-white font-semibold mb-6 text-balance animate-fade-in"
+            style={{
+              fontFamily: "'Playfair Display', Georgia, serif",
+              fontSize: 'clamp(2.5rem, 6vw, 4.5rem)',
+              color: '#fff',
+              fontWeight: 600,
+              marginBottom: '24px',
+              textWrap: 'balance',
+              animation: 'fadeInUp 0.6s ease forwards',
+              textShadow: '2px 2px 8px rgba(0,0,0,0.5)',
+            }}
           >
             {slides[activeIndex].title}
           </h1>
@@ -85,7 +103,19 @@ const HeroSection = () => {
           {/* Animated Subtitle */}
           <p
             key={`subtitle-${activeIndex}`}
-            className="text-lg sm:text-xl md:text-2xl text-white/90 font-light mb-10 max-w-2xl mx-auto text-balance animate-slide-up"
+            style={{
+              fontSize: 'clamp(1rem, 2.5vw, 1.5rem)',
+              color: 'rgba(255, 255, 255, 0.9)',
+              fontWeight: 300,
+              marginBottom: '40px',
+              maxWidth: '600px',
+              margin: '0 auto 40px',
+              textWrap: 'balance',
+              animation: 'slideUp 0.6s ease forwards',
+              animationDelay: '0.2s',
+              opacity: 0,
+              textShadow: '1px 1px 4px rgba(0,0,0,0.5)',
+            }}
           >
             {slides[activeIndex].subtitle}
           </p>
@@ -93,7 +123,26 @@ const HeroSection = () => {
           {/* CTA Button */}
           <button
             onClick={() => scrollToSection('contacto')}
-            className="group bg-amber-800 text-white px-8 py-4 rounded-full text-base sm:text-lg font-medium transition-all duration-300 hover:bg-amber-900 hover:scale-105 shadow-lg hover:shadow-xl"
+            style={{
+              backgroundColor: '#92400e',
+              color: '#fff',
+              padding: '16px 32px',
+              borderRadius: '9999px',
+              fontSize: '18px',
+              fontWeight: 500,
+              border: 'none',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.3)',
+            }}
+            onMouseOver={(e) => {
+              e.target.style.backgroundColor = '#78350f';
+              e.target.style.transform = 'scale(1.05)';
+            }}
+            onMouseOut={(e) => {
+              e.target.style.backgroundColor = '#92400e';
+              e.target.style.transform = 'scale(1)';
+            }}
           >
             Reservar mi Evento
           </button>
@@ -102,25 +151,91 @@ const HeroSection = () => {
         {/* Scroll Indicator */}
         <button
           onClick={() => scrollToSection('stats')}
-          className="absolute bottom-8 left-1/2 -translate-x-1/2 text-white flex flex-col items-center gap-2 animate-bounce-slow cursor-pointer hover:opacity-80 transition-opacity"
+          style={{
+            position: 'absolute',
+            bottom: '32px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            color: '#fff',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '8px',
+            animation: 'bounce 2s infinite',
+            cursor: 'pointer',
+            background: 'none',
+            border: 'none',
+          }}
           aria-label="Scroll down"
         >
-          <span className="text-sm font-light tracking-wide">Descubre mas</span>
+          <span style={{ fontSize: '14px', fontWeight: 300, letterSpacing: '1px' }}>Descubre mas</span>
           <ChevronDown size={24} />
         </button>
       </div>
 
       {/* Slide Indicators */}
-      <div className="absolute bottom-8 right-8 z-10 hidden md:flex gap-2">
+      <div style={{
+        position: 'absolute',
+        bottom: '32px',
+        right: '32px',
+        zIndex: 10,
+        display: 'flex',
+        gap: '8px',
+      }}
+      className="slide-indicators"
+      >
         {slides.map((_, index) => (
           <div
             key={index}
-            className={`w-2 h-2 rounded-full transition-all duration-300 ${
-              index === activeIndex ? 'bg-white w-6' : 'bg-white/50'
-            }`}
+            style={{
+              width: index === activeIndex ? '24px' : '8px',
+              height: '8px',
+              borderRadius: '9999px',
+              backgroundColor: index === activeIndex ? '#fff' : 'rgba(255, 255, 255, 0.5)',
+              transition: 'all 0.3s ease',
+            }}
           />
         ))}
       </div>
+
+      <style>{`
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        @keyframes slideUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        @keyframes bounce {
+          0%, 20%, 50%, 80%, 100% {
+            transform: translateX(-50%) translateY(0);
+          }
+          40% {
+            transform: translateX(-50%) translateY(-10px);
+          }
+          60% {
+            transform: translateX(-50%) translateY(-5px);
+          }
+        }
+        @media (max-width: 768px) {
+          .slide-indicators {
+            display: none !important;
+          }
+        }
+      `}</style>
     </section>
   );
 };

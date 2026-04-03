@@ -4,6 +4,26 @@ import emailjs from '@emailjs/browser';
 import CalendarioReserva from '../CalendarioReserva';
 import { emailConfig } from '../../config/emailConfig';
 
+const inputStyle = {
+  width: '100%',
+  padding: '14px 16px',
+  border: '2px solid #d6d3d1',
+  borderRadius: '12px',
+  fontSize: '15px',
+  outline: 'none',
+  transition: 'all 0.2s ease',
+  backgroundColor: '#fff',
+  color: '#1c1917',
+};
+
+const labelStyle = {
+  display: 'block',
+  fontSize: '14px',
+  fontWeight: 500,
+  color: '#44403c',
+  marginBottom: '6px',
+};
+
 const LandingContactSection = memo(() => {
   const [formData, setFormData] = useState({
     nombre: '',
@@ -163,85 +183,145 @@ Enviado desde: Formulario web El Refugio
   ];
 
   return (
-    <section id="contacto" className="py-20 md:py-28 bg-cream-100">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="contacto" style={{ padding: '100px 0', backgroundColor: '#F5F1E8' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px' }}>
         {/* Section Header */}
-        <div className="text-center mb-16">
-          <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl text-stone-900 font-semibold mb-4">
+        <div style={{ textAlign: 'center', marginBottom: '64px' }}>
+          <h2 style={{
+            fontFamily: "'Playfair Display', Georgia, serif",
+            fontSize: 'clamp(2rem, 4vw, 3rem)',
+            color: '#1c1917',
+            marginBottom: '16px',
+            fontWeight: 600,
+          }}>
             Reserva tu Evento
           </h2>
-          <p className="text-stone-600 text-lg max-w-2xl mx-auto text-balance">
+          <p style={{
+            color: '#57534e',
+            fontSize: '18px',
+            maxWidth: '600px',
+            margin: '0 auto',
+            lineHeight: 1.7,
+          }}>
             Completa el formulario y nos pondremos en contacto contigo para
             planificar tu celebracion perfecta
           </p>
         </div>
 
         {/* Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 lg:gap-12">
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+          gap: '48px',
+        }}>
           {/* Contact Info Cards */}
-          <div className="lg:col-span-2 space-y-4">
-            <h3 className="font-serif text-2xl text-stone-900 font-semibold mb-6">
+          <div>
+            <h3 style={{
+              fontFamily: "'Playfair Display', Georgia, serif",
+              fontSize: '24px',
+              color: '#1c1917',
+              marginBottom: '24px',
+              fontWeight: 600,
+            }}>
               Informacion de Contacto
             </h3>
-            {contactInfo.map((info, index) => (
-              <div
-                key={index}
-                className="bg-white rounded-xl p-5 shadow-sm border border-stone-100 hover:shadow-md transition-shadow"
-              >
-                <div className="flex items-start gap-4">
-                  <div className="p-2.5 bg-amber-800/10 rounded-lg">
-                    <info.icon className="w-5 h-5 text-amber-800" />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {contactInfo.map((info, index) => {
+                const IconComponent = info.icon;
+                return (
+                  <div
+                    key={index}
+                    style={{
+                      backgroundColor: '#fff',
+                      borderRadius: '16px',
+                      padding: '20px',
+                      boxShadow: '0 2px 10px rgba(107, 68, 35, 0.06)',
+                      border: '1px solid rgba(107, 68, 35, 0.08)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
+                      <div style={{
+                        padding: '10px',
+                        backgroundColor: 'rgba(146, 64, 14, 0.1)',
+                        borderRadius: '10px',
+                      }}>
+                        <IconComponent size={20} color="#92400e" />
+                      </div>
+                      <div>
+                        <span style={{
+                          fontSize: '13px',
+                          color: '#78716c',
+                          fontWeight: 500,
+                          display: 'block',
+                          marginBottom: '4px',
+                        }}>
+                          {info.label}
+                        </span>
+                        {info.link ? (
+                          <a
+                            href={info.link}
+                            target={info.link.startsWith('http') ? '_blank' : '_self'}
+                            rel="noopener noreferrer"
+                            style={{
+                              color: '#1c1917',
+                              fontWeight: 500,
+                              textDecoration: 'none',
+                              display: 'block',
+                            }}
+                          >
+                            {info.value}
+                          </a>
+                        ) : (
+                          <p style={{ color: '#1c1917', fontWeight: 500, margin: 0 }}>{info.value}</p>
+                        )}
+                        {info.subValue && (
+                          <p style={{ color: '#57534e', fontSize: '14px', margin: '4px 0 0' }}>{info.subValue}</p>
+                        )}
+                        {info.linkText && (
+                          <a
+                            href={info.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              fontSize: '13px',
+                              color: '#92400e',
+                              fontWeight: 500,
+                              textDecoration: 'none',
+                              marginTop: '4px',
+                              display: 'inline-block',
+                            }}
+                          >
+                            {info.linkText}
+                          </a>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-sm text-stone-500 font-medium">
-                      {info.label}
-                    </span>
-                    {info.link ? (
-                      <a
-                        href={info.link}
-                        target={info.link.startsWith('http') ? '_blank' : '_self'}
-                        rel="noopener noreferrer"
-                        className="block text-stone-800 font-medium hover:text-amber-800 transition-colors"
-                      >
-                        {info.value}
-                      </a>
-                    ) : (
-                      <p className="text-stone-800 font-medium">{info.value}</p>
-                    )}
-                    {info.subValue && (
-                      <p className="text-stone-600 text-sm">{info.subValue}</p>
-                    )}
-                    {info.linkText && (
-                      <a
-                        href={info.link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-amber-800 font-medium hover:underline mt-1 inline-block"
-                      >
-                        {info.linkText}
-                      </a>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
+                );
+              })}
+            </div>
           </div>
 
           {/* Contact Form */}
-          <div className="lg:col-span-3">
+          <div style={{ gridColumn: 'span 1' }}>
             <form
               onSubmit={handleSubmit}
-              className="bg-white rounded-2xl p-6 md:p-8 shadow-lg border border-stone-100"
+              style={{
+                backgroundColor: '#fff',
+                borderRadius: '24px',
+                padding: '32px',
+                boxShadow: '0 10px 40px rgba(107, 68, 35, 0.08)',
+                border: '1px solid rgba(107, 68, 35, 0.08)',
+              }}
             >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: '20px',
+              }}>
                 {/* Nombre */}
                 <div>
-                  <label
-                    htmlFor="nombre"
-                    className="block text-sm font-medium text-stone-700 mb-1.5"
-                  >
-                    Nombre completo *
-                  </label>
+                  <label htmlFor="nombre" style={labelStyle}>Nombre completo *</label>
                   <input
                     type="text"
                     id="nombre"
@@ -249,19 +329,16 @@ Enviado desde: Formulario web El Refugio
                     value={formData.nombre}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-3 border border-stone-300 rounded-xl focus:ring-2 focus:ring-amber-700 focus:border-transparent transition-all outline-none"
+                    style={inputStyle}
                     placeholder="Tu nombre"
+                    onFocus={(e) => e.target.style.borderColor = '#92400e'}
+                    onBlur={(e) => e.target.style.borderColor = '#d6d3d1'}
                   />
                 </div>
 
                 {/* Email */}
                 <div>
-                  <label
-                    htmlFor="email"
-                    className="block text-sm font-medium text-stone-700 mb-1.5"
-                  >
-                    Email *
-                  </label>
+                  <label htmlFor="email" style={labelStyle}>Email *</label>
                   <input
                     type="email"
                     id="email"
@@ -269,19 +346,16 @@ Enviado desde: Formulario web El Refugio
                     value={formData.email}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-3 border border-stone-300 rounded-xl focus:ring-2 focus:ring-amber-700 focus:border-transparent transition-all outline-none"
+                    style={inputStyle}
                     placeholder="tu@email.com"
+                    onFocus={(e) => e.target.style.borderColor = '#92400e'}
+                    onBlur={(e) => e.target.style.borderColor = '#d6d3d1'}
                   />
                 </div>
 
                 {/* Telefono */}
                 <div>
-                  <label
-                    htmlFor="telefono"
-                    className="block text-sm font-medium text-stone-700 mb-1.5"
-                  >
-                    Telefono *
-                  </label>
+                  <label htmlFor="telefono" style={labelStyle}>Telefono *</label>
                   <input
                     type="tel"
                     id="telefono"
@@ -289,32 +363,29 @@ Enviado desde: Formulario web El Refugio
                     value={formData.telefono}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-3 border border-stone-300 rounded-xl focus:ring-2 focus:ring-amber-700 focus:border-transparent transition-all outline-none"
+                    style={inputStyle}
                     placeholder="+52 999 123 4567"
+                    onFocus={(e) => e.target.style.borderColor = '#92400e'}
+                    onBlur={(e) => e.target.style.borderColor = '#d6d3d1'}
                   />
                 </div>
 
                 {/* Tipo de Evento */}
                 <div>
-                  <label
-                    htmlFor="tipoEvento"
-                    className="block text-sm font-medium text-stone-700 mb-1.5"
-                  >
-                    Tipo de evento *
-                  </label>
+                  <label htmlFor="tipoEvento" style={labelStyle}>Tipo de evento *</label>
                   <select
                     id="tipoEvento"
                     name="tipoEvento"
                     value={formData.tipoEvento}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-3 border border-stone-300 rounded-xl focus:ring-2 focus:ring-amber-700 focus:border-transparent transition-all outline-none bg-white"
+                    style={{ ...inputStyle, cursor: 'pointer' }}
+                    onFocus={(e) => e.target.style.borderColor = '#92400e'}
+                    onBlur={(e) => e.target.style.borderColor = '#d6d3d1'}
                   >
                     <option value="">Selecciona un tipo</option>
                     <option value="Boda">Boda</option>
-                    <option value="Evento Corporativo">
-                      Evento Corporativo
-                    </option>
+                    <option value="Evento Corporativo">Evento Corporativo</option>
                     <option value="Cumpleanos">Cumpleanos</option>
                     <option value="Aniversario">Aniversario</option>
                     <option value="Graduacion">Graduacion</option>
@@ -325,9 +396,7 @@ Enviado desde: Formulario web El Refugio
 
                 {/* Fecha */}
                 <div>
-                  <label className="block text-sm font-medium text-stone-700 mb-1.5">
-                    Fecha del evento
-                  </label>
+                  <label style={labelStyle}>Fecha del evento</label>
                   <CalendarioReserva
                     value={formData.fecha}
                     onChange={handleFechaChange}
@@ -336,12 +405,7 @@ Enviado desde: Formulario web El Refugio
 
                 {/* Numero de Personas */}
                 <div>
-                  <label
-                    htmlFor="numeroPersonas"
-                    className="block text-sm font-medium text-stone-700 mb-1.5"
-                  >
-                    Numero de personas
-                  </label>
+                  <label htmlFor="numeroPersonas" style={labelStyle}>Numero de personas</label>
                   <input
                     type="number"
                     id="numeroPersonas"
@@ -350,28 +414,27 @@ Enviado desde: Formulario web El Refugio
                     onChange={handleChange}
                     min="1"
                     max="1500"
-                    className="w-full px-4 py-3 border border-stone-300 rounded-xl focus:ring-2 focus:ring-amber-700 focus:border-transparent transition-all outline-none"
+                    style={inputStyle}
                     placeholder="Ej: 100"
+                    onFocus={(e) => e.target.style.borderColor = '#92400e'}
+                    onBlur={(e) => e.target.style.borderColor = '#d6d3d1'}
                   />
                 </div>
               </div>
 
               {/* Mensaje */}
-              <div className="mt-5">
-                <label
-                  htmlFor="mensaje"
-                  className="block text-sm font-medium text-stone-700 mb-1.5"
-                >
-                  Mensaje adicional
-                </label>
+              <div style={{ marginTop: '20px' }}>
+                <label htmlFor="mensaje" style={labelStyle}>Mensaje adicional</label>
                 <textarea
                   id="mensaje"
                   name="mensaje"
                   value={formData.mensaje}
                   onChange={handleChange}
                   rows={4}
-                  className="w-full px-4 py-3 border border-stone-300 rounded-xl focus:ring-2 focus:ring-amber-700 focus:border-transparent transition-all outline-none resize-none"
+                  style={{ ...inputStyle, resize: 'none' }}
                   placeholder="Cuentanos mas detalles sobre tu evento..."
+                  onFocus={(e) => e.target.style.borderColor = '#92400e'}
+                  onBlur={(e) => e.target.style.borderColor = '#d6d3d1'}
                 />
               </div>
 
@@ -379,16 +442,50 @@ Enviado desde: Formulario web El Refugio
               <button
                 type="submit"
                 disabled={isLoading}
-                className="mt-6 w-full flex items-center justify-center gap-2 bg-amber-800 text-white py-4 px-6 rounded-xl font-medium text-base transition-all duration-300 hover:bg-amber-900 hover:scale-[1.02] disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
+                style={{
+                  marginTop: '24px',
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  backgroundColor: '#92400e',
+                  color: '#fff',
+                  padding: '16px 24px',
+                  borderRadius: '12px',
+                  fontWeight: 500,
+                  fontSize: '16px',
+                  border: 'none',
+                  cursor: isLoading ? 'not-allowed' : 'pointer',
+                  opacity: isLoading ? 0.7 : 1,
+                  transition: 'all 0.3s ease',
+                }}
+                onMouseOver={(e) => {
+                  if (!isLoading) {
+                    e.target.style.backgroundColor = '#78350f';
+                    e.target.style.transform = 'scale(1.02)';
+                  }
+                }}
+                onMouseOut={(e) => {
+                  e.target.style.backgroundColor = '#92400e';
+                  e.target.style.transform = 'scale(1)';
+                }}
               >
                 {isLoading ? (
                   <>
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <div style={{
+                      width: '20px',
+                      height: '20px',
+                      border: '2px solid rgba(255,255,255,0.3)',
+                      borderTopColor: '#fff',
+                      borderRadius: '50%',
+                      animation: 'spin 1s linear infinite',
+                    }} />
                     <span>Enviando...</span>
                   </>
                 ) : (
                   <>
-                    <Send className="w-5 h-5" />
+                    <Send size={20} />
                     <span>Enviar Consulta</span>
                   </>
                 )}
@@ -397,6 +494,12 @@ Enviado desde: Formulario web El Refugio
           </div>
         </div>
       </div>
+
+      <style>{`
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </section>
   );
 });

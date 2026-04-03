@@ -21,25 +21,60 @@ const StatsSection = () => {
   ];
 
   return (
-    <section id="stats" className="bg-amber-800 py-16 md:py-20">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 md:gap-12">
-          {stats.map((stat, index) => (
-            <div
-              key={index}
-              className="flex flex-col items-center text-center group"
-            >
-              <div className="mb-4 p-4 bg-white/10 rounded-full transition-transform duration-300 group-hover:scale-110">
-                <stat.icon className="w-8 h-8 text-white" strokeWidth={1.5} />
+    <section id="stats" style={{ backgroundColor: '#92400e', padding: '80px 0' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px' }}>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gap: '48px',
+        }}>
+          {stats.map((stat, index) => {
+            const IconComponent = stat.icon;
+            return (
+              <div
+                key={index}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  textAlign: 'center',
+                }}
+              >
+                <div style={{
+                  marginBottom: '16px',
+                  padding: '16px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  borderRadius: '50%',
+                  transition: 'transform 0.3s ease',
+                }}>
+                  <IconComponent 
+                    size={32} 
+                    color="#fff" 
+                    strokeWidth={1.5} 
+                  />
+                </div>
+                <span style={{
+                  fontFamily: "'Playfair Display', Georgia, serif",
+                  fontSize: '48px',
+                  fontWeight: 600,
+                  color: '#fff',
+                  marginBottom: '8px',
+                  lineHeight: 1,
+                }}>
+                  {stat.number}
+                </span>
+                <span style={{
+                  color: 'rgba(255, 255, 255, 0.8)',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  letterSpacing: '0.5px',
+                  textTransform: 'uppercase',
+                }}>
+                  {stat.label}
+                </span>
               </div>
-              <span className="font-serif text-4xl md:text-5xl font-semibold text-white mb-2">
-                {stat.number}
-              </span>
-              <span className="text-white/80 text-sm md:text-base font-medium tracking-wide">
-                {stat.label}
-              </span>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>

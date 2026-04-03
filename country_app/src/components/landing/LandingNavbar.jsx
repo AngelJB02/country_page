@@ -43,60 +43,115 @@ const LandingNavbar = () => {
 
   return (
     <nav
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled
-          ? 'bg-white/95 backdrop-blur-md shadow-md'
-          : 'bg-transparent'
-      }`}
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 50,
+        transition: 'all 0.3s ease',
+        backgroundColor: isScrolled ? 'rgba(255, 255, 255, 0.95)' : 'transparent',
+        backdropFilter: isScrolled ? 'blur(12px)' : 'none',
+        boxShadow: isScrolled ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : 'none',
+      }}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20">
+      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '80px' }}>
           {/* Logo */}
-          <div className="flex items-center gap-3">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <img
               src="/El_refugio_logo.png"
               alt="El Refugio Logo"
-              className="w-10 h-12 object-contain"
+              style={{ width: '40px', height: '48px', objectFit: 'contain' }}
             />
             <span
-              className={`font-serif text-lg font-semibold tracking-wide transition-colors duration-300 ${
-                isScrolled ? 'text-brown' : 'text-white'
-              }`}
+              style={{
+                fontFamily: "'Playfair Display', Georgia, serif",
+                fontSize: '18px',
+                fontWeight: 600,
+                letterSpacing: '1px',
+                color: isScrolled ? '#6B4423' : '#fff',
+                transition: 'color 0.3s ease',
+              }}
             >
               EL REFUGIO
             </span>
           </div>
 
           {/* Desktop Navigation */}
-          <ul className="hidden md:flex items-center gap-8">
+          <ul style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '32px', 
+            listStyle: 'none', 
+            margin: 0, 
+            padding: 0,
+          }}
+          className="desktop-nav"
+          >
             {navLinks.map((link) => (
-              <li key={link.section}>
+              <li key={link.section} style={{ listStyle: 'none' }}>
                 <button
                   onClick={() => scrollToSection(link.section)}
-                  className={`text-sm font-medium tracking-wide transition-colors duration-300 hover:opacity-80 ${
-                    isScrolled ? 'text-stone-700' : 'text-white'
-                  }`}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    letterSpacing: '0.5px',
+                    color: isScrolled ? '#44403c' : '#fff',
+                    cursor: 'pointer',
+                    transition: 'opacity 0.3s ease',
+                    padding: '8px 0',
+                  }}
+                  onMouseOver={(e) => e.target.style.opacity = '0.7'}
+                  onMouseOut={(e) => e.target.style.opacity = '1'}
                 >
                   {link.label}
                 </button>
               </li>
             ))}
-            <li>
+            <li style={{ listStyle: 'none' }}>
               <a
                 href="/equitacion"
-                className={`text-sm font-medium tracking-wide transition-colors duration-300 hover:opacity-80 ${
-                  isScrolled ? 'text-stone-700' : 'text-white'
-                }`}
+                style={{
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  letterSpacing: '0.5px',
+                  color: isScrolled ? '#44403c' : '#fff',
+                  textDecoration: 'none',
+                  transition: 'opacity 0.3s ease',
+                }}
+                onMouseOver={(e) => e.target.style.opacity = '0.7'}
+                onMouseOut={(e) => e.target.style.opacity = '1'}
               >
                 Equitacion
               </a>
             </li>
-            <li>
+            <li style={{ listStyle: 'none' }}>
               <button
                 onClick={() => scrollToSection('contacto')}
-                className="bg-amber-800 text-white px-5 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-amber-900 hover:scale-105"
+                style={{
+                  backgroundColor: '#92400e',
+                  color: '#fff',
+                  padding: '10px 20px',
+                  borderRadius: '9999px',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                }}
+                onMouseOver={(e) => {
+                  e.target.style.backgroundColor = '#78350f';
+                  e.target.style.transform = 'scale(1.05)';
+                }}
+                onMouseOut={(e) => {
+                  e.target.style.backgroundColor = '#92400e';
+                  e.target.style.transform = 'scale(1)';
+                }}
               >
-                Reservar
+                Reservar Ahora
               </button>
             </li>
           </ul>
@@ -104,9 +159,15 @@ const LandingNavbar = () => {
           {/* Mobile Menu Button */}
           <button
             onClick={toggleMobileMenu}
-            className={`md:hidden p-2 rounded-lg transition-colors ${
-              isScrolled ? 'text-stone-800' : 'text-white'
-            }`}
+            style={{
+              display: 'none',
+              padding: '8px',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: isScrolled ? '#1c1917' : '#fff',
+            }}
+            className="mobile-menu-btn"
             aria-label="Toggle menu"
           >
             {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
@@ -116,33 +177,71 @@ const LandingNavbar = () => {
 
       {/* Mobile Menu */}
       <div
-        className={`md:hidden fixed inset-0 top-20 bg-white/98 backdrop-blur-lg transition-transform duration-300 ${
-          isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
-        }`}
+        style={{
+          position: 'fixed',
+          inset: 0,
+          top: '80px',
+          backgroundColor: 'rgba(255, 255, 255, 0.98)',
+          backdropFilter: 'blur(12px)',
+          transform: isMobileMenuOpen ? 'translateX(0)' : 'translateX(100%)',
+          transition: 'transform 0.3s ease',
+          zIndex: 40,
+        }}
+        className="mobile-menu"
       >
-        <ul className="flex flex-col items-center gap-6 pt-12">
+        <ul style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center', 
+          gap: '24px', 
+          paddingTop: '48px',
+          listStyle: 'none',
+          margin: 0,
+        }}>
           {navLinks.map((link) => (
-            <li key={link.section}>
+            <li key={link.section} style={{ listStyle: 'none' }}>
               <button
                 onClick={() => scrollToSection(link.section)}
-                className="text-lg font-medium text-stone-700 hover:text-amber-800 transition-colors"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '18px',
+                  fontWeight: 500,
+                  color: '#44403c',
+                  cursor: 'pointer',
+                  transition: 'color 0.3s ease',
+                }}
               >
                 {link.label}
               </button>
             </li>
           ))}
-          <li>
+          <li style={{ listStyle: 'none' }}>
             <a
               href="/equitacion"
-              className="text-lg font-medium text-stone-700 hover:text-amber-800 transition-colors"
+              style={{
+                fontSize: '18px',
+                fontWeight: 500,
+                color: '#44403c',
+                textDecoration: 'none',
+              }}
             >
               Equitacion
             </a>
           </li>
-          <li className="mt-4">
+          <li style={{ listStyle: 'none', marginTop: '16px' }}>
             <button
               onClick={() => scrollToSection('contacto')}
-              className="bg-amber-800 text-white px-8 py-3 rounded-full text-base font-medium transition-all duration-300 hover:bg-amber-900"
+              style={{
+                backgroundColor: '#92400e',
+                color: '#fff',
+                padding: '12px 32px',
+                borderRadius: '9999px',
+                fontSize: '16px',
+                fontWeight: 500,
+                border: 'none',
+                cursor: 'pointer',
+              }}
             >
               Reservar Ahora
             </button>
@@ -150,16 +249,21 @@ const LandingNavbar = () => {
         </ul>
       </div>
 
-      {/* Overlay */}
-      {isMobileMenuOpen && (
-        <div
-          className="md:hidden fixed inset-0 top-20 bg-black/20 -z-10"
-          onClick={() => {
-            setIsMobileMenuOpen(false);
-            document.body.style.overflow = 'auto';
-          }}
-        />
-      )}
+      <style>{`
+        @media (max-width: 768px) {
+          .desktop-nav {
+            display: none !important;
+          }
+          .mobile-menu-btn {
+            display: block !important;
+          }
+        }
+        @media (min-width: 769px) {
+          .mobile-menu {
+            display: none !important;
+          }
+        }
+      `}</style>
     </nav>
   );
 };
