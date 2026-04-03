@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Autoplay, EffectFade } from 'swiper/modules';
@@ -11,6 +11,55 @@ import image3 from '../../img/image_3.jpg';
 import image4 from '../../img/image_4.webp';
 
 const HeroSection = () => {
+  const heroRef = useRef(null);
+
+  useEffect(() => {
+    const logDimensions = () => {
+      const viewportHeight = window.innerHeight;
+      const navbarHeight = 80;
+      const expectedHeroHeight = viewportHeight - navbarHeight;
+      
+      console.log('[v0] ========= HERO DEBUG =========');
+      console.log('[v0] window.innerHeight:', viewportHeight);
+      console.log('[v0] Navbar height (fixed):', navbarHeight);
+      console.log('[v0] Expected hero height (100vh - 80px):', expectedHeroHeight);
+      
+      if (heroRef.current) {
+        const heroRect = heroRef.current.getBoundingClientRect();
+        console.log('[v0] Hero section actual height:', heroRect.height);
+        console.log('[v0] Hero section offsetHeight:', heroRef.current.offsetHeight);
+        console.log('[v0] Hero section clientHeight:', heroRef.current.clientHeight);
+        console.log('[v0] Hero section top position:', heroRect.top);
+        console.log('[v0] Hero section bottom position:', heroRect.bottom);
+        
+        const swiper = heroRef.current.querySelector('.swiper');
+        if (swiper) {
+          console.log('[v0] Swiper height:', swiper.offsetHeight);
+          console.log('[v0] Swiper computed style height:', window.getComputedStyle(swiper).height);
+        }
+        
+        const swiperSlide = heroRef.current.querySelector('.swiper-slide');
+        if (swiperSlide) {
+          console.log('[v0] SwiperSlide height:', swiperSlide.offsetHeight);
+        }
+        
+        const img = heroRef.current.querySelector('img');
+        if (img) {
+          console.log('[v0] Image naturalHeight:', img.naturalHeight);
+          console.log('[v0] Image offsetHeight:', img.offsetHeight);
+          console.log('[v0] Image computed height:', window.getComputedStyle(img).height);
+        }
+      }
+      console.log('[v0] ================================');
+    };
+
+    // Log after a small delay to ensure everything is rendered
+    setTimeout(logDimensions, 500);
+    
+    // Also log on resize
+    window.addEventListener('resize', logDimensions);
+    return () => window.removeEventListener('resize', logDimensions);
+  }, []);
   const slides = [
     {
       image: image1,
@@ -42,7 +91,7 @@ const HeroSection = () => {
   };
 
   return (
-    <section id="hero" style={{ position: 'relative', width: '100%', height: 'calc(100vh - 80px)', minHeight: '600px', overflow: 'hidden' }}>
+    <section ref={heroRef} id="hero" style={{ position: 'relative', width: '100%', height: 'calc(100vh - 80px)', minHeight: '600px', overflow: 'hidden' }}>
       {/* Background Swiper */}
       <Swiper
         modules={[Autoplay, EffectFade]}
