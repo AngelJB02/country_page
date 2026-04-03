@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Menu, X, ChevronDown, Check, Phone, Mail, MapPin, Facebook, Instagram } from "lucide-react";
+import { ChevronDown, Check } from "lucide-react";
+import { LandingNavbar, LandingFooter } from "../components/landing";
 
 // Imagenes slides
 import image11 from "../img/image11.jpg";
@@ -20,7 +21,6 @@ import "swiper/css/effect-fade";
 
 const Equitacion = () => {
   const [activeIndex, setActiveIndex] = useState(0);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
 
   const slides = [
@@ -63,229 +63,9 @@ const Equitacion = () => {
     if (element) element.scrollIntoView({ behavior: "smooth" });
   };
 
-  const toggleMobileMenu = () => {
-    setIsMobileMenuOpen(!isMobileMenuOpen);
-    document.body.style.overflow = !isMobileMenuOpen ? "hidden" : "auto";
-  };
-
-  useEffect(() => {
-    return () => {
-      document.body.style.overflow = "auto";
-    };
-  }, []);
-
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#F5F1E8" }}>
-      {/* Navigation */}
-      <nav
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 50,
-          backgroundColor: "#835634",
-          boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-        }}
-      >
-        <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 24px" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: "80px" }}>
-            {/* Logo */}
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <img
-                src="/El_refugio_logo.png"
-                alt="El Refugio Logo"
-                style={{ width: "40px", height: "48px", objectFit: "contain" }}
-              />
-              <span
-                style={{
-                  fontFamily: "'Playfair Display', Georgia, serif",
-                  fontSize: "18px",
-                  fontWeight: 600,
-                  letterSpacing: "1px",
-                  color: "#FEFBF6",
-                }}
-              >
-                EL REFUGIO
-              </span>
-            </div>
-
-            {/* Desktop Navigation */}
-            <ul
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "32px",
-                listStyle: "none",
-                margin: 0,
-                padding: 0,
-              }}
-              className="desktop-nav"
-            >
-              <li style={{ listStyle: "none" }}>
-                <button
-                  onClick={() => navigate("/")}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    fontSize: "14px",
-                    fontWeight: 500,
-                    color: "#FEFBF6",
-                    cursor: "pointer",
-                    transition: "opacity 0.3s ease",
-                  }}
-                  onMouseOver={(e) => (e.target.style.opacity = "0.7")}
-                  onMouseOut={(e) => (e.target.style.opacity = "1")}
-                >
-                  Inicio
-                </button>
-              </li>
-              <li style={{ listStyle: "none" }}>
-                <button
-                  onClick={() => scrollToSection("clases")}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    fontSize: "14px",
-                    fontWeight: 500,
-                    color: "#FEFBF6",
-                    cursor: "pointer",
-                    transition: "opacity 0.3s ease",
-                  }}
-                  onMouseOver={(e) => (e.target.style.opacity = "0.7")}
-                  onMouseOut={(e) => (e.target.style.opacity = "1")}
-                >
-                  Clases
-                </button>
-              </li>
-              <li style={{ listStyle: "none" }}>
-                <button
-                  onClick={() => navigate("/login")}
-                  style={{
-                    backgroundColor: "#FEFBF6",
-                    color: "#835634",
-                    padding: "10px 20px",
-                    borderRadius: "9999px",
-                    fontSize: "14px",
-                    fontWeight: 600,
-                    border: "none",
-                    cursor: "pointer",
-                    transition: "all 0.3s ease",
-                  }}
-                  onMouseOver={(e) => {
-                    e.target.style.backgroundColor = "#F5F1E8";
-                    e.target.style.transform = "scale(1.05)";
-                  }}
-                  onMouseOut={(e) => {
-                    e.target.style.backgroundColor = "#FEFBF6";
-                    e.target.style.transform = "scale(1)";
-                  }}
-                >
-                  Reservar Clase
-                </button>
-              </li>
-            </ul>
-
-            {/* Mobile Menu Button */}
-            <button
-              onClick={toggleMobileMenu}
-              style={{
-                display: "none",
-                padding: "8px",
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                color: "#FEFBF6",
-              }}
-              className="mobile-menu-btn"
-              aria-label="Toggle menu"
-            >
-              {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile Menu */}
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            top: "80px",
-            backgroundColor: "#835634",
-            transform: isMobileMenuOpen ? "translateX(0)" : "translateX(100%)",
-            transition: "transform 0.3s ease",
-            zIndex: 40,
-          }}
-          className="mobile-menu"
-        >
-          <ul
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: "24px",
-              paddingTop: "48px",
-              listStyle: "none",
-              margin: 0,
-            }}
-          >
-            <li style={{ listStyle: "none" }}>
-              <button
-                onClick={() => {
-                  navigate("/");
-                  setIsMobileMenuOpen(false);
-                }}
-                style={{
-                  background: "none",
-                  border: "none",
-                  fontSize: "18px",
-                  fontWeight: 500,
-                  color: "#FEFBF6",
-                  cursor: "pointer",
-                }}
-              >
-                Inicio
-              </button>
-            </li>
-            <li style={{ listStyle: "none" }}>
-              <button
-                onClick={() => {
-                  scrollToSection("clases");
-                  setIsMobileMenuOpen(false);
-                  document.body.style.overflow = "auto";
-                }}
-                style={{
-                  background: "none",
-                  border: "none",
-                  fontSize: "18px",
-                  fontWeight: 500,
-                  color: "#FEFBF6",
-                  cursor: "pointer",
-                }}
-              >
-                Clases
-              </button>
-            </li>
-            <li style={{ listStyle: "none", marginTop: "16px" }}>
-              <button
-                onClick={() => navigate("/login")}
-                style={{
-                  backgroundColor: "#FEFBF6",
-                  color: "#835634",
-                  padding: "12px 32px",
-                  borderRadius: "9999px",
-                  fontSize: "16px",
-                  fontWeight: 600,
-                  border: "none",
-                  cursor: "pointer",
-                }}
-              >
-                Reservar Clase
-              </button>
-            </li>
-          </ul>
-        </div>
-      </nav>
+      <LandingNavbar variant="equitacion" />
 
       {/* Hero Section */}
       <section
@@ -293,9 +73,9 @@ const Equitacion = () => {
         style={{
           position: "relative",
           width: "100%",
-          height: "100vh",
+          height: "calc(100vh + 80px)",
+          marginTop: "-80px",
           overflow: "hidden",
-          paddingTop: "80px",
         }}
       >
         <Swiper
@@ -307,11 +87,11 @@ const Equitacion = () => {
           autoplay={{ delay: 5000, disableOnInteraction: false }}
           speed={1500}
           loop
-          style={{ position: "absolute", inset: 0, width: "100%", height: "calc(100vh - 80px)" }}
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
         >
           {slides.map((slide, index) => (
             <SwiperSlide key={index}>
-              <div style={{ position: "relative", width: "100%", height: "calc(100vh - 80px)" }}>
+              <div style={{ position: "relative", width: "100%", height: "100%" }}>
                 <img
                   src={slide.image}
                   alt={`Equitacion - ${slide.title}`}
@@ -334,7 +114,7 @@ const Equitacion = () => {
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            padding: "0 16px",
+            padding: "80px 16px 0 16px",
           }}
         >
           <div style={{ textAlign: "center", maxWidth: "900px", margin: "0 auto" }}>
@@ -346,6 +126,8 @@ const Equitacion = () => {
                 color: "#fff",
                 fontWeight: 600,
                 marginBottom: "24px",
+                textWrap: "balance",
+                animation: "eqFadeInUp 0.6s ease forwards",
                 textShadow: "2px 2px 8px rgba(0,0,0,0.5)",
               }}
             >
@@ -353,6 +135,7 @@ const Equitacion = () => {
             </h1>
 
             <p
+              key={`subtitle-${activeIndex}`}
               style={{
                 fontSize: "clamp(1rem, 2.5vw, 1.5rem)",
                 color: "rgba(255, 255, 255, 0.9)",
@@ -360,6 +143,10 @@ const Equitacion = () => {
                 marginBottom: "40px",
                 maxWidth: "600px",
                 margin: "0 auto 40px",
+                textWrap: "balance",
+                animation: "eqSlideUp 0.6s ease forwards",
+                animationDelay: "0.2s",
+                opacity: 0,
                 textShadow: "1px 1px 4px rgba(0,0,0,0.5)",
               }}
             >
@@ -369,7 +156,7 @@ const Equitacion = () => {
             <button
               onClick={() => navigate("/login")}
               style={{
-                backgroundColor: "#92400e",
+                backgroundColor: "#6b4423",
                 color: "#fff",
                 padding: "16px 32px",
                 borderRadius: "9999px",
@@ -381,11 +168,11 @@ const Equitacion = () => {
                 boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.3)",
               }}
               onMouseOver={(e) => {
-                e.target.style.backgroundColor = "#78350f";
+                e.target.style.backgroundColor = "#5f3c24";
                 e.target.style.transform = "scale(1.05)";
               }}
               onMouseOut={(e) => {
-                e.target.style.backgroundColor = "#92400e";
+                e.target.style.backgroundColor = "#6b4423";
                 e.target.style.transform = "scale(1)";
               }}
             >
@@ -406,6 +193,7 @@ const Equitacion = () => {
               flexDirection: "column",
               alignItems: "center",
               gap: "8px",
+              animation: "eqBounce 2s infinite",
               cursor: "pointer",
               background: "none",
               border: "none",
@@ -416,6 +204,50 @@ const Equitacion = () => {
             <ChevronDown size={24} />
           </button>
         </div>
+
+        {/* Slide Indicators */}
+        <div style={{
+          position: "absolute",
+          bottom: "32px",
+          right: "32px",
+          zIndex: 10,
+          display: "flex",
+          gap: "8px",
+        }}
+        className="eq-slide-indicators"
+        >
+          {slides.map((_, index) => (
+            <div
+              key={index}
+              style={{
+                width: index === activeIndex ? "24px" : "8px",
+                height: "8px",
+                borderRadius: "9999px",
+                backgroundColor: index === activeIndex ? "#fff" : "rgba(255, 255, 255, 0.5)",
+                transition: "all 0.3s ease",
+              }}
+            />
+          ))}
+        </div>
+
+        <style>{`
+          @keyframes eqFadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+          @keyframes eqSlideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+          @keyframes eqBounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateX(-50%) translateY(0); }
+            40% { transform: translateX(-50%) translateY(-10px); }
+            60% { transform: translateX(-50%) translateY(-5px); }
+          }
+          @media (max-width: 768px) {
+            .eq-slide-indicators { display: none !important; }
+          }
+        `}</style>
       </section>
 
       {/* Info Section */}
@@ -428,7 +260,7 @@ const Equitacion = () => {
               fontWeight: 600,
               letterSpacing: "2px",
               textTransform: "uppercase",
-              color: "#92400e",
+              color: "#6b4423",
               marginBottom: "16px",
             }}
           >
@@ -472,7 +304,7 @@ const Equitacion = () => {
                 fontWeight: 600,
                 letterSpacing: "2px",
                 textTransform: "uppercase",
-                color: "#92400e",
+                color: "#6b4423",
                 marginBottom: "16px",
               }}
             >
@@ -576,7 +408,7 @@ const Equitacion = () => {
                           marginBottom: "8px",
                         }}
                       >
-                        <Check size={16} color="#835634" strokeWidth={2.5} />
+                        <Check size={16} color="#6b4423" strokeWidth={2.5} />
                         {car}
                       </li>
                     ))}
@@ -591,7 +423,7 @@ const Equitacion = () => {
             <button
               onClick={() => navigate("/login")}
               style={{
-                backgroundColor: "#835634",
+                backgroundColor: "#6b4423",
                 color: "#fff",
                 padding: "16px 40px",
                 borderRadius: "9999px",
@@ -600,14 +432,14 @@ const Equitacion = () => {
                 border: "none",
                 cursor: "pointer",
                 transition: "all 0.3s ease",
-                boxShadow: "0 4px 15px rgba(131, 86, 52, 0.3)",
+                boxShadow: "0 4px 15px rgba(107, 68, 35, 0.3)",
               }}
               onMouseOver={(e) => {
-                e.target.style.backgroundColor = "#6B4423";
+                e.target.style.backgroundColor = "#5f3c24";
                 e.target.style.transform = "scale(1.05)";
               }}
               onMouseOut={(e) => {
-                e.target.style.backgroundColor = "#835634";
+                e.target.style.backgroundColor = "#6b4423";
                 e.target.style.transform = "scale(1)";
               }}
             >
@@ -617,182 +449,7 @@ const Equitacion = () => {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer style={{ backgroundColor: "#1c1917", color: "#fff", padding: "64px 0 32px" }}>
-        <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "0 24px" }}>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-              gap: "48px",
-              marginBottom: "48px",
-            }}
-          >
-            {/* Brand */}
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
-                <img
-                  src="/El_refugio_logo.png"
-                  alt="El Refugio"
-                  style={{ width: "40px", height: "48px", objectFit: "contain" }}
-                />
-                <span
-                  style={{
-                    fontFamily: "'Playfair Display', Georgia, serif",
-                    fontSize: "20px",
-                    fontWeight: 600,
-                    color: "#fff",
-                  }}
-                >
-                  El Refugio
-                </span>
-              </div>
-              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "14px", color: "#a8a29e", lineHeight: 1.7 }}>
-                Tu espacio ideal para aprender equitacion y celebraciones inolvidables.
-              </p>
-            </div>
-
-            {/* Contact */}
-            <div>
-              <h4
-                style={{
-                  fontFamily: "'Playfair Display', Georgia, serif",
-                  fontSize: "18px",
-                  fontWeight: 500,
-                  marginBottom: "20px",
-                  color: "#fff",
-                }}
-              >
-                Contacto
-              </h4>
-              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                <a
-                  href="tel:+529982144898"
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "10px",
-                    fontFamily: "'Inter', sans-serif",
-                    fontSize: "14px",
-                    color: "#a8a29e",
-                    textDecoration: "none",
-                    transition: "color 0.3s ease",
-                  }}
-                  onMouseOver={(e) => (e.target.style.color = "#fff")}
-                  onMouseOut={(e) => (e.target.style.color = "#a8a29e")}
-                >
-                  <Phone size={16} />
-                  +52 998 214 4898
-                </a>
-                <a
-                  href="mailto:elrefugiocclub@gmail.com"
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "10px",
-                    fontFamily: "'Inter', sans-serif",
-                    fontSize: "14px",
-                    color: "#a8a29e",
-                    textDecoration: "none",
-                    transition: "color 0.3s ease",
-                  }}
-                  onMouseOver={(e) => (e.target.style.color = "#fff")}
-                  onMouseOut={(e) => (e.target.style.color = "#a8a29e")}
-                >
-                  <Mail size={16} />
-                  elrefugiocclub@gmail.com
-                </a>
-              </div>
-            </div>
-
-            {/* Social */}
-            <div>
-              <h4
-                style={{
-                  fontFamily: "'Playfair Display', Georgia, serif",
-                  fontSize: "18px",
-                  fontWeight: 500,
-                  marginBottom: "20px",
-                  color: "#fff",
-                }}
-              >
-                Siguenos
-              </h4>
-              <div style={{ display: "flex", gap: "16px" }}>
-                <a
-                  href="https://www.facebook.com/people/Elrefugio_country_club/100083084179417/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: "40px",
-                    height: "40px",
-                    backgroundColor: "rgba(255,255,255,0.1)",
-                    borderRadius: "50%",
-                    color: "#fff",
-                    transition: "all 0.3s ease",
-                  }}
-                  onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "#835634")}
-                  onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.1)")}
-                >
-                  <Facebook size={20} />
-                </a>
-                <a
-                  href="https://www.instagram.com/elrefugio_country_club/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: "40px",
-                    height: "40px",
-                    backgroundColor: "rgba(255,255,255,0.1)",
-                    borderRadius: "50%",
-                    color: "#fff",
-                    transition: "all 0.3s ease",
-                  }}
-                  onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "#835634")}
-                  onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.1)")}
-                >
-                  <Instagram size={20} />
-                </a>
-              </div>
-            </div>
-          </div>
-
-          {/* Bottom */}
-          <div
-            style={{
-              borderTop: "1px solid rgba(255,255,255,0.1)",
-              paddingTop: "24px",
-              textAlign: "center",
-            }}
-          >
-            <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "14px", color: "#78716c" }}>
-              © 2025 El Refugio. Todos los derechos reservados.
-            </p>
-          </div>
-        </div>
-      </footer>
-
-      <style>{`
-        @media (max-width: 768px) {
-          .desktop-nav {
-            display: none !important;
-          }
-          .mobile-menu-btn {
-            display: block !important;
-          }
-        }
-        @media (min-width: 769px) {
-          .mobile-menu {
-            display: none !important;
-          }
-        }
-      `}</style>
+      <LandingFooter />
     </div>
   );
 };

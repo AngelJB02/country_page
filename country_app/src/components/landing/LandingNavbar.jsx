@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 
-const LandingNavbar = () => {
+const LandingNavbar = ({ variant = 'landing' }) => {
+  const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const scrollToSection = (sectionId) => {
@@ -24,12 +26,17 @@ const LandingNavbar = () => {
     };
   }, []);
 
-  const navLinks = [
-    { label: 'Inicio', section: 'hero' },
-    { label: 'Nosotros', section: 'nosotros' },
-    { label: 'Eventos', section: 'eventos' },
-    { label: 'Contacto', section: 'contacto' },
-  ];
+  const navLinks = variant === 'equitacion'
+    ? [
+        { label: 'Inicio', action: () => navigate('/') },
+        { label: 'Clases', action: () => scrollToSection('clases') },
+      ]
+    : [
+        { label: 'Inicio', action: () => scrollToSection('hero') },
+        { label: 'Nosotros', action: () => scrollToSection('nosotros') },
+        { label: 'Eventos', action: () => scrollToSection('eventos') },
+        { label: 'Contacto', action: () => scrollToSection('contacto') },
+      ];
 
   return (
     <nav
@@ -46,7 +53,10 @@ const LandingNavbar = () => {
       <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '80px' }}>
           {/* Logo */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div
+            style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}
+            onClick={() => navigate('/')}
+          >
             <img
               src="/El_refugio_logo.png"
               alt="El Refugio Logo"
@@ -77,9 +87,9 @@ const LandingNavbar = () => {
           className="desktop-nav"
           >
             {navLinks.map((link) => (
-              <li key={link.section} style={{ listStyle: 'none' }}>
+              <li key={link.label} style={{ listStyle: 'none' }}>
                 <button
-                  onClick={() => scrollToSection(link.section)}
+                  onClick={link.action}
                   style={{
                     background: 'none',
                     border: 'none',
@@ -98,26 +108,28 @@ const LandingNavbar = () => {
                 </button>
               </li>
             ))}
-            <li style={{ listStyle: 'none' }}>
-              <a
-                href="/equitacion"
-                style={{
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  letterSpacing: '0.5px',
-                  color: '#FEFBF6',
-                  textDecoration: 'none',
-                  transition: 'opacity 0.3s ease',
-                }}
-                onMouseOver={(e) => e.target.style.opacity = '0.7'}
-                onMouseOut={(e) => e.target.style.opacity = '1'}
-              >
-                Equitacion
-              </a>
-            </li>
+            {variant === 'landing' && (
+              <li style={{ listStyle: 'none' }}>
+                <a
+                  href="/equitacion"
+                  style={{
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    letterSpacing: '0.5px',
+                    color: '#FEFBF6',
+                    textDecoration: 'none',
+                    transition: 'opacity 0.3s ease',
+                  }}
+                  onMouseOver={(e) => e.target.style.opacity = '0.7'}
+                  onMouseOut={(e) => e.target.style.opacity = '1'}
+                >
+                  Equitacion
+                </a>
+              </li>
+            )}
             <li style={{ listStyle: 'none' }}>
               <button
-                onClick={() => scrollToSection('contacto')}
+                onClick={() => navigate('/login')}
                 style={{
                   backgroundColor: '#faf8ec',
                   color: '#6b4423',
@@ -138,7 +150,7 @@ const LandingNavbar = () => {
                   e.target.style.transform = 'scale(1)';
                 }}
               >
-                Reservar Ahora
+                Acceder a Plataforma
               </button>
             </li>
           </ul>
@@ -185,9 +197,13 @@ const LandingNavbar = () => {
           margin: 0,
         }}>
           {navLinks.map((link) => (
-            <li key={link.section} style={{ listStyle: 'none' }}>
+            <li key={link.label} style={{ listStyle: 'none' }}>
               <button
-                onClick={() => scrollToSection(link.section)}
+                onClick={() => {
+                  link.action();
+                  setIsMobileMenuOpen(false);
+                  document.body.style.overflow = 'auto';
+                }}
                 style={{
                   background: 'none',
                   border: 'none',
@@ -202,22 +218,24 @@ const LandingNavbar = () => {
               </button>
             </li>
           ))}
-          <li style={{ listStyle: 'none' }}>
-            <a
-              href="/equitacion"
-              style={{
-                fontSize: '18px',
-                fontWeight: 500,
-                color: '#FEFBF6',
-                textDecoration: 'none',
-              }}
-            >
-              Equitacion
-            </a>
-          </li>
+          {variant === 'landing' && (
+            <li style={{ listStyle: 'none' }}>
+              <a
+                href="/equitacion"
+                style={{
+                  fontSize: '18px',
+                  fontWeight: 500,
+                  color: '#FEFBF6',
+                  textDecoration: 'none',
+                }}
+              >
+                Equitacion
+              </a>
+            </li>
+          )}
           <li style={{ listStyle: 'none', marginTop: '16px' }}>
             <button
-              onClick={() => scrollToSection('contacto')}
+              onClick={() => navigate('/login')}
               style={{
                 backgroundColor: '#faf8ec',
                 color: '#6b4423',
@@ -229,7 +247,7 @@ const LandingNavbar = () => {
                 cursor: 'pointer',
               }}
             >
-              Reservar Ahora
+              Acceder a Plataforma
             </button>
           </li>
         </ul>

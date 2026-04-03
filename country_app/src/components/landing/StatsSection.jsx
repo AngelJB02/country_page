@@ -63,7 +63,7 @@ const StatsSection = () => {
       icon: Award,
       number: '5',
       suffix: '',
-      label: 'Anos de Experiencia',
+      label: 'Años de Experiencia',
       description: 'Creando momentos unicos para nuestros clientes',
     },
     {
@@ -80,7 +80,7 @@ const StatsSection = () => {
       id="stats"
       style={{
         backgroundColor: '#845624',
-        padding: '80px 0',
+        padding: '28px 0',
         position: 'relative',
         overflow: 'hidden',
       }}
@@ -97,11 +97,11 @@ const StatsSection = () => {
 
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px', position: 'relative', zIndex: 1 }}>
         {/* Section Title */}
-        <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
           <h2
             style={{
               fontFamily: "'Playfair Display', Georgia, serif",
-              fontSize: 'clamp(1.75rem, 3vw, 2.25rem)',
+              fontSize: 'clamp(1.5rem, 3vw, 2rem)',
               color: '#fff',
               fontWeight: 500,
               marginBottom: '8px',
@@ -111,7 +111,7 @@ const StatsSection = () => {
           </h2>
           <div
             style={{
-              width: '60px',
+              width: '50px',
               height: '2px',
               backgroundColor: 'rgba(255,255,255,0.4)',
               margin: '0 auto',
@@ -119,12 +119,13 @@ const StatsSection = () => {
           />
         </div>
 
-        {/* Stats Grid */}
+        {/* Stats Row */}
         <div
           style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-            gap: '32px',
+            display: 'flex',
+            justifyContent: 'space-evenly',
+            flexWrap: 'wrap',
+            gap: '24px',
           }}
         >
           {stats.map((stat, index) => {
@@ -134,76 +135,43 @@ const StatsSection = () => {
                 key={index}
                 style={{
                   display: 'flex',
-                  flexDirection: 'column',
                   alignItems: 'center',
-                  textAlign: 'center',
-                  padding: '32px 24px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                  borderRadius: '16px',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  transition: 'all 0.3s ease',
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-                  e.currentTarget.style.transform = 'translateY(-4px)';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
-                  e.currentTarget.style.transform = 'translateY(0)';
+                  gap: '14px',
                 }}
               >
-                {/* Icon */}
                 <div
                   style={{
-                    marginBottom: '20px',
-                    padding: '16px',
-                    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                    borderRadius: '50%',
+                    padding: '10px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                    borderRadius: '12px',
+                    flexShrink: 0,
                   }}
                 >
-                  <IconComponent size={28} color="#FEFBF6" strokeWidth={1.5} />
+                  <IconComponent size={20} color="#FEFBF6" strokeWidth={1.5} />
                 </div>
-
-                {/* Number with Animation */}
-                <div
-                  style={{
-                    fontFamily: "'Playfair Display', Georgia, serif",
-                    fontSize: 'clamp(3rem, 5vw, 4rem)',
-                    fontWeight: 600,
-                    color: '#FEFBF6',
-                    lineHeight: 1,
-                    marginBottom: '12px',
-                  }}
-                >
-                  <AnimatedNumber target={stat.number} suffix={stat.suffix} />
+                <div>
+                  <div
+                    style={{
+                      fontFamily: "'Playfair Display', Georgia, serif",
+                      fontSize: '1.75rem',
+                      fontWeight: 600,
+                      color: '#FEFBF6',
+                      lineHeight: 1.1,
+                    }}
+                  >
+                    <AnimatedNumber target={stat.number} suffix={stat.suffix} />
+                  </div>
+                  <span
+                    style={{
+                      color: 'rgba(254, 251, 246, 0.7)',
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      letterSpacing: '0.3px',
+                    }}
+                  >
+                    {stat.label}
+                  </span>
                 </div>
-
-                {/* Label */}
-                <span
-                  style={{
-                    color: '#FEFBF6',
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    letterSpacing: '1.5px',
-                    textTransform: 'uppercase',
-                    marginBottom: '8px',
-                  }}
-                >
-                  {stat.label}
-                </span>
-
-                {/* Description */}
-                <p
-                  style={{
-                    color: 'rgba(254, 251, 246, 0.7)',
-                    fontSize: '14px',
-                    lineHeight: 1.5,
-                    margin: 0,
-                    maxWidth: '220px',
-                  }}
-                >
-                  {stat.description}
-                </p>
               </div>
             );
           })}

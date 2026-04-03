@@ -23,7 +23,6 @@ const LandingEventsSection = () => {
         'Ceremonia al aire libre',
         'Catering incluido',
       ],
-      featured: true,
     },
     {
       id: 2,
@@ -36,7 +35,6 @@ const LandingEventsSection = () => {
         'Equipos audiovisuales',
         'Team building',
       ],
-      featured: false,
     },
     {
       id: 3,
@@ -49,7 +47,6 @@ const LandingEventsSection = () => {
         'Juegos para ninos',
         'Flexibilidad de horarios',
       ],
-      featured: false,
     },
     {
       id: 4,
@@ -62,7 +59,6 @@ const LandingEventsSection = () => {
         'Ambientes tranquilos',
         'Espacios meditativos',
       ],
-      featured: false,
     },
     {
       id: 5,
@@ -75,7 +71,6 @@ const LandingEventsSection = () => {
         'Clases de equitacion',
         'Instructores certificados',
       ],
-      featured: false,
       clickable: true,
     },
   ];
@@ -112,12 +107,15 @@ const LandingEventsSection = () => {
           </p>
         </div>
 
-        {/* Events Grid */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-          gap: '24px',
-        }}>
+        {/* Events Grid - 3 columns, top row 3 + bottom row 2 centered */}
+        <div
+          className="events-grid"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: '24px',
+          }}
+        >
           {eventos.map((evento) => (
             <div
               key={evento.id}
@@ -220,6 +218,40 @@ const LandingEventsSection = () => {
           ))}
         </div>
       </div>
+
+      <style>{`
+        .events-grid {
+          justify-items: center;
+        }
+        .events-grid > *:nth-child(4),
+        .events-grid > *:nth-child(5) {
+          grid-column: auto;
+        }
+        /* Center the last 2 cards: use a 6-col subgrid trick */
+        @supports (grid-template-columns: repeat(6, 1fr)) {
+          .events-grid {
+            grid-template-columns: repeat(6, 1fr) !important;
+          }
+          .events-grid > *:nth-child(1) { grid-column: 1 / 3; }
+          .events-grid > *:nth-child(2) { grid-column: 3 / 5; }
+          .events-grid > *:nth-child(3) { grid-column: 5 / 7; }
+          .events-grid > *:nth-child(4) { grid-column: 2 / 4; }
+          .events-grid > *:nth-child(5) { grid-column: 4 / 6; }
+        }
+        @media (max-width: 900px) {
+          .events-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+          }
+          .events-grid > * {
+            grid-column: auto !important;
+          }
+        }
+        @media (max-width: 600px) {
+          .events-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
     </section>
   );
 };

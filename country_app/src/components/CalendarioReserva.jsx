@@ -47,28 +47,17 @@ const CalendarioReserva = ({ value, onChange }) => {
   }, [showCalendar]);
 
   return (
-    <div className="calendario-reserva-minimal">
-      <label className="form-label" htmlFor="fechaEvento">Fecha del evento</label>
-      <div className="calendario-input-row">
-        <input
-          type="text"
-          className="input-datepicker"
-          value={selectedDate ? formatDate(selectedDate) : ""}
-          placeholder="Selecciona una fecha disponible"
-          readOnly
-          onClick={() => setShowCalendar(true)}
-          style={{ cursor: "pointer", background: "#fafafa" }}
-        />
-        <button
-          type="button"
-          className="calendario-btn"
-          onClick={() => setShowCalendar((v) => !v)}
-        >
-          {selectedDate ? "Cambiar fecha" : "Elegir fecha"}
-        </button>
-      </div>
+    <div className="calendario-reserva-inline" ref={calendarRef}>
+      <input
+        type="text"
+        className="calendario-input"
+        value={selectedDate ? formatDate(selectedDate) : ""}
+        placeholder="Selecciona una fecha"
+        readOnly
+        onClick={() => setShowCalendar((v) => !v)}
+      />
       {showCalendar && (
-        <div className="calendario-popover" ref={calendarRef}>
+        <div className="calendario-popover">
           <DatePicker
             selected={selectedDate}
             onChange={(date) => {
@@ -84,66 +73,36 @@ const CalendarioReserva = ({ value, onChange }) => {
       )}
       <input type="hidden" name="fechaEvento" id="fechaEvento" value={selectedDate ? formatDate(selectedDate) : ""} />
       <style>{`
-        .calendario-reserva-minimal {
-          max-width: 520px;
-          margin: 0 auto 1.5rem auto;
-          font-family: inherit;
-          background: #fff;
-          border-radius: 16px;
-          box-shadow: 0 2px 16px rgba(0,0,0,0.07);
-          padding: 1.5rem 1rem;
+        .calendario-reserva-inline {
           position: relative;
         }
-        .form-label {
-          display: block;
-          margin-bottom: 12px;
-          font-size: 1.15rem;
-          font-weight: 600;
-          color: #222;
-        }
-        .calendario-input-row {
-          display: flex;
-          gap: 0.5rem;
-          align-items: center;
-        }
-        .input-datepicker {
-          flex: 1;
-          padding: 10px;
-          border-radius: 8px;
-          border: 1px solid #e0e0e0;
-          font-size: 1rem;
-          background: #fafafa;
-          height: 44px;
+        .calendario-input {
+          width: 100%;
+          padding: 14px 16px;
+          border: 2px solid #d6d3d1;
+          border-radius: 12px;
+          font-size: 15px;
+          outline: none;
+          transition: all 0.2s ease;
+          background-color: #fff;
+          color: #1c1917;
+          cursor: pointer;
           box-sizing: border-box;
         }
-        .calendario-btn {
-          padding: 0 28px;
-          height: 44px;
-          border-radius: 8px;
-          border: none;
-        background: #8B5A2B; 
-        color: #fff;
-          font-size: 1rem;
-          font-weight: 500;
-          cursor: pointer;
-          transition: background 0.2s;
-          box-shadow: 0 2px 8px rgba(33,150,243,0.08);
-          display: flex;
-          align-items: center;
-        }
-        .calendario-btn:hover {
-          background: #1769aa;
+        .calendario-input:focus,
+        .calendario-input:hover {
+          border-color: #6B4423;
         }
         .calendario-popover {
           position: absolute;
-          z-index: 10;
-          top: 70px;
+          z-index: 20;
+          top: calc(100% + 8px);
           left: 0;
-          right: 0;
           background: #fff;
           border-radius: 16px;
-          box-shadow: 0 4px 24px rgba(0,0,0,0.13);
+          box-shadow: 0 8px 30px rgba(0,0,0,0.15);
           padding: 1rem 0.5rem;
+          min-width: 300px;
         }
         .react-datepicker {
           border: none;
@@ -165,11 +124,11 @@ const CalendarioReserva = ({ value, onChange }) => {
           color: #333;
         }
         .react-datepicker__day {
-          width: 44px;
-          height: 44px;
-          line-height: 44px;
-          font-size: 1.08rem;
-          border-radius: 12px;
+          width: 40px;
+          height: 40px;
+          line-height: 40px;
+          font-size: 1rem;
+          border-radius: 10px;
           margin: 2px;
           border: none;
           background: #f7f7f7;
@@ -177,7 +136,7 @@ const CalendarioReserva = ({ value, onChange }) => {
           transition: background 0.2s, color 0.2s;
         }
         .react-datepicker__day--selected {
-          background: #4caf50 !important;
+          background: #6B4423 !important;
           color: #fff !important;
         }
         .react-datepicker__day--keyboard-selected {
@@ -185,7 +144,7 @@ const CalendarioReserva = ({ value, onChange }) => {
           color: #222 !important;
         }
         .react-datepicker__day--today {
-          border: 1.5px solid #2196f3 !important;
+          border: 1.5px solid #8B5A2B !important;
         }
         .react-datepicker__day--disabled {
           color: #fff !important;
@@ -196,20 +155,16 @@ const CalendarioReserva = ({ value, onChange }) => {
         .react-datepicker__navigation {
           top: 18px;
         }
-        .react-datepicker__navigation-icon {
-          width: 24px;
-          height: 24px;
-        }
         @media (max-width: 600px) {
-          .calendario-reserva-minimal {
-            max-width: 100%;
-            padding: 1rem 0.5rem;
+          .calendario-popover {
+            min-width: unset;
+            right: 0;
           }
           .react-datepicker__day {
             width: 32px;
             height: 32px;
             line-height: 32px;
-            font-size: 0.98rem;
+            font-size: 0.95rem;
             border-radius: 8px;
           }
         }

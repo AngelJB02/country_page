@@ -211,11 +211,14 @@ Enviado desde: Formulario web El Refugio
         {/* Content Grid */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+          gridTemplateColumns: '1fr 1.2fr',
           gap: '48px',
-        }}>
+          alignItems: 'stretch',
+        }}
+        className="contact-grid"
+        >
           {/* Contact Info Cards */}
-          <div>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
             <h3 style={{
               fontFamily: "'Playfair Display', Georgia, serif",
               fontSize: '24px',
@@ -225,7 +228,7 @@ Enviado desde: Formulario web El Refugio
             }}>
               Informacion de Contacto
             </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', flex: 1, justifyContent: 'space-between' }}>
               {contactInfo.map((info, index) => {
                 const IconComponent = info.icon;
                 return (
@@ -303,7 +306,7 @@ Enviado desde: Formulario web El Refugio
           </div>
 
           {/* Contact Form */}
-          <div style={{ gridColumn: 'span 1' }}>
+          <div>
             <form
               onSubmit={handleSubmit}
               style={{
@@ -316,9 +319,11 @@ Enviado desde: Formulario web El Refugio
             >
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gridTemplateColumns: '1fr 1fr',
                 gap: '20px',
-              }}>
+              }}
+              className="form-grid"
+              >
                 {/* Nombre */}
                 <div>
                   <label htmlFor="nombre" style={labelStyle}>Nombre completo *</label>
@@ -498,6 +503,14 @@ Enviado desde: Formulario web El Refugio
       <style>{`
         @keyframes spin {
           to { transform: rotate(360deg); }
+        }
+        @media (max-width: 768px) {
+          .contact-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .form-grid {
+            grid-template-columns: 1fr !important;
+          }
         }
       `}</style>
     </section>

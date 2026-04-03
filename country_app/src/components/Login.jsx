@@ -178,6 +178,15 @@ const Login = () => {
       }}
     >
       <div className="login-container">
+        <button
+          type="button"
+          className="login-back"
+          onClick={() => navigate("/")}
+        >
+          <ArrowLeftIcon />
+          Volver al inicio
+        </button>
+
         <div className="login-header">
           <img
             src={logoRefugio}
@@ -299,14 +308,6 @@ const Login = () => {
             )}
           </button>
 
-          <button
-            type="button"
-            className="login-back"
-            onClick={() => navigate("/")}
-          >
-            <ArrowLeftIcon />
-            Volver al inicio
-          </button>
         </form>
       </div>
     </div>

@@ -20,11 +20,6 @@ const LandingFooter = () => {
     },
   ];
 
-  const scrollToSection = (sectionId) => {
-    const element = document.getElementById(sectionId);
-    if (element) element.scrollIntoView({ behavior: 'smooth' });
-  };
-
   const linkStyle = {
     color: '#a8a29e',
     textDecoration: 'none',
@@ -88,32 +83,23 @@ const LandingFooter = () => {
             </h4>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
               {[
-                { label: 'Inicio', section: 'hero' },
-                { label: 'Nosotros', section: 'nosotros' },
-                { label: 'Eventos', section: 'eventos' },
-                { label: 'Contacto', section: 'contacto' },
+                { label: 'Inicio', href: '/#hero' },
+                { label: 'Nosotros', href: '/#nosotros' },
+                { label: 'Eventos', href: '/#eventos' },
+                { label: 'Contacto', href: '/#contacto' },
+                { label: 'Equitacion', href: '/equitacion' },
               ].map((item) => (
-                <li key={item.section} style={{ marginBottom: '12px' }}>
-                  <button
-                    onClick={() => scrollToSection(item.section)}
+                <li key={item.label} style={{ marginBottom: '12px' }}>
+                  <a
+                    href={item.href}
                     style={linkStyle}
                     onMouseOver={(e) => e.target.style.color = '#fff'}
                     onMouseOut={(e) => e.target.style.color = '#a8a29e'}
                   >
                     {item.label}
-                  </button>
+                  </a>
                 </li>
               ))}
-              <li style={{ marginBottom: '12px' }}>
-                <a
-                  href="/equitacion"
-                  style={linkStyle}
-                  onMouseOver={(e) => e.target.style.color = '#fff'}
-                  onMouseOut={(e) => e.target.style.color = '#a8a29e'}
-                >
-                  Equitacion
-                </a>
-              </li>
             </ul>
           </div>
 
