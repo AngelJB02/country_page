@@ -47,7 +47,7 @@ const HeroSection = () => {
       style={{ 
         position: 'relative', 
         width: '100%', 
-        height: '100vh',
+        height: 'calc(100vh + 80px)',
         marginTop: '-80px',
         paddingTop: '0',
         overflow: 'hidden' 
@@ -67,7 +67,7 @@ const HeroSection = () => {
       >
         {slides.map((slide, index) => (
           <SwiperSlide key={index} style={{ width: '100%', height: '100%' }}>
-            <div style={{ position: 'relative', width: '100%', height: '100vh' }}>
+            <div style={{ position: 'relative', width: '100%', height: 'calc(100vh + 80px)' }}>
               <img
                 src={slide.image}
                 alt={`El Refugio - ${slide.title}`}
@@ -216,16 +216,16 @@ const HeroSection = () => {
 
       <style>{`
         #hero {
-          height: 100vh !important;
+          height: calc(100vh + 80px) !important;
         }
         #hero .swiper,
         #hero .swiper-wrapper,
         #hero .swiper-slide,
         #hero .swiper-slide > div {
-          height: 100vh !important;
+          height: calc(100vh + 80px) !important;
         }
         #hero .swiper-slide img {
-          height: 100vh !important;
+          height: calc(100vh + 80px) !important;
           object-fit: cover;
         }
         @keyframes fadeInUp {
