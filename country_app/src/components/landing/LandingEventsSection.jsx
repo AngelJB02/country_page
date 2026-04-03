@@ -194,7 +194,7 @@ const LandingEventsSection = () => {
                         color: '#57534e',
                       }}
                     >
-                      <Check size={16} color="#92400e" strokeWidth={2} />
+                      <Check size={16} color="#6B4423" strokeWidth={2} />
                       <span>{caracteristica}</span>
                     </li>
                   ))}
@@ -207,7 +207,7 @@ const LandingEventsSection = () => {
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
-                    color: '#92400e',
+                    color: '#6B4423',
                     fontWeight: 500,
                     fontSize: '14px',
                   }}>

@@ -42,7 +42,7 @@ const HeroSection = () => {
   };
 
   return (
-    <section id="hero" style={{ position: 'relative', width: '100%', height: '100vh', overflow: 'hidden', paddingTop: '80px' }}>
+    <section id="hero" style={{ position: 'relative', width: '100%', height: 'calc(100vh - 80px)', overflow: 'hidden' }}>
       {/* Background Swiper */}
       <Swiper
         modules={[Autoplay, EffectFade]}
@@ -53,11 +53,11 @@ const HeroSection = () => {
         autoplay={{ delay: 5000, disableOnInteraction: false }}
         speed={1500}
         loop
-        style={{ position: 'absolute', inset: 0, width: '100%', height: 'calc(100vh - 80px)' }}
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
       >
         {slides.map((slide, index) => (
           <SwiperSlide key={index}>
-            <div style={{ position: 'relative', width: '100%', height: 'calc(100vh - 80px)' }}>
+            <div style={{ position: 'relative', width: '100%', height: '100%' }}>
               <img
                 src={slide.image}
                 alt={`El Refugio - ${slide.title}`}
@@ -124,7 +124,7 @@ const HeroSection = () => {
           <button
             onClick={() => scrollToSection('contacto')}
             style={{
-              backgroundColor: '#92400e',
+              backgroundColor: '#6B4423',
               color: '#fff',
               padding: '16px 32px',
               borderRadius: '9999px',
@@ -136,11 +136,11 @@ const HeroSection = () => {
               boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.3)',
             }}
             onMouseOver={(e) => {
-              e.target.style.backgroundColor = '#78350f';
+              e.target.style.backgroundColor = '#4A2F17';
               e.target.style.transform = 'scale(1.05)';
             }}
             onMouseOut={(e) => {
-              e.target.style.backgroundColor = '#92400e';
+              e.target.style.backgroundColor = '#6B4423';
               e.target.style.transform = 'scale(1)';
             }}
           >

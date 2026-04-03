@@ -242,10 +242,10 @@ Enviado desde: Formulario web El Refugio
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
                       <div style={{
                         padding: '10px',
-                        backgroundColor: 'rgba(146, 64, 14, 0.1)',
+                        backgroundColor: 'rgba(107, 68, 35, 0.1)',
                         borderRadius: '10px',
                       }}>
-                        <IconComponent size={20} color="#92400e" />
+                        <IconComponent size={20} color="#6B4423" />
                       </div>
                       <div>
                         <span style={{
@@ -284,7 +284,7 @@ Enviado desde: Formulario web El Refugio
                             rel="noopener noreferrer"
                             style={{
                               fontSize: '13px',
-                              color: '#92400e',
+                              color: '#6B4423',
                               fontWeight: 500,
                               textDecoration: 'none',
                               marginTop: '4px',
@@ -331,7 +331,7 @@ Enviado desde: Formulario web El Refugio
                     required
                     style={inputStyle}
                     placeholder="Tu nombre"
-                    onFocus={(e) => e.target.style.borderColor = '#92400e'}
+                    onFocus={(e) => e.target.style.borderColor = '#6B4423'}
                     onBlur={(e) => e.target.style.borderColor = '#d6d3d1'}
                   />
                 </div>
@@ -348,7 +348,7 @@ Enviado desde: Formulario web El Refugio
                     required
                     style={inputStyle}
                     placeholder="tu@email.com"
-                    onFocus={(e) => e.target.style.borderColor = '#92400e'}
+                    onFocus={(e) => e.target.style.borderColor = '#6B4423'}
                     onBlur={(e) => e.target.style.borderColor = '#d6d3d1'}
                   />
                 </div>
@@ -365,7 +365,7 @@ Enviado desde: Formulario web El Refugio
                     required
                     style={inputStyle}
                     placeholder="+52 999 123 4567"
-                    onFocus={(e) => e.target.style.borderColor = '#92400e'}
+                    onFocus={(e) => e.target.style.borderColor = '#6B4423'}
                     onBlur={(e) => e.target.style.borderColor = '#d6d3d1'}
                   />
                 </div>
@@ -380,7 +380,7 @@ Enviado desde: Formulario web El Refugio
                     onChange={handleChange}
                     required
                     style={{ ...inputStyle, cursor: 'pointer' }}
-                    onFocus={(e) => e.target.style.borderColor = '#92400e'}
+                    onFocus={(e) => e.target.style.borderColor = '#6B4423'}
                     onBlur={(e) => e.target.style.borderColor = '#d6d3d1'}
                   >
                     <option value="">Selecciona un tipo</option>
@@ -416,7 +416,7 @@ Enviado desde: Formulario web El Refugio
                     max="1500"
                     style={inputStyle}
                     placeholder="Ej: 100"
-                    onFocus={(e) => e.target.style.borderColor = '#92400e'}
+                    onFocus={(e) => e.target.style.borderColor = '#6B4423'}
                     onBlur={(e) => e.target.style.borderColor = '#d6d3d1'}
                   />
                 </div>
@@ -449,7 +449,7 @@ Enviado desde: Formulario web El Refugio
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '8px',
-                  backgroundColor: '#92400e',
+                  backgroundColor: '#6B4423',
                   color: '#fff',
                   padding: '16px 24px',
                   borderRadius: '12px',
@@ -462,12 +462,12 @@ Enviado desde: Formulario web El Refugio
                 }}
                 onMouseOver={(e) => {
                   if (!isLoading) {
-                    e.target.style.backgroundColor = '#78350f';
+                    e.target.style.backgroundColor = '#4A2F17';
                     e.target.style.transform = 'scale(1.02)';
                   }
                 }}
                 onMouseOut={(e) => {
-                  e.target.style.backgroundColor = '#92400e';
+                  e.target.style.backgroundColor = '#6B4423';
                   e.target.style.transform = 'scale(1)';
                 }}
               >
