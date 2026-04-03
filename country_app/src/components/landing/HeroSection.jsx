@@ -42,7 +42,7 @@ const HeroSection = () => {
   };
 
   return (
-    <section id="hero" style={{ position: 'relative', width: '100%', height: 'calc(100vh - 80px)', overflow: 'hidden' }}>
+    <section id="hero" style={{ position: 'relative', width: '100%', height: 'calc(100vh - 80px)', minHeight: '600px', overflow: 'hidden' }}>
       {/* Background Swiper */}
       <Swiper
         modules={[Autoplay, EffectFade]}
@@ -53,15 +53,21 @@ const HeroSection = () => {
         autoplay={{ delay: 5000, disableOnInteraction: false }}
         speed={1500}
         loop
-        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
       >
         {slides.map((slide, index) => (
-          <SwiperSlide key={index}>
-            <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+          <SwiperSlide key={index} style={{ width: '100%', height: '100%' }}>
+            <div style={{ position: 'relative', width: '100%', height: 'calc(100vh - 80px)', minHeight: '600px' }}>
               <img
                 src={slide.image}
                 alt={`El Refugio - ${slide.title}`}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                style={{ 
+                  width: '100%', 
+                  height: '100%', 
+                  objectFit: 'cover',
+                  objectPosition: 'center center',
+                  display: 'block'
+                }}
                 loading={index === 0 ? 'eager' : 'lazy'}
               />
               {/* Dark overlay for text contrast */}
@@ -199,6 +205,16 @@ const HeroSection = () => {
       </div>
 
       <style>{`
+        #hero .swiper {
+          width: 100%;
+          height: 100%;
+        }
+        #hero .swiper-wrapper {
+          height: 100%;
+        }
+        #hero .swiper-slide {
+          height: 100% !important;
+        }
         @keyframes fadeInUp {
           from {
             opacity: 0;
