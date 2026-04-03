@@ -1,0 +1,154 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter);
+  --font-serif: var(--font-playfair);
+}
+
+:root {
+  /* El Refugio - Modern Rustic Elegance Theme */
+  
+  /* Primary - Warm Earth Brown */
+  --background: #FDFBF7;
+  --foreground: #3D2914;
+  
+  /* Card surfaces */
+  --card: #FBF9F4;
+  --card-foreground: #3D2914;
+  
+  /* Popover */
+  --popover: #FBF9F4;
+  --popover-foreground: #3D2914;
+  
+  /* Primary - Terracotta/Wood Brown */
+  --primary: #8B5A2B;
+  --primary-foreground: #FDFBF7;
+  
+  /* Secondary - Soft Cream */
+  --secondary: #F5F1E8;
+  --secondary-foreground: #6B4423;
+  
+  /* Muted - Stone Gray */
+  --muted: #E8E4DB;
+  --muted-foreground: #78716C;
+  
+  /* Accent - Deep Terracotta */
+  --accent: #C17B4A;
+  --accent-foreground: #FDFBF7;
+  
+  /* Destructive */
+  --destructive: #B91C1C;
+  --destructive-foreground: #FDFBF7;
+  
+  /* Border - Subtle Stone */
+  --border: #E7E5E4;
+  --input: #E7E5E4;
+  --ring: #8B5A2B;
+  
+  /* Chart colors */
+  --chart-1: #8B5A2B;
+  --chart-2: #C17B4A;
+  --chart-3: #6B4423;
+  --chart-4: #A67B5B;
+  --chart-5: #D4A574;
+  
+  --radius: 1rem;
+}
+
+.dark {
+  --background: #1C1410;
+  --foreground: #F5F1E8;
+  
+  --card: #251A14;
+  --card-foreground: #F5F1E8;
+  
+  --popover: #251A14;
+  --popover-foreground: #F5F1E8;
+  
+  --primary: #C17B4A;
+  --primary-foreground: #1C1410;
+  
+  --secondary: #3D2914;
+  --secondary-foreground: #F5F1E8;
+  
+  --muted: #3D2914;
+  --muted-foreground: #A8A29E;
+  
+  --accent: #8B5A2B;
+  --accent-foreground: #F5F1E8;
+  
+  --destructive: #EF4444;
+  --destructive-foreground: #FDFBF7;
+  
+  --border: #3D2914;
+  --input: #3D2914;
+  --ring: #C17B4A;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+}
+
+/* Custom animations */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes scroll-hint {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(8px);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.8s ease-out forwards;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-scroll-hint {
+  animation: scroll-hint 2s ease-in-out infinite;
+}
+
+/* Stagger animation delays */
+.animate-delay-100 { animation-delay: 0.1s; }
+.animate-delay-200 { animation-delay: 0.2s; }
+.animate-delay-300 { animation-delay: 0.3s; }
+.animate-delay-400 { animation-delay: 0.4s; }
+.animate-delay-500 { animation-delay: 0.5s; }
