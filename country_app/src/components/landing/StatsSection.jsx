@@ -79,7 +79,7 @@ const StatsSection = () => {
     <section
       id="stats"
       style={{
-        backgroundColor: '#6B4423',
+        backgroundColor: '#845624',
         padding: '80px 0',
         position: 'relative',
         overflow: 'hidden',

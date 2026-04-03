@@ -27,7 +27,7 @@ const LandingAboutSection = () => {
   ];
 
   return (
-    <section id="nosotros" style={{ backgroundColor: '#FAF8F5', padding: '120px 0' }}>
+    <section id="nosotros" style={{ backgroundColor: '#faf8ec', padding: '120px 0' }}>
       <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 24px' }}>
         
         {/* Split Layout - Magazine Style */}
@@ -65,7 +65,7 @@ const LandingAboutSection = () => {
                 right: '-24px',
                 width: '200px',
                 height: '200px',
-                backgroundColor: '#835634',
+                backgroundColor: '#c09332',
                 borderRadius: '8px',
                 zIndex: -1,
               }} className="decorative-accent" />
@@ -81,7 +81,7 @@ const LandingAboutSection = () => {
               fontWeight: 600,
               letterSpacing: '2px',
               textTransform: 'uppercase',
-              color: '#92400e',
+              color: '#a57429',
               marginBottom: '16px',
             }}>
               Nuestra Historia
@@ -104,7 +104,7 @@ const LandingAboutSection = () => {
               fontFamily: "'Playfair Display', Georgia, serif",
               fontSize: '20px',
               fontStyle: 'italic',
-              color: '#92400e',
+              color: '#a57429',
               marginBottom: '24px',
               lineHeight: 1.6,
             }}>
@@ -144,19 +144,19 @@ const LandingAboutSection = () => {
                 fontWeight: 600,
                 letterSpacing: '1px',
                 textTransform: 'uppercase',
-                color: '#835634',
+                color: '#6b4423',
                 textDecoration: 'none',
-                borderBottom: '2px solid #835634',
+                borderBottom: '2px solid #6b4423',
                 paddingBottom: '4px',
                 transition: 'all 0.3s ease',
               }}
               onMouseOver={(e) => {
-                e.target.style.color = '#92400e';
-                e.target.style.borderBottomColor = '#92400e';
+                e.target.style.color = '#a57429';
+                e.target.style.borderBottomColor = '#a57429';
               }}
               onMouseOut={(e) => {
-                e.target.style.color = '#835634';
-                e.target.style.borderBottomColor = '#835634';
+                e.target.style.color = '#6b4423';
+                e.target.style.borderBottomColor = '#6b4423';
               }}
             >
               Conoce mas sobre nosotros
@@ -194,10 +194,10 @@ const LandingAboutSection = () => {
                   marginBottom: '20px',
                   display: 'inline-flex',
                   padding: '16px',
-                  backgroundColor: 'rgba(131, 86, 52, 0.1)',
+                  backgroundColor: 'rgba(107, 68, 35, 0.1)',
                   borderRadius: '50%',
                 }}>
-                  <IconComponent size={28} color="#835634" strokeWidth={1.5} />
+                  <IconComponent size={28} color="#6b4423" strokeWidth={1.5} />
                 </div>
                 <h3 style={{
                   fontFamily: "'Playfair Display', Georgia, serif",

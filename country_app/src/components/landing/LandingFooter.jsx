@@ -37,7 +37,7 @@ const LandingFooter = () => {
   };
 
   return (
-    <footer style={{ backgroundColor: '#1c1917', color: '#fff' }}>
+    <footer style={{ backgroundColor: '#371f11', color: '#fff' }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '64px 24px' }}>
         <div style={{
           display: 'grid',
@@ -170,15 +170,15 @@ const LandingFooter = () => {
                     aria-label={social.name}
                     style={{
                       padding: '10px',
-                      backgroundColor: '#292524',
+                      backgroundColor: '#5f3c24',
                       borderRadius: '10px',
                       transition: 'background-color 0.2s ease',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                     }}
-                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#92400e'}
-                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#292524'}
+                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#a57429'}
+                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#5f3c24'}
                   >
                     <IconComponent size={20} color="#a8a29e" />
                   </a>
@@ -192,7 +192,7 @@ const LandingFooter = () => {
         <div style={{
           marginTop: '48px',
           paddingTop: '32px',
-          borderTop: '1px solid #292524',
+          borderTop: '1px solid #5f3c24',
           display: 'flex',
           flexWrap: 'wrap',
           justifyContent: 'space-between',

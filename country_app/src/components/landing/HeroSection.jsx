@@ -124,7 +124,7 @@ const HeroSection = () => {
           <button
             onClick={() => scrollToSection('contacto')}
             style={{
-              backgroundColor: '#6B4423',
+              backgroundColor: '#845624',
               color: '#fff',
               padding: '16px 32px',
               borderRadius: '9999px',
@@ -136,11 +136,11 @@ const HeroSection = () => {
               boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.3)',
             }}
             onMouseOver={(e) => {
-              e.target.style.backgroundColor = '#4A2F17';
+              e.target.style.backgroundColor = '#6b4423';
               e.target.style.transform = 'scale(1.05)';
             }}
             onMouseOut={(e) => {
-              e.target.style.backgroundColor = '#6B4423';
+              e.target.style.backgroundColor = '#845624';
               e.target.style.transform = 'scale(1)';
             }}
           >

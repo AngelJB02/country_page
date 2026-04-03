@@ -183,7 +183,7 @@ Enviado desde: Formulario web El Refugio
   ];
 
   return (
-    <section id="contacto" style={{ padding: '100px 0', backgroundColor: '#F5F1E8' }}>
+    <section id="contacto" style={{ padding: '100px 0', backgroundColor: '#e8daa0' }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px' }}>
         {/* Section Header */}
         <div style={{ textAlign: 'center', marginBottom: '64px' }}>
@@ -245,7 +245,7 @@ Enviado desde: Formulario web El Refugio
                         backgroundColor: 'rgba(107, 68, 35, 0.1)',
                         borderRadius: '10px',
                       }}>
-                        <IconComponent size={20} color="#6B4423" />
+                        <IconComponent size={20} color="#6b4423" />
                       </div>
                       <div>
                         <span style={{
@@ -449,7 +449,7 @@ Enviado desde: Formulario web El Refugio
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '8px',
-                  backgroundColor: '#6B4423',
+                  backgroundColor: '#6b4423',
                   color: '#fff',
                   padding: '16px 24px',
                   borderRadius: '12px',
@@ -462,12 +462,12 @@ Enviado desde: Formulario web El Refugio
                 }}
                 onMouseOver={(e) => {
                   if (!isLoading) {
-                    e.target.style.backgroundColor = '#4A2F17';
+                    e.target.style.backgroundColor = '#5f3c24';
                     e.target.style.transform = 'scale(1.02)';
                   }
                 }}
                 onMouseOut={(e) => {
-                  e.target.style.backgroundColor = '#6B4423';
+                  e.target.style.backgroundColor = '#6b4423';
                   e.target.style.transform = 'scale(1)';
                 }}
               >

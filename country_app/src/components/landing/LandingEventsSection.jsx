@@ -87,7 +87,7 @@ const LandingEventsSection = () => {
   };
 
   return (
-    <section id="eventos" style={{ padding: '100px 0', backgroundColor: '#fafaf9' }}>
+    <section id="eventos" style={{ padding: '100px 0', backgroundColor: '#f3edce' }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px' }}>
         {/* Section Header */}
         <div style={{ textAlign: 'center', marginBottom: '64px' }}>
@@ -194,7 +194,7 @@ const LandingEventsSection = () => {
                         color: '#57534e',
                       }}
                     >
-                      <Check size={16} color="#6B4423" strokeWidth={2} />
+                      <Check size={16} color="#845624" strokeWidth={2} />
                       <span>{caracteristica}</span>
                     </li>
                   ))}
@@ -207,7 +207,7 @@ const LandingEventsSection = () => {
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
-                    color: '#6B4423',
+                    color: '#845624',
                     fontWeight: 500,
                     fontSize: '14px',
                   }}>

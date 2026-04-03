@@ -39,7 +39,7 @@ const LandingNavbar = () => {
         left: 0,
         right: 0,
         zIndex: 50,
-        backgroundColor: '#835634',
+        backgroundColor: '#6b4423',
         boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
       }}
     >
@@ -119,8 +119,8 @@ const LandingNavbar = () => {
               <button
                 onClick={() => scrollToSection('contacto')}
                 style={{
-                  backgroundColor: '#FEFBF6',
-                  color: '#835634',
+                  backgroundColor: '#faf8ec',
+                  color: '#6b4423',
                   padding: '10px 20px',
                   borderRadius: '9999px',
                   fontSize: '14px',
@@ -130,11 +130,11 @@ const LandingNavbar = () => {
                   transition: 'all 0.3s ease',
                 }}
                 onMouseOver={(e) => {
-                  e.target.style.backgroundColor = '#F5F1E8';
+                  e.target.style.backgroundColor = '#e8daa0';
                   e.target.style.transform = 'scale(1.05)';
                 }}
                 onMouseOut={(e) => {
-                  e.target.style.backgroundColor = '#FEFBF6';
+                  e.target.style.backgroundColor = '#faf8ec';
                   e.target.style.transform = 'scale(1)';
                 }}
               >
@@ -168,7 +168,7 @@ const LandingNavbar = () => {
           position: 'fixed',
           inset: 0,
           top: '80px',
-          backgroundColor: '#835634',
+          backgroundColor: '#6b4423',
           transform: isMobileMenuOpen ? 'translateX(0)' : 'translateX(100%)',
           transition: 'transform 0.3s ease',
           zIndex: 40,
@@ -219,8 +219,8 @@ const LandingNavbar = () => {
             <button
               onClick={() => scrollToSection('contacto')}
               style={{
-                backgroundColor: '#FEFBF6',
-                color: '#835634',
+                backgroundColor: '#faf8ec',
+                color: '#6b4423',
                 padding: '12px 32px',
                 borderRadius: '9999px',
                 fontSize: '16px',
