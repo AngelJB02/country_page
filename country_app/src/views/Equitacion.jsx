@@ -1,7 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronDown, Check } from "lucide-react";
 import { LandingNavbar, LandingFooter } from "../components/landing";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { useGSAP } from "@gsap/react";
 
 // Imagenes slides
 import image11 from "../img/image11.jpg";
@@ -22,6 +25,9 @@ import "swiper/css/effect-fade";
 const Equitacion = () => {
   const [activeIndex, setActiveIndex] = useState(0);
   const navigate = useNavigate();
+  const heroRef = useRef(null);
+  const infoRef = useRef(null);
+  const clasesRef = useRef(null);
 
   const slides = [
     { image: image11, title: "Aprende a montar a caballo", subtitle: "Descubre la emocion de montar a caballo en un entorno seguro y amigable" },
@@ -59,9 +65,115 @@ const Equitacion = () => {
   }, []);
 
   const scrollToSection = (sectionId) => {
-    const element = document.getElementById(sectionId);
-    if (element) element.scrollIntoView({ behavior: "smooth" });
+    gsap.to(window, {
+      scrollTo: { y: `#${sectionId}`, offsetY: 80 },
+      duration: 0.8,
+      ease: "power2.inOut",
+    });
   };
+
+  // Hero text entrance animation
+  useGSAP(() => {
+    const mm = gsap.matchMedia();
+    mm.add("(prefers-reduced-motion: no-preference)", () => {
+      const tl = gsap.timeline({ defaults: { ease: "back.out(1.2)" } });
+      tl.fromTo(".eq-hero-title",
+        { autoAlpha: 0, y: 40, scale: 0.97 },
+        { autoAlpha: 1, y: 0, scale: 1, duration: 0.8 }
+      )
+      .fromTo(".eq-hero-subtitle",
+        { autoAlpha: 0, y: 25 },
+        { autoAlpha: 1, y: 0, duration: 0.7, ease: "power2.out" },
+        "<0.2"
+      )
+      .fromTo(".eq-hero-cta",
+        { autoAlpha: 0, y: 20, scale: 0.9 },
+        { autoAlpha: 1, y: 0, scale: 1, duration: 0.6 },
+        "<0.15"
+      );
+    });
+    mm.add("(prefers-reduced-motion: reduce)", () => {
+      gsap.set([".eq-hero-title", ".eq-hero-subtitle", ".eq-hero-cta"], { autoAlpha: 1, y: 0, scale: 1 });
+    });
+  }, { scope: heroRef, dependencies: [activeIndex], revertOnUpdate: true });
+
+  // Scroll indicator bounce
+  useGSAP(() => {
+    gsap.matchMedia().add("(prefers-reduced-motion: no-preference)", () => {
+      gsap.to(".eq-scroll-indicator", {
+        y: -10,
+        duration: 1,
+        repeat: -1,
+        yoyo: true,
+        ease: "power1.inOut",
+      });
+    });
+  }, { scope: heroRef });
+
+  // Info section animations
+  useGSAP(() => {
+    const mm = gsap.matchMedia();
+    mm.add("(prefers-reduced-motion: no-preference)", () => {
+      const tl = gsap.timeline({
+        scrollTrigger: { trigger: ".eq-info-content", start: "top 80%" },
+      });
+      tl.fromTo(".eq-info-eyebrow",
+        { autoAlpha: 0, y: 15 },
+        { autoAlpha: 1, y: 0, duration: 0.5 }
+      ).fromTo(".eq-info-title",
+        { autoAlpha: 0, y: 20 },
+        { autoAlpha: 1, y: 0, duration: 0.6, ease: "back.out(1.2)" },
+        "<0.1"
+      ).fromTo(".eq-info-text",
+        { autoAlpha: 0, y: 20 },
+        { autoAlpha: 1, y: 0, duration: 0.5 },
+        "<0.15"
+      );
+    });
+    mm.add("(prefers-reduced-motion: reduce)", () => {
+      gsap.set([".eq-info-eyebrow", ".eq-info-title", ".eq-info-text"], { autoAlpha: 1, y: 0 });
+    });
+  }, { scope: infoRef });
+
+  // Clases section animations
+  useGSAP(() => {
+    const mm = gsap.matchMedia();
+    mm.add("(prefers-reduced-motion: no-preference)", () => {
+      // Header
+      const tl = gsap.timeline({
+        scrollTrigger: { trigger: ".eq-clases-header", start: "top 80%" },
+      });
+      tl.fromTo(".eq-clases-eyebrow",
+        { autoAlpha: 0, y: 15 },
+        { autoAlpha: 1, y: 0, duration: 0.5 }
+      ).fromTo(".eq-clases-title",
+        { autoAlpha: 0, y: 20 },
+        { autoAlpha: 1, y: 0, duration: 0.6, ease: "back.out(1.2)" },
+        "<0.1"
+      );
+
+      // Cards batch with scale
+      ScrollTrigger.batch(".eq-clase-card", {
+        start: "top 85%",
+        onEnter: (batch) => {
+          gsap.fromTo(batch,
+            { autoAlpha: 0, y: 50, scale: 0.95 },
+            { autoAlpha: 1, y: 0, scale: 1, duration: 0.7, stagger: 0.15, ease: "back.out(1.3)", overwrite: true }
+          );
+        },
+      });
+
+      // CTA button
+      gsap.fromTo(".eq-clases-cta",
+        { autoAlpha: 0, y: 20 },
+        { autoAlpha: 1, y: 0, duration: 0.5,
+          scrollTrigger: { trigger: ".eq-clases-cta", start: "top 90%" } }
+      );
+    });
+    mm.add("(prefers-reduced-motion: reduce)", () => {
+      gsap.set([".eq-clases-eyebrow", ".eq-clases-title", ".eq-clase-card", ".eq-clases-cta"], { autoAlpha: 1, y: 0, scale: 1 });
+    });
+  }, { scope: clasesRef });
 
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#F5F1E8" }}>
@@ -69,6 +181,7 @@ const Equitacion = () => {
 
       {/* Hero Section */}
       <section
+        ref={heroRef}
         id="hero"
         style={{
           position: "relative",
@@ -98,7 +211,12 @@ const Equitacion = () => {
                   style={{ width: "100%", height: "100%", objectFit: "cover" }}
                   loading={index === 0 ? "eager" : "lazy"}
                 />
-                <div style={{ position: "absolute", inset: 0, backgroundColor: "rgba(0, 0, 0, 0.4)" }} />
+                {/* Cinematic gradient overlay */}
+                <div style={{
+                  position: "absolute",
+                  inset: 0,
+                  background: "linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.15) 40%, rgba(0,0,0,0.4) 70%, rgba(55,31,17,0.7) 100%)",
+                }} />
               </div>
             </SwiperSlide>
           ))}
@@ -120,6 +238,7 @@ const Equitacion = () => {
           <div style={{ textAlign: "center", maxWidth: "900px", margin: "0 auto" }}>
             <h1
               key={`title-${activeIndex}`}
+              className="eq-hero-title"
               style={{
                 fontFamily: "'Playfair Display', Georgia, serif",
                 fontSize: "clamp(2.5rem, 6vw, 4.5rem)",
@@ -127,8 +246,8 @@ const Equitacion = () => {
                 fontWeight: 600,
                 marginBottom: "24px",
                 textWrap: "balance",
-                animation: "eqFadeInUp 0.6s ease forwards",
-                textShadow: "2px 2px 8px rgba(0,0,0,0.5)",
+                textShadow: "2px 4px 12px rgba(0,0,0,0.4)",
+                visibility: "hidden",
               }}
             >
               {slides[activeIndex].title}
@@ -136,6 +255,7 @@ const Equitacion = () => {
 
             <p
               key={`subtitle-${activeIndex}`}
+              className="eq-hero-subtitle"
               style={{
                 fontSize: "clamp(1rem, 2.5vw, 1.5rem)",
                 color: "rgba(255, 255, 255, 0.9)",
@@ -144,10 +264,8 @@ const Equitacion = () => {
                 maxWidth: "600px",
                 margin: "0 auto 40px",
                 textWrap: "balance",
-                animation: "eqSlideUp 0.6s ease forwards",
-                animationDelay: "0.2s",
-                opacity: 0,
-                textShadow: "1px 1px 4px rgba(0,0,0,0.5)",
+                textShadow: "1px 2px 6px rgba(0,0,0,0.4)",
+                visibility: "hidden",
               }}
             >
               {slides[activeIndex].subtitle}
@@ -155,6 +273,7 @@ const Equitacion = () => {
 
             <button
               onClick={() => navigate("/login")}
+              className="eq-hero-cta"
               style={{
                 backgroundColor: "#6b4423",
                 color: "#fff",
@@ -162,18 +281,21 @@ const Equitacion = () => {
                 borderRadius: "9999px",
                 fontSize: "18px",
                 fontWeight: 500,
-                border: "none",
+                border: "1px solid rgba(255,255,255,0.15)",
                 cursor: "pointer",
                 transition: "all 0.3s ease",
-                boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.3)",
+                boxShadow: "0 10px 30px -5px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255,255,255,0.1)",
+                visibility: "hidden",
               }}
               onMouseOver={(e) => {
                 e.target.style.backgroundColor = "#5f3c24";
                 e.target.style.transform = "scale(1.05)";
+                e.target.style.boxShadow = "0 15px 40px -5px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.15)";
               }}
               onMouseOut={(e) => {
                 e.target.style.backgroundColor = "#6b4423";
                 e.target.style.transform = "scale(1)";
+                e.target.style.boxShadow = "0 10px 30px -5px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255,255,255,0.1)";
               }}
             >
               Reservar mi Clase
@@ -183,6 +305,7 @@ const Equitacion = () => {
           {/* Scroll Indicator */}
           <button
             onClick={() => scrollToSection("info")}
+            className="eq-scroll-indicator"
             style={{
               position: "absolute",
               bottom: "32px",
@@ -193,7 +316,6 @@ const Equitacion = () => {
               flexDirection: "column",
               alignItems: "center",
               gap: "8px",
-              animation: "eqBounce 2s infinite",
               cursor: "pointer",
               background: "none",
               border: "none",
@@ -231,19 +353,6 @@ const Equitacion = () => {
         </div>
 
         <style>{`
-          @keyframes eqFadeInUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-          }
-          @keyframes eqSlideUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-          }
-          @keyframes eqBounce {
-            0%, 20%, 50%, 80%, 100% { transform: translateX(-50%) translateY(0); }
-            40% { transform: translateX(-50%) translateY(-10px); }
-            60% { transform: translateX(-50%) translateY(-5px); }
-          }
           @media (max-width: 768px) {
             .eq-slide-indicators { display: none !important; }
           }
@@ -251,9 +360,19 @@ const Equitacion = () => {
       </section>
 
       {/* Info Section */}
-      <section id="info" style={{ padding: "80px 0", backgroundColor: "#FAF8F5" }}>
-        <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "0 24px", textAlign: "center" }}>
+      <section ref={infoRef} id="info" style={{
+        padding: "80px 0",
+        background: "linear-gradient(180deg, #FAF8F5 0%, #f7f2e8 100%)",
+        position: "relative",
+      }}>
+        {/* Top wave */}
+        <svg style={{ position: "absolute", top: "-1px", left: 0, width: "100%", height: "50px" }} viewBox="0 0 1440 50" preserveAspectRatio="none">
+          <path d="M0,50 C360,10 720,40 1080,15 C1260,5 1380,25 1440,10 L1440,0 L0,0 Z" fill="#3d2415" />
+        </svg>
+
+        <div className="eq-info-content" style={{ maxWidth: "1200px", margin: "0 auto", padding: "0 24px", textAlign: "center" }}>
           <p
+            className="eq-info-eyebrow"
             style={{
               fontFamily: "'Inter', sans-serif",
               fontSize: "13px",
@@ -262,22 +381,26 @@ const Equitacion = () => {
               textTransform: "uppercase",
               color: "#6b4423",
               marginBottom: "16px",
+              visibility: "hidden",
             }}
           >
             Equitacion en El Refugio
           </p>
           <h2
+            className="eq-info-title"
             style={{
               fontFamily: "'Playfair Display', Georgia, serif",
               fontSize: "clamp(2rem, 4vw, 3rem)",
               color: "#1c1917",
               fontWeight: 500,
               marginBottom: "24px",
+              visibility: "hidden",
             }}
           >
             Sobre las Clases
           </h2>
           <p
+            className="eq-info-text"
             style={{
               fontFamily: "'Inter', sans-serif",
               fontSize: "18px",
@@ -285,6 +408,7 @@ const Equitacion = () => {
               maxWidth: "700px",
               margin: "0 auto",
               lineHeight: 1.8,
+              visibility: "hidden",
             }}
           >
             Un espacio unico donde puedes aprender a montar y disfrutar de la equitacion en un entorno natural y seguro.
@@ -294,10 +418,15 @@ const Equitacion = () => {
       </section>
 
       {/* Clases Section */}
-      <section id="clases" style={{ padding: "80px 0", backgroundColor: "#F5F1E8" }}>
+      <section ref={clasesRef} id="clases" style={{
+        padding: "80px 0",
+        background: "linear-gradient(180deg, #f7f2e8 0%, #F5F1E8 40%, #f0ead8 100%)",
+        position: "relative",
+      }}>
         <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "0 24px" }}>
-          <div style={{ textAlign: "center", marginBottom: "64px" }}>
+          <div className="eq-clases-header" style={{ textAlign: "center", marginBottom: "64px" }}>
             <p
+              className="eq-clases-eyebrow"
               style={{
                 fontFamily: "'Inter', sans-serif",
                 fontSize: "13px",
@@ -306,16 +435,19 @@ const Equitacion = () => {
                 textTransform: "uppercase",
                 color: "#6b4423",
                 marginBottom: "16px",
+                visibility: "hidden",
               }}
             >
               Nuestras Clases
             </p>
             <h2
+              className="eq-clases-title"
               style={{
                 fontFamily: "'Playfair Display', Georgia, serif",
                 fontSize: "clamp(2rem, 4vw, 3rem)",
                 color: "#1c1917",
                 fontWeight: 500,
+                visibility: "hidden",
               }}
             >
               Programas de Equitacion
@@ -333,20 +465,22 @@ const Equitacion = () => {
             {clases.map((clase) => (
               <div
                 key={clase.id}
+                className="eq-clase-card"
                 style={{
                   backgroundColor: "#fff",
                   borderRadius: "16px",
                   overflow: "hidden",
-                  boxShadow: "0 4px 20px rgba(0, 0, 0, 0.08)",
+                  boxShadow: "0 4px 24px rgba(107, 68, 35, 0.1)",
                   transition: "all 0.3s ease",
+                  visibility: "hidden",
                 }}
                 onMouseOver={(e) => {
                   e.currentTarget.style.transform = "translateY(-8px)";
-                  e.currentTarget.style.boxShadow = "0 20px 40px rgba(0, 0, 0, 0.12)";
+                  e.currentTarget.style.boxShadow = "0 20px 50px rgba(107, 68, 35, 0.15)";
                 }}
                 onMouseOut={(e) => {
                   e.currentTarget.style.transform = "translateY(0)";
-                  e.currentTarget.style.boxShadow = "0 4px 20px rgba(0, 0, 0, 0.08)";
+                  e.currentTarget.style.boxShadow = "0 4px 24px rgba(107, 68, 35, 0.1)";
                 }}
               >
                 <div style={{ position: "relative", height: "240px", overflow: "hidden" }}>
@@ -365,7 +499,7 @@ const Equitacion = () => {
                     style={{
                       position: "absolute",
                       inset: 0,
-                      background: "linear-gradient(to top, rgba(0,0,0,0.4), transparent)",
+                      background: "linear-gradient(to top, rgba(107,68,35,0.35), transparent 60%)",
                     }}
                   />
                 </div>
@@ -419,7 +553,7 @@ const Equitacion = () => {
           </div>
 
           {/* CTA */}
-          <div style={{ textAlign: "center", marginTop: "64px" }}>
+          <div className="eq-clases-cta" style={{ textAlign: "center", marginTop: "64px", visibility: "hidden" }}>
             <button
               onClick={() => navigate("/login")}
               style={{
@@ -429,18 +563,20 @@ const Equitacion = () => {
                 borderRadius: "9999px",
                 fontSize: "16px",
                 fontWeight: 600,
-                border: "none",
+                border: "1px solid rgba(255,255,255,0.1)",
                 cursor: "pointer",
                 transition: "all 0.3s ease",
-                boxShadow: "0 4px 15px rgba(107, 68, 35, 0.3)",
+                boxShadow: "0 4px 20px rgba(107, 68, 35, 0.3)",
               }}
               onMouseOver={(e) => {
                 e.target.style.backgroundColor = "#5f3c24";
                 e.target.style.transform = "scale(1.05)";
+                e.target.style.boxShadow = "0 8px 30px rgba(107, 68, 35, 0.4)";
               }}
               onMouseOut={(e) => {
                 e.target.style.backgroundColor = "#6b4423";
                 e.target.style.transform = "scale(1)";
+                e.target.style.boxShadow = "0 4px 20px rgba(107, 68, 35, 0.3)";
               }}
             >
               Reservar una Clase

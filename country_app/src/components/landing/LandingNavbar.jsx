@@ -1,18 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
+import gsap from 'gsap';
 
 const LandingNavbar = ({ variant = 'landing' }) => {
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const scrollToSection = (sectionId) => {
-    const element = document.getElementById(sectionId);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-      setIsMobileMenuOpen(false);
-      document.body.style.overflow = 'auto';
-    }
+    gsap.to(window, {
+      scrollTo: { y: `#${sectionId}`, offsetY: 80 },
+      duration: 0.8,
+      ease: 'power2.inOut',
+    });
+    setIsMobileMenuOpen(false);
+    document.body.style.overflow = 'auto';
   };
 
   const toggleMobileMenu = () => {

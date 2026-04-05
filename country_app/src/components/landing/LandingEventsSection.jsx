@@ -1,6 +1,9 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, ArrowRight } from 'lucide-react';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useGSAP } from '@gsap/react';
 
 import boda1 from '../../img/boda.jpeg';
 import image6 from '../../img/image-6.jpg';
@@ -10,6 +13,7 @@ import image10 from '../../img/image_10.jpg';
 
 const LandingEventsSection = () => {
   const navigate = useNavigate();
+  const sectionRef = useRef(null);
 
   const eventos = [
     {
@@ -81,17 +85,60 @@ const LandingEventsSection = () => {
     }
   };
 
+  useGSAP(() => {
+    const mm = gsap.matchMedia();
+    mm.add('(prefers-reduced-motion: no-preference)', () => {
+      // Section header
+      const tl = gsap.timeline({
+        scrollTrigger: { trigger: '.events-header', start: 'top 80%' },
+      });
+      tl.fromTo('.events-header h2',
+        { autoAlpha: 0, y: 25 },
+        { autoAlpha: 1, y: 0, duration: 0.6, ease: 'back.out(1.2)' }
+      ).fromTo('.events-header p',
+        { autoAlpha: 0, y: 15 },
+        { autoAlpha: 1, y: 0, duration: 0.5 },
+        '<0.15'
+      );
+
+      // Event cards batch reveal with scale
+      ScrollTrigger.batch('.event-card', {
+        start: 'top 85%',
+        onEnter: (batch) => {
+          gsap.fromTo(batch,
+            { autoAlpha: 0, y: 50, scale: 0.95 },
+            { autoAlpha: 1, y: 0, scale: 1, duration: 0.7, stagger: 0.12, ease: 'back.out(1.3)', overwrite: true }
+          );
+        },
+      });
+    });
+
+    mm.add('(prefers-reduced-motion: reduce)', () => {
+      gsap.set(['.events-header h2', '.events-header p', '.event-card'], { autoAlpha: 1, y: 0, scale: 1 });
+    });
+  }, { scope: sectionRef });
+
   return (
-    <section id="eventos" style={{ padding: '100px 0', backgroundColor: '#f3edce' }}>
+    <section ref={sectionRef} id="eventos" style={{
+      padding: '100px 0',
+      background: 'linear-gradient(180deg, #f3edce 0%, #efe7be 50%, #ebe1b0 100%)',
+      position: 'relative',
+    }}>
+      {/* Top wave separator */}
+      <svg style={{ position: 'absolute', top: '-1px', left: 0, width: '100%', height: '50px' }} viewBox="0 0 1440 50" preserveAspectRatio="none">
+        <path d="M0,50 C480,5 960,40 1440,10 L1440,0 L0,0 Z" fill="#f3edce" />
+      </svg>
+
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px' }}>
         {/* Section Header */}
-        <div style={{ textAlign: 'center', marginBottom: '64px' }}>
+        <div className="events-header" style={{ textAlign: 'center', marginBottom: '64px' }}>
           <h2 style={{
             fontFamily: "'Playfair Display', Georgia, serif",
             fontSize: 'clamp(2rem, 4vw, 3rem)',
             color: '#1c1917',
             marginBottom: '16px',
             fontWeight: 600,
+            visibility: 'hidden',
           }}>
             Nuestros Eventos
           </h2>
@@ -101,13 +148,14 @@ const LandingEventsSection = () => {
             maxWidth: '600px',
             margin: '0 auto',
             lineHeight: 1.7,
+            visibility: 'hidden',
           }}>
             Descubre los diferentes tipos de celebraciones que puedes realizar
             en El Refugio
           </p>
         </div>
 
-        {/* Events Grid - 3 columns, top row 3 + bottom row 2 centered */}
+        {/* Events Grid */}
         <div
           className="events-grid"
           style={{
@@ -119,23 +167,25 @@ const LandingEventsSection = () => {
           {eventos.map((evento) => (
             <div
               key={evento.id}
+              className="event-card"
               onClick={() => handleEventClick(evento)}
               style={{
                 backgroundColor: '#fff',
                 borderRadius: '20px',
                 overflow: 'hidden',
-                boxShadow: '0 4px 20px rgba(107, 68, 35, 0.08)',
-                border: '1px solid rgba(107, 68, 35, 0.08)',
+                boxShadow: '0 4px 24px rgba(107, 68, 35, 0.1)',
+                border: '1px solid rgba(107, 68, 35, 0.06)',
                 transition: 'all 0.3s ease',
                 cursor: evento.clickable ? 'pointer' : 'default',
+                visibility: 'hidden',
               }}
               onMouseOver={(e) => {
-                e.currentTarget.style.transform = 'translateY(-4px)';
-                e.currentTarget.style.boxShadow = '0 20px 40px rgba(107, 68, 35, 0.12)';
+                e.currentTarget.style.transform = 'translateY(-6px)';
+                e.currentTarget.style.boxShadow = '0 20px 50px rgba(107, 68, 35, 0.15)';
               }}
               onMouseOut={(e) => {
                 e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 20px rgba(107, 68, 35, 0.08)';
+                e.currentTarget.style.boxShadow = '0 4px 24px rgba(107, 68, 35, 0.1)';
               }}
             >
               {/* Image */}
@@ -154,7 +204,7 @@ const LandingEventsSection = () => {
                 <div style={{
                   position: 'absolute',
                   inset: 0,
-                  background: 'linear-gradient(180deg, transparent 50%, rgba(0,0,0,0.3) 100%)',
+                  background: 'linear-gradient(180deg, transparent 40%, rgba(107,68,35,0.25) 100%)',
                 }} />
               </div>
 
@@ -178,7 +228,6 @@ const LandingEventsSection = () => {
                   {evento.descripcion}
                 </p>
 
-                {/* Features List */}
                 <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                   {evento.caracteristicas.map((caracteristica, idx) => (
                     <li
@@ -198,7 +247,6 @@ const LandingEventsSection = () => {
                   ))}
                 </ul>
 
-                {/* Arrow for clickable items */}
                 {evento.clickable && (
                   <div style={{
                     marginTop: '16px',
@@ -227,7 +275,6 @@ const LandingEventsSection = () => {
         .events-grid > *:nth-child(5) {
           grid-column: auto;
         }
-        /* Center the last 2 cards: use a 6-col subgrid trick */
         @supports (grid-template-columns: repeat(6, 1fr)) {
           .events-grid {
             grid-template-columns: repeat(6, 1fr) !important;

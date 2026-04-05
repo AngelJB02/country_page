@@ -1,7 +1,24 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Facebook, Instagram, MessageCircle } from 'lucide-react';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useGSAP } from '@gsap/react';
 
 const LandingFooter = () => {
+  const footerRef = useRef(null);
+
+  useGSAP(() => {
+    gsap.matchMedia().add('(prefers-reduced-motion: no-preference)', () => {
+      gsap.fromTo('.footer-content > div',
+        { autoAlpha: 0, y: 20 },
+        { autoAlpha: 1, y: 0, duration: 0.5, stagger: 0.1,
+          scrollTrigger: { trigger: '.footer-content', start: 'top 90%' } }
+      );
+    });
+    gsap.matchMedia().add('(prefers-reduced-motion: reduce)', () => {
+      gsap.set('.footer-content > div', { autoAlpha: 1, y: 0 });
+    });
+  }, { scope: footerRef });
   const socialLinks = [
     {
       name: 'Facebook',
@@ -32,15 +49,23 @@ const LandingFooter = () => {
   };
 
   return (
-    <footer style={{ backgroundColor: '#371f11', color: '#fff' }}>
+    <footer ref={footerRef} style={{
+      background: 'linear-gradient(180deg, #3d2415 0%, #371f11 40%, #2c1a0e 100%)',
+      color: '#fff',
+      position: 'relative',
+    }}>
+      {/* Top wave separator */}
+      <svg style={{ position: 'absolute', top: '-1px', left: 0, width: '100%', height: '40px' }} viewBox="0 0 1440 40" preserveAspectRatio="none">
+        <path d="M0,40 C360,8 720,35 1080,15 C1260,5 1380,20 1440,10 L1440,0 L0,0 Z" fill="#dfd09a" />
+      </svg>
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '64px 24px' }}>
-        <div style={{
+        <div className="footer-content" style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
           gap: '48px',
         }}>
           {/* Brand Section */}
-          <div>
+          <div style={{ visibility: 'hidden' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
               <img
                 src="/El_refugio_logo.png"
@@ -72,7 +97,7 @@ const LandingFooter = () => {
           </div>
 
           {/* Quick Links */}
-          <div>
+          <div style={{ visibility: 'hidden' }}>
             <h4 style={{
               fontFamily: "'Playfair Display', Georgia, serif",
               fontSize: '18px',
@@ -104,7 +129,7 @@ const LandingFooter = () => {
           </div>
 
           {/* Contact & Social */}
-          <div>
+          <div style={{ visibility: 'hidden' }}>
             <h4 style={{
               fontFamily: "'Playfair Display', Georgia, serif",
               fontSize: '18px',

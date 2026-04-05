@@ -1,8 +1,13 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Leaf, Home, Users, Star } from 'lucide-react';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useGSAP } from '@gsap/react';
 import ElRefugio from '../../img/ElrefugioCountryclub.webp';
 
 const LandingAboutSection = () => {
+  const sectionRef = useRef(null);
+
   const features = [
     {
       icon: Leaf,
@@ -26,10 +31,66 @@ const LandingAboutSection = () => {
     },
   ];
 
+  useGSAP(() => {
+    const mm = gsap.matchMedia();
+    mm.add({
+      isDesktop: '(min-width: 1025px)',
+      isMobile: '(max-width: 1024px)',
+      reduceMotion: '(prefers-reduced-motion: reduce)',
+    }, (context) => {
+      const { isDesktop, reduceMotion } = context.conditions;
+      if (reduceMotion) {
+        gsap.set(['.about-image-col', '.about-text-col', '.feature-card', '.decorative-accent'], { autoAlpha: 1, x: 0, y: 0, scale: 1 });
+        return;
+      }
+
+      // Image column reveal
+      gsap.fromTo('.about-image-col',
+        { autoAlpha: 0, x: isDesktop ? -60 : 0, y: isDesktop ? 0 : 30 },
+        { autoAlpha: 1, x: 0, y: 0, duration: 0.9, ease: 'power2.out',
+          scrollTrigger: { trigger: '.about-image-col', start: 'top 80%' } }
+      );
+
+      // Decorative accent scale in
+      gsap.fromTo('.decorative-accent',
+        { scale: 0, autoAlpha: 0 },
+        { scale: 1, autoAlpha: 1, duration: 0.7, ease: 'back.out(1.7)',
+          scrollTrigger: { trigger: '.about-image-col', start: 'top 70%' } }
+      );
+
+      // Text column reveal
+      gsap.fromTo('.about-text-col',
+        { autoAlpha: 0, x: isDesktop ? 60 : 0, y: isDesktop ? 0 : 30 },
+        { autoAlpha: 1, x: 0, y: 0, duration: 0.9, ease: 'power2.out',
+          scrollTrigger: { trigger: '.about-text-col', start: 'top 80%' } }
+      );
+
+      // Feature cards batch reveal with scale
+      ScrollTrigger.batch('.feature-card', {
+        start: 'top 85%',
+        onEnter: (elements) => {
+          gsap.fromTo(elements,
+            { autoAlpha: 0, y: 40, scale: 0.95 },
+            { autoAlpha: 1, y: 0, scale: 1, duration: 0.7, stagger: 0.12, ease: 'back.out(1.4)', overwrite: true }
+          );
+        },
+      });
+    });
+  }, { scope: sectionRef });
+
   return (
-    <section id="nosotros" style={{ backgroundColor: '#faf8ec', padding: '120px 0' }}>
+    <section ref={sectionRef} id="nosotros" style={{
+      background: 'linear-gradient(180deg, #faf8ec 0%, #f7f2e0 60%, #f3edce 100%)',
+      padding: '120px 0',
+      position: 'relative',
+    }}>
+      {/* Top wave separator */}
+      <svg style={{ position: 'absolute', top: '-1px', left: 0, width: '100%', height: '60px' }} viewBox="0 0 1440 60" preserveAspectRatio="none">
+        <path d="M0,60 C360,10 720,50 1080,20 C1260,5 1380,25 1440,15 L1440,0 L0,0 Z" fill="#6b4423" />
+      </svg>
+
       <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 24px' }}>
-        
+
         {/* Split Layout - Magazine Style */}
         <div style={{
           display: 'grid',
@@ -40,11 +101,9 @@ const LandingAboutSection = () => {
         }}
         className="about-grid"
         >
-          {/* Image Column - Takes 7 columns */}
-          <div style={{ gridColumn: 'span 7' }} className="about-image-col">
-            <div style={{
-              position: 'relative',
-            }}>
+          {/* Image Column */}
+          <div style={{ gridColumn: 'span 7', visibility: 'hidden' }} className="about-image-col">
+            <div style={{ position: 'relative' }}>
               <img
                 src={ElRefugio}
                 alt="El Refugio Country Club - Vista panoramica"
@@ -52,8 +111,8 @@ const LandingAboutSection = () => {
                   width: '100%',
                   height: '600px',
                   objectFit: 'cover',
-                  borderRadius: '8px',
-                  boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                  borderRadius: '12px',
+                  boxShadow: '0 25px 60px -12px rgba(107, 68, 35, 0.3)',
                   display: 'block',
                 }}
                 loading="lazy"
@@ -65,16 +124,16 @@ const LandingAboutSection = () => {
                 right: '-24px',
                 width: '200px',
                 height: '200px',
-                backgroundColor: '#c09332',
-                borderRadius: '8px',
+                background: 'linear-gradient(135deg, #c09332, #a57429)',
+                borderRadius: '12px',
                 zIndex: -1,
+                visibility: 'hidden',
               }} className="decorative-accent" />
             </div>
           </div>
 
-          {/* Text Column - Takes 5 columns */}
-          <div style={{ gridColumn: 'span 5' }} className="about-text-col">
-            {/* Eyebrow */}
+          {/* Text Column */}
+          <div style={{ gridColumn: 'span 5', visibility: 'hidden' }} className="about-text-col">
             <p style={{
               fontFamily: "'Inter', sans-serif",
               fontSize: '13px',
@@ -87,7 +146,6 @@ const LandingAboutSection = () => {
               Nuestra Historia
             </p>
 
-            {/* Title */}
             <h2 style={{
               fontFamily: "'Playfair Display', Georgia, serif",
               fontSize: 'clamp(2.5rem, 4vw, 3.5rem)',
@@ -99,7 +157,6 @@ const LandingAboutSection = () => {
               Sobre El Refugio
             </h2>
 
-            {/* Subtitle */}
             <p style={{
               fontFamily: "'Playfair Display', Georgia, serif",
               fontSize: '20px',
@@ -111,7 +168,6 @@ const LandingAboutSection = () => {
               Un espacio donde la naturaleza y la elegancia se encuentran para crear momentos inolvidables.
             </p>
 
-            {/* Body Text */}
             <p style={{
               fontFamily: "'Inter', sans-serif",
               fontSize: '16px',
@@ -132,7 +188,6 @@ const LandingAboutSection = () => {
               Desde bodas intimas hasta grandes eventos corporativos, nuestro compromiso es hacer de tu evento un momento memorable que perdure en el tiempo.
             </p>
 
-            {/* CTA Link */}
             <a
               href="#contacto"
               style={{
@@ -178,10 +233,12 @@ const LandingAboutSection = () => {
             return (
               <div
                 key={index}
+                className="feature-card"
                 style={{
                   textAlign: 'center',
                   padding: '32px 24px',
                   transition: 'transform 0.3s ease',
+                  visibility: 'hidden',
                 }}
                 onMouseOver={(e) => {
                   e.currentTarget.style.transform = 'translateY(-4px)';
@@ -194,8 +251,9 @@ const LandingAboutSection = () => {
                   marginBottom: '20px',
                   display: 'inline-flex',
                   padding: '16px',
-                  backgroundColor: 'rgba(107, 68, 35, 0.1)',
+                  background: 'linear-gradient(135deg, rgba(107, 68, 35, 0.12), rgba(165, 116, 41, 0.08))',
                   borderRadius: '50%',
+                  boxShadow: '0 4px 15px rgba(107, 68, 35, 0.08)',
                 }}>
                   <IconComponent size={28} color="#6b4423" strokeWidth={1.5} />
                 </div>

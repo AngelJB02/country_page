@@ -1,6 +1,9 @@
-import React, { useState, useCallback, memo } from 'react';
+import React, { useState, useCallback, useRef, memo } from 'react';
 import { MapPin, Phone, Mail, Clock, Send } from 'lucide-react';
 import emailjs from '@emailjs/browser';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useGSAP } from '@gsap/react';
 import CalendarioReserva from '../CalendarioReserva';
 import { emailConfig } from '../../config/emailConfig';
 
@@ -25,6 +28,8 @@ const labelStyle = {
 };
 
 const LandingContactSection = memo(() => {
+  const sectionRef = useRef(null);
+
   const [formData, setFormData] = useState({
     nombre: '',
     email: '',
@@ -182,11 +187,49 @@ Enviado desde: Formulario web El Refugio
     },
   ];
 
+  useGSAP(() => {
+    const mm = gsap.matchMedia();
+    mm.add('(prefers-reduced-motion: no-preference)', () => {
+      // Section header
+      gsap.fromTo('.contact-header',
+        { autoAlpha: 0, y: 25 },
+        { autoAlpha: 1, y: 0, duration: 0.6, ease: 'back.out(1.2)',
+          scrollTrigger: { trigger: '.contact-header', start: 'top 80%' } }
+      );
+
+      // Contact info cards stagger
+      gsap.fromTo('.contact-info-card',
+        { autoAlpha: 0, x: -30, scale: 0.95 },
+        { autoAlpha: 1, x: 0, scale: 1, duration: 0.6, stagger: 0.1, ease: 'power2.out',
+          scrollTrigger: { trigger: '.contact-info-card', start: 'top 85%' } }
+      );
+
+      // Form card
+      gsap.fromTo('.contact-form-card',
+        { autoAlpha: 0, x: 30 },
+        { autoAlpha: 1, x: 0, duration: 0.7, ease: 'power2.out',
+          scrollTrigger: { trigger: '.contact-form-card', start: 'top 85%' } }
+      );
+    });
+
+    mm.add('(prefers-reduced-motion: reduce)', () => {
+      gsap.set(['.contact-header', '.contact-info-card', '.contact-form-card'], { autoAlpha: 1, x: 0, y: 0, scale: 1 });
+    });
+  }, { scope: sectionRef });
+
   return (
-    <section id="contacto" style={{ padding: '100px 0', backgroundColor: '#e8daa0' }}>
+    <section ref={sectionRef} id="contacto" style={{
+      padding: '100px 0',
+      background: 'linear-gradient(180deg, #ebe1b0 0%, #e5d8a0 40%, #dfd09a 100%)',
+      position: 'relative',
+    }}>
+      {/* Top wave separator */}
+      <svg style={{ position: 'absolute', top: '-1px', left: 0, width: '100%', height: '50px' }} viewBox="0 0 1440 50" preserveAspectRatio="none">
+        <path d="M0,50 C300,15 600,45 900,20 C1100,5 1300,30 1440,10 L1440,0 L0,0 Z" fill="#ebe1b0" />
+      </svg>
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px' }}>
         {/* Section Header */}
-        <div style={{ textAlign: 'center', marginBottom: '64px' }}>
+        <div className="contact-header" style={{ textAlign: 'center', marginBottom: '64px', visibility: 'hidden' }}>
           <h2 style={{
             fontFamily: "'Playfair Display', Georgia, serif",
             fontSize: 'clamp(2rem, 4vw, 3rem)',
@@ -234,12 +277,14 @@ Enviado desde: Formulario web El Refugio
                 return (
                   <div
                     key={index}
+                    className="contact-info-card"
                     style={{
                       backgroundColor: '#fff',
                       borderRadius: '16px',
                       padding: '20px',
                       boxShadow: '0 2px 10px rgba(107, 68, 35, 0.06)',
                       border: '1px solid rgba(107, 68, 35, 0.08)',
+                      visibility: 'hidden',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
@@ -306,7 +351,7 @@ Enviado desde: Formulario web El Refugio
           </div>
 
           {/* Contact Form */}
-          <div>
+          <div className="contact-form-card" style={{ visibility: 'hidden' }}>
             <form
               onSubmit={handleSubmit}
               style={{
